@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "Modem Diagnostics",
+    "slug": "modem-diagnostics",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2196F3"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "fonts": [
+      {
+        "asset": "./assets/fonts/Manrope-Regular.ttf",
+        "family": "Manrope-Regular"
+      },
+      {
+        "asset": "./assets/fonts/Manrope-Bold.ttf",
+        "family": "Manrope-Bold"
+      },
+      {
+        "asset": "./assets/fonts/Manrope-Medium.ttf",
+        "family": "Manrope-Medium"
+      },
+      {
+        "asset": "./assets/fonts/Manrope-SemiBold.ttf",
+        "family": "Manrope-SemiBold"
+      },
+      {
+        "asset": "./assets/fonts/Manrope-Light.ttf",
+        "family": "Manrope-Light"
+      },
+      {
+        "asset": "./assets/fonts/Manrope-ExtraLight.ttf",
+        "family": "Manrope-ExtraLight"
+      },
+      {
+        "asset": "./assets/fonts/Manrope-ExtraBold.ttf",
+        "family": "Manrope-ExtraBold"
+      }
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2196F3"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "75908f7a-ba73-4786-97bf-14d1114c863a"
+      }
+    }
+  }
+}
