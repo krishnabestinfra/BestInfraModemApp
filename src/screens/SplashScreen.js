@@ -1,81 +1,74 @@
-import React, { useEffect, useRef } from "react";
-import { View, StyleSheet, Image, Dimensions, Platform } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect } from "react";
+import { View, StyleSheet, Image, Dimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  interpolate,
-  runOnJS,
-  withRepeat,
-} from "react-native-reanimated";
-import { Easing } from "react-native-reanimated";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Logo from "../components/global/Logo";
+import AnimatedRings from "../components/global/AnimatedRings";
 
 const { width, height } = Dimensions.get("window");
 
-const RING_COUNT = 100;
-const RING_DELAY = 800;
-const ANIMATION_DURATION = 5000;
-
-const Ring = ({ index, progress }) => {
-  const ringStyle = useAnimatedStyle(() => {
-    const delay = index * RING_DELAY;
-    const localProgress =
-      Math.max(0, progress.value - delay) / ANIMATION_DURATION;
-    const clamped = Math.min(localProgress, 1);
-
-    return {
-      opacity: interpolate(clamped, [0, 0.1, 1], [0, 0.6, 0]),
-
-      transform: [
-        {
-          scale: interpolate(clamped, [0, 1], [0.4, 4]),
-        },
-      ],
-    };
-  });
-
-  return <Animated.View style={[styles.ring, ringStyle]} />;
+const getUser = async () => {
+  try {
+    const userData = await AsyncStorage.getItem("user"); 
+    return userData ? JSON.parse(userData) : null;
+  } catch (error) {
+    return null;
+  }
 };
 
 const SplashScreen = ({ onFinish }) => {
-  const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withRepeat(
-      withTiming(RING_DELAY * (RING_COUNT - 1) + ANIMATION_DURATION, {
-        duration: RING_DELAY * (RING_COUNT - 1) + ANIMATION_DURATION,
-        easing: Easing.linear,
-      }),
-      -1,
-      false
-    );
-  }, []);
+    const initializeApp = async () => {
+      try {
+        console.log('🚀 Initializing app...');
+        
+        // Proceed with normal app flow
+        await proceedToMainApp();
+        
+      } catch (error) {
+        console.error('❌ Error during app initialization:', error);
+        // On error, proceed to main app (graceful degradation)
+        await proceedToMainApp();
+      }
+    };
 
-  // Auto navigate after 7 seconds
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onFinish();
-    }, 7000);
+    const proceedToMainApp = async () => {
+      const user = await getUser();
+      const timeoutId = setTimeout(() => {
+        onFinish?.(Boolean(user));
+      }, 2000);
 
-    return () => clearTimeout(timer);
+      return timeoutId;
+    };
+
+    let cleanupTimeout;
+
+    initializeApp().then((timeoutId) => {
+      cleanupTimeout = timeoutId;
+    });
+
+    return () => {
+      if (cleanupTimeout) {
+        clearTimeout(cleanupTimeout);
+      }
+    };
   }, [onFinish]);
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <LinearGradient
-        colors={["#163b7c", "#1f3d6d", "#2a6f65", "#55b56c"]}
-        start={{ x: 0.6, y: 0.5 }}
-        end={{ x: 0.2, y: 0.8 }}
-        style={StyleSheet.absoluteFill}
+      
+      <Image 
+        source={require("../../assets/images/onboardingbg.png")} 
+        style={styles.backgroundImage}
+        resizeMode="cover"
       />
+      
+      <View style={styles.overlay} />
+      
       <View style={styles.centerWrapper}>
-        {Array.from({ length: RING_COUNT }).map((_, index) => (
-          <Ring key={index} index={index} progress={progress} />
-        ))}
+        <AnimatedRings count={3} loop={true} />
         <Logo variant="white" size="large" />
       </View>
     </View>
@@ -89,18 +82,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#1f255e",
   },
+  backgroundImage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: width,
+    height: "100%",
+  },
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.3)", // Semi-transparent overlay for better text visibility
+  },
   centerWrapper: {
     flex: 1,
     justifyContent: "center", // Center vertically
     alignItems: "center", // Center horizontally
+    zIndex: 1, // Ensure content is above background
   },
-  ring: {
-    position: "absolute",
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    borderWidth: 1,
-    borderColor: "#BABECC66",
-    opacity: 0.2
-  },
-}); 
+});

@@ -18,6 +18,7 @@ import Input from "../components/global/Input";
 import Logo from "../components/global/Logo";
 import Tick from "../../assets/icons/tick.svg";
 import Icon from 'react-native-vector-icons/AntDesign';
+import User from '../../assets/icons/user.svg';
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -199,6 +200,14 @@ const LoginScreen = ({ onLogin }) => {
                       fill={errors.uid ? COLORS.color_danger : COLORS.color_positive}
                     />
                   }
+                  rightIcon={
+                    <User 
+                    width={20} 
+                    height={20} 
+                    fill={COLORS.color_text_secondary} 
+                    style={styles.userIcon}
+                  />
+                  }
                   disabled={isLoading}
                 />
 
@@ -305,6 +314,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
     zIndex: 999,
+    marginTop:80
   },
   FormContainer: {
     padding: 30,
@@ -437,4 +447,7 @@ const styles = StyleSheet.create({
     verticalAlign: "middle",
     fontFamily: "Manrope-SemiBold",
   },
+  userIcon:{
+    marginRight: 8,
+  }
 }); 

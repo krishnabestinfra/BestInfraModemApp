@@ -1,448 +1,899 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share, RefreshControl } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Pressable,
+  Dimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import SummaryCard from '../components/SummaryCard';
-import ErrorChart from '../components/ErrorChart';
-import DashboardHeaderSection from '../components/DashboardHeaderSection';
-import ModemStatus from '../components/ModemStatus';
-import { modemStats, errorChartData, modemErrors, alerts } from '../data/dummyData';
-import { colors, spacing, borderRadius, typography, shadows } from '../styles/theme';
-import LogoutIcon from '../../assets/icons/logout.svg';
+import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import Logo from '../components/global/Logo';
+import NotificationCard from '../components/global/NotificationCard';
+import { modemStats, modemErrors, notifications as notificationSeed } from '../data/dummyData';
+import { colors, spacing, borderRadius, typography } from '../styles/theme';
+import { COLORS } from '../constants/colors';
+import Button from '../components/global/Button';
+import MenuIcon from '../../assets/icons/bars.svg';
+import NotificationIcon from '../../assets/icons/notificationDark.svg';
+import HandBill from '../../assets/icons/handBill.svg';
+import Calendar from '../../assets/icons/calendar.svg';
+import CheapDollar from '../../assets/icons/cheapDollar.svg';
+import DashboardIcon from '../../assets/icons/dashboardMenu.svg';
+import ActiveDashboard from '../../assets/icons/activeDashboard.svg';
+import UsageIcon from '../../assets/icons/usageMenu.svg';
+import ActiveUsage from '../../assets/icons/activeUsage.svg';
+import PaymentsIcon from '../../assets/icons/paymentsMenu.svg';
+import ActivePayments from '../../assets/icons/activePayments.svg';
+import TransactionsIcon from '../../assets/icons/transactionMenu.svg';
+import ActiveTransactions from '../../assets/icons/transactionsActive.svg';
+import TicketsIcon from '../../assets/icons/ticketsMenu.svg';
+import ActiveTickets from '../../assets/icons/activeTickets.svg';
+import SettingsIcon from '../../assets/icons/settingMenu.svg';
+import ActiveSettings from '../../assets/icons/activeSettings.svg';
+import LogoutIcon from '../../assets/icons/logoutMenu.svg';
+import ActiveLogout from '../../assets/icons/activeLogout.svg';
 
-const DashboardScreen = ({ navigation, onLogout }) => {
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState(new Date());
+const DashboardScreen = ({ navigation }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeMenuItem, setActiveMenuItem] = useState('Dashboard');
+  const [notificationList] = useState(notificationSeed);
 
-  const handleExportData = () => {
-    try {
-      // Create CSV data for export
-      const csvData = createCSVData();
+  const notificationIconMapper = useMemo(
+    () => ({
+      payment: HandBill,
+      success: HandBill,
+      warning: Calendar,
+      alert: Calendar,
+      due: Calendar,
+      balance: CheapDollar,
+      info: CheapDollar,
+    }),
+    []
+  );
 
-      // Share the data (on mobile this will show share options)
-      Share.share({
-        message: `Modem Diagnostics Report\n\n${csvData}`,
-        title: 'Modem Diagnostics Export',
-      });
+  const notificationVariantMapper = useMemo(
+    () => ({
+      warning: 'warning',
+      alert: 'warning',
+      success: 'success',
+      payment: 'success',
+      info: 'info',
+      balance: 'info',
+    }),
+    []
+  );
 
-      Alert.alert(
-        'Export Successful',
-        'Data has been prepared for export. Use the share options to save as Excel or CSV.',
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      Alert.alert('Export Failed', 'Unable to export data. Please try again.');
+  const recentNotifications = useMemo(
+    () => notificationList.slice(0, 2),
+    [notificationList]
+  );
+
+  const filteredModems = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return modemErrors;
     }
-  };
-
-  const createCSVData = () => {
-    const headers = 'Modem ID,Status,Error,Reason,Location,Date,Signal Strength\n';
-    const errorRows = modemErrors.map(error =>
-      `${error.modemId},${error.status},${error.error},${error.reason},${error.location},${error.date},${error.signalStrength}`
-    ).join('\n');
-
-    const alertHeaders = '\n\nAlerts\nAlert ID,Modem ID,Type,Severity,Location,Date\n';
-    const alertRows = alerts.map(alert =>
-      `${alert.id},${alert.modemId},${alert.type},${alert.severity},${alert.location},${alert.date}`
-    ).join('\n');
-
-    const summary = `\n\nSummary\nConnected Modems,${modemStats.connected}\nDisconnected Modems,${modemStats.disconnected}\nTotal Issues,${modemStats.totalIssues}\nMost Common Error,${modemStats.mostCommon.label} (${modemStats.mostCommon.count})`;
-
-    return headers + errorRows + alertHeaders + alertRows + summary;
-  };
-
-  const handleDownloadLogs = () => {
-    try {
-      // Create log data
-      const logData = createLogData();
-
-      // Share the log data
-      Share.share({
-        message: `Modem Diagnostics Logs\n\n${logData}`,
-        title: 'Modem Diagnostics Logs',
-      });
-
-      Alert.alert(
-        'Logs Ready',
-        'System logs have been prepared. Use the share options to save the log file.',
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      Alert.alert('Download Failed', 'Unable to download logs. Please try again.');
-    }
-  };
-
-  const createLogData = () => {
-    const timestamp = new Date().toISOString();
-    const logHeader = `=== MODEM DIAGNOSTICS SYSTEM LOG ===\nGenerated: ${timestamp}\n\n`;
-
-    const systemLogs = [
-      'INFO: System initialized successfully',
-      'INFO: Connected to modem network',
-      'WARN: 5 modems showing connectivity issues',
-      'ERROR: MDM002 - SIM card removed',
-      'ERROR: MDM004 - Physical wire damage detected',
-      'INFO: Alert system active',
-      'INFO: Data collection completed',
-    ].join('\n');
-
-    const errorLogs = modemErrors.map(error =>
-      `ERROR: ${error.modemId} - ${error.error} at ${error.location} (${error.date})`
-    ).join('\n');
-
-    const alertLogs = alerts.map(alert =>
-      `ALERT: ${alert.severity.toUpperCase()} - ${alert.type} for ${alert.modemId} at ${alert.location}`
-    ).join('\n');
-
-    return logHeader + systemLogs + '\n\n=== ERROR LOGS ===\n' + errorLogs + '\n\n=== ALERT LOGS ===\n' + alertLogs;
-  };
-
-  const handleRefresh = useCallback(() => {
-    setIsRefreshing(true);
-
-    // Simulate refresh delay
-    setTimeout(() => {
-      setLastRefresh(new Date());
-      setIsRefreshing(false);
-
-      Alert.alert(
-        'Refresh Complete',
-        `Dashboard updated at ${new Date().toLocaleTimeString()}`,
-        [{ text: 'OK' }]
-      );
-    }, 1500);
-  }, []);
+    const query = searchQuery.toLowerCase();
+    return modemErrors.filter((item) =>
+      [item.modemId, item.location, item.error, item.reason]
+        .join(' ')
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [searchQuery]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar style="dark" />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
-          />
-        }
+        contentContainerStyle={styles.scrollContent}
       >
-        <DashboardHeaderSection navigation={navigation} onLogout={onLogout} />
+        <LinearGradient
+          colors={['#f4fbf7', '#e6f4ed']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          <View style={styles.heroOverlayCircleLarge} />
+          <View style={styles.heroOverlayCircleSmall} />
 
-        {/* <View style={styles.whiteContainer}>
-          <View
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              flexDirection: "row",
-            }}
-          >
-            <Text style={styles.energyText}>Modem Summary</Text>
-            <View style={{ display: "flex", flexDirection: "row" }}>
-              <TouchableOpacity onPress={() => { }}>
-                <Text style={styles.monthlyText}>Daily</Text>
-              </TouchableOpacity>
-              <Text> / </Text>
-              <TouchableOpacity onPress={() => { }}>
-                <Text style={styles.dailyText}>Monthly</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View style={styles.graphsContainer}>
-            <Text style={styles.thismonthText}>
-              Today's Status: <Text style={styles.kwhText}>25 Connected</Text>
-            </Text>
-            <View
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                marginTop: 10,
-              }}
+          <View style={styles.heroTopRow}>
+            <TouchableOpacity
+              style={styles.iconChip}
+              onPress={() => setIsMenuOpen(true)}
             >
-              <View style={styles.tenPercentageTextContainer}>
-                <Text style={styles.percentText}>5%</Text>
-                <Text style={styles.arrowText}>↑</Text>
-              </View>
-              <Text style={styles.lastText}>Yesterday.</Text>
+              <Ionicons name="menu-outline" size={18} color={colors.primary} />
+            </TouchableOpacity>
+
+            <View style={styles.logoWrapper}>
+              <Logo width={60} height={24} />
             </View>
-            <View>
-              <ErrorChart data={errorChartData} />
+
+            <TouchableOpacity
+              style={[styles.iconChip, styles.notificationChip]}
+              onPress={() => navigation?.navigate?.('Profile')}
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={18}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.greetingText}>Hi, Sandeep 👋</Text>
+          <Text style={styles.greetingSubText}>Staying efficient today?</Text>
+
+          <View style={styles.statRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Connected Modems</Text>
+              <View style={styles.statValueRow}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={18}
+                  color={colors.secondary}
+                />
+                <Text style={styles.statValue}>
+                  {modemStats.connected.toLocaleString()}
+                </Text>
+              </View>
+              <View style={styles.badgePill}>
+                <Ionicons name="calendar" size={12} color="#fff" />
+              </View>
+            </View>
+
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Disconnected Modems</Text>
+              <View style={styles.statValueRow}>
+                <Ionicons
+                  name="alert-circle"
+                  size={18}
+                  color={colors.error}
+                />
+                <Text style={styles.statValue}>
+                  {modemStats.disconnected.toLocaleString()}
+                </Text>
+              </View>
+              <View style={[styles.badgePill, { backgroundColor: '#1f915a' }]}>
+                <Ionicons name="calendar" size={12} color="#fff" />
+              </View>
             </View>
           </View>
-        </View> */}
+        </LinearGradient>
 
-        <View style={styles.summaryContainer}>
-          <SummaryCard
-            label="Connected Modems"
-            value={modemStats.connected.toString()}
-            icon="📶"
-            color={colors.connected}
-            // trend={5}
+        <View style={styles.searchCard}>
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color={colors.textSecondary}
           />
-          <SummaryCard
-            label="Disconnected Modems"
-            value={modemStats.disconnected.toString()}
-            icon="🔌"
-            color={colors.disconnected}
-            onPress={() => navigation.navigate('ErrorDetails')}
-            // trend={-2}
+          <TextInput
+            placeholder="Quick Search"
+            placeholderTextColor={colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={styles.searchInput}
           />
+          <TouchableOpacity style={styles.scanButton}>
+            <Ionicons name="scan-outline" size={16} color="#fff" />
+            <Text style={styles.scanText}>Scan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.filterButton}>
+            <Ionicons name="options-outline" size={16} color={colors.primary} />
+          </TouchableOpacity>
         </View>
 
-        {/* <View style={styles.summaryContainer}>
-          <SummaryCard
-            label="Total Issues"
-            value={modemStats.totalIssues.toString()}
-            icon="⚠️"
-            color={colors.warning}
-            onPress={() => navigation.navigate('Alerts')}
-            // trend={-1}
-          />
-          <SummaryCard
-            label="Most Common Error"
-            value={`${modemStats.mostCommon.label} (${modemStats.mostCommon.count})`}
-            icon="📊"
-            color={colors.info}
-          />
-        </View> */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Active Issues</Text>
+          <Text style={styles.sectionCount}>
+            {filteredModems.length} devices
+          </Text>
+        </View>
 
-        <ModemStatus />
+        <View style={styles.cardsWrapper}>
+          {filteredModems.map((modem) => (
+            <ModemCard key={modem.id} modem={modem} navigation={navigation} />
+          ))}
+        </View>
 
-        {/* <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
-            onPress={() => navigation.navigate('ErrorDetails')}
-          >
-            <Text style={styles.buttonText}>View Error Details</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
-            onPress={() => navigation.navigate('Alerts')}
-          >
-            <Text style={[styles.buttonText, { color: colors.primary }]}>View Alerts</Text>
-          </TouchableOpacity>
-        </View> */}
-
-        {/* <View style={styles.quickActions}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.quickAction} onPress={handleExportData}>
-              <Text style={styles.quickActionIcon}>📊</Text>
-              <Text style={styles.quickActionText}>Export Data</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickAction} onPress={handleDownloadLogs}>
-              <Text style={styles.quickActionIcon}>📱</Text>
-              <Text style={styles.quickActionText}>Download Logs</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.quickAction, isRefreshing && styles.quickActionDisabled]}
-              onPress={handleRefresh}
-              disabled={isRefreshing}
-            >
-              <Text style={[styles.quickActionIcon, isRefreshing && styles.quickActionIconDisabled]}>
-                {isRefreshing ? '⏳' : '🔄'}
-              </Text>
-              <Text style={[styles.quickActionText, isRefreshing && styles.quickActionTextDisabled]}>
-                {isRefreshing ? 'Refreshing...' : 'Refresh'}
-              </Text>
+        <View style={styles.notificationSection}>
+          <View style={styles.notificationHeader}>
+            <Text style={styles.sectionTitle}>Notifications</Text>
+            <TouchableOpacity onPress={() => navigation?.navigate?.('Profile')}>
+              <Text style={styles.viewAllText}>View all</Text>
             </TouchableOpacity>
           </View>
-        </View> */}
+
+          {recentNotifications.map((notification) => {
+            const iconComponent =
+              notificationIconMapper[notification.type?.toLowerCase()] ??
+              NotificationIcon;
+            const variant =
+              notificationVariantMapper[notification.type?.toLowerCase()] ??
+              'default';
+
+            return (
+              <NotificationCard
+                key={notification.id}
+                title={notification.title}
+                message={notification.message}
+                sentAt={notification.created_at}
+                icon={iconComponent}
+                variant={variant}
+                isRead={notification.is_read}
+                onPress={() => navigation?.navigate?.('Profile')}
+                containerStyle={styles.dashboardNotificationCard}
+              />
+            );
+          })}
+        </View>
       </ScrollView>
 
-      {/* Floating Logout Button
-      <View style={styles.logoutContainer}>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={onLogout}
-          activeOpacity={0.8}
-        >
-          <View style={styles.logoutIconContainer}>
-            <LogoutIcon width={18} height={18} fill="#fff" />
-          </View>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View> */}
+      {isMenuOpen && (
+        <SideMenuOverlay
+          activeItem={activeMenuItem}
+          onSelect={(itemKey) => {
+            setActiveMenuItem(itemKey);
+            handleMenuNavigation(itemKey, navigation);
+            setIsMenuOpen(false);
+          }}
+          onClose={() => setIsMenuOpen(false)}
+          onLogout={() => {
+            setActiveMenuItem('Logout');
+            navigation?.replace?.('Login');
+            setIsMenuOpen(false);
+          }}
+        />
+      )}
     </SafeAreaView>
+  );
+};
+
+const handleMenuNavigation = (itemKey, navigation) => {
+  const routeMap = {
+    Dashboard: 'Dashboard',
+    Usage: 'Dashboard',
+    PostPaidRechargePayments: 'Alerts',
+    Transactions: 'ModemDetails',
+    DG: 'Dashboard',
+    Settings: 'Dashboard',
+  };
+
+  const routeName = routeMap[itemKey];
+  if (routeName) {
+    navigation?.navigate?.(routeName);
+  }
+};
+
+const statusConfig = {
+  warning: {
+    label: 'Warning',
+    color: '#FFB74D25',
+    icon: 'warning-outline',
+    text: '#AD5A00',
+  },
+  disconnected: {
+    label: 'Disconnected',
+    color: '#FFCDD225',
+    icon: 'alert-circle-outline',
+    text: '#C62828',
+  },
+  default: {
+    label: 'Info',
+    color: '#E3F2FD55',
+    icon: 'information-circle-outline',
+    text: colors.primary,
+  },
+};
+
+const ModemCard = ({ modem, navigation }) => {
+  const meta = statusConfig[modem.status] ?? statusConfig.default;
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return dateString;
+    const day = date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+    });
+    const time = date.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `${day} · ${time}`;
+  };
+
+  const handleCardPress = () => {
+    navigation?.navigate?.('ModemDetails', { modem });
+  };
+
+  return (
+    <Pressable onPress={handleCardPress} style={styles.modemCard}>
+      <View style={styles.modemCardHeader}>
+        <View>
+          <Text style={styles.modemId}>{modem.modemId}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: meta.color }]}>
+            <Ionicons name={meta.icon} size={12} color={meta.text} />
+            <Text style={[styles.statusText, { color: meta.text }]}>
+              {meta.label}
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.directionButton}>
+          <Text style={styles.directionText}>Get Direction</Text>
+          <Ionicons
+            name="navigate-outline"
+            size={14}
+            color="#fff"
+            style={{ marginLeft: 4 }}
+          />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.modemInfoRow}>
+        <View style={styles.infoBlock}>
+          <Text style={styles.infoLabel}>Error</Text>
+          <Text style={styles.infoHighlight}>{modem.error}</Text>
+        </View>
+        <View style={styles.infoBlock}>
+          <Text style={styles.infoLabel}>Meter Type</Text>
+          <Text style={styles.infoValue}>Smart</Text>
+        </View>
+      </View>
+
+      <View style={styles.modemInfoRow}>
+        <View style={styles.infoBlock}>
+          <Text style={styles.infoLabel}>Location</Text>
+          <Text style={styles.infoValue}>{modem.location}</Text>
+        </View>
+        <View style={styles.infoBlock}>
+          <Text style={styles.infoLabel}>Issue Occurrence</Text>
+          <Text style={styles.infoValue}>{formatDate(modem.date)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.cardFooter}>
+        <TouchableOpacity style={styles.photoButton}>
+          <Ionicons name="image-outline" size={14} color={colors.primary} />
+          <Text style={styles.photoText}>Photos</Text>
+        </TouchableOpacity>
+        <Text style={styles.signalText}>
+          Signal Strength: {modem.signalStrength ?? '—'} dBm
+        </Text>
+      </View>
+    </Pressable>
   );
 };
 
 export default DashboardScreen;
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  whiteContainer: {
-    padding: 20,
+  scrollContent: {
+    paddingBottom: spacing.xl,
   },
-  energyText: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontFamily: "Manrope-Bold",
-  },
-  dailyText: {
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontFamily: "Manrope-Regular",
-  },
-  monthlyText: {
-    color: colors.secondary,
-    fontSize: 12,
-    fontFamily: "Manrope-Bold",
-  },
-  separator: {
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontFamily: "Manrope-Regular",
-    marginHorizontal: 5,
-  },
-  toggleButton: {
-    minHeight: 30,
-    paddingHorizontal: 8,
-  },
-  graphsContainer: {
-    backgroundColor: "#eef8f0",
-    paddingHorizontal: 15,
-    paddingTop: 15,
-    marginTop: 10,
-    borderRadius: 5,
-    paddingBottom: 5,
-  },
-  thismonthText: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontFamily: "Manrope-Regular",
-  },
-  kwhText: {
-    color: colors.secondary,
-    fontSize: 14,
-    fontFamily: "Manrope-Bold",
-  },
-  tenPercentageTextContainer: {
-    backgroundColor: colors.secondary,
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    width: 60,
-    borderRadius: 20,
-    height: 19,
-  },
-  percentText: {
-    color: colors.cardBackground,
-    fontSize: 12,
-    fontFamily: "Manrope-SemiBold",
-    marginRight: 5,
-  },
-  arrowText: {
-    color: colors.cardBackground,
-    fontSize: 12,
-    fontFamily: "Manrope-SemiBold",
-  },
-  lastText: {
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontFamily: "Manrope-Regular",
-    marginLeft: 10,
-  },
-  summaryContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  actionButtons: {
-    padding: spacing.md,
-  },
-  button: {
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.sm,
-    alignItems: 'center',
-    ...shadows.small,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-  },
-  secondaryButton: {
-    backgroundColor: colors.cardBackground,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  buttonText: {
-    ...typography.body,
-    color: colors.cardBackground,
-    fontWeight: '600',
-  },
-  quickActions: {
-    padding: spacing.md,
-    backgroundColor: colors.cardBackground,
+  heroCard: {
     margin: spacing.md,
+    marginBottom: spacing.lg,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    overflow: 'hidden',
+  },
+  heroOverlayCircleLarge: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    borderWidth: 1,
+    borderColor: '#d6e8dc',
+    top: -80,
+    right: -80,
+  },
+  heroOverlayCircleSmall: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 1,
+    borderColor: '#d6e8dc',
+    top: 10,
+    right: 20,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  iconChip: {
+    width: 40,
+    height: 40,
     borderRadius: borderRadius.lg,
-    ...shadows.medium,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+  },
+  notificationChip: {
+    borderWidth: 1,
+    borderColor: '#d7e2d9',
+  },
+  logoWrapper: {
+    paddingHorizontal: spacing.sm,
+  },
+  greetingText: {
+    ...typography.h2,
+    color: colors.textPrimary,
+  },
+  greetingSubText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginRight: spacing.sm,
+    elevation: 3,
+  },
+  statLabel: {
+    ...typography.small,
+    color: colors.textSecondary,
+  },
+  statValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  statValue: {
+    ...typography.h1,
+    marginLeft: spacing.xs,
+    color: colors.textPrimary,
+  },
+  badgePill: {
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.secondary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.round,
+  },
+  searchCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.cardBackground,
+    marginHorizontal: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+    color: colors.textPrimary,
+  },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.secondary,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.round,
+    marginRight: spacing.sm,
+  },
+  scanText: {
+    color: '#fff',
+    marginLeft: 4,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  filterButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#d7e2d9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
   },
   sectionTitle: {
     ...typography.h3,
     color: colors.textPrimary,
-    marginBottom: spacing.md,
   },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  quickAction: {
-    alignItems: 'center',
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-    minWidth: 80,
-  },
-  quickActionDisabled: {
-    opacity: 0.5,
-  },
-  quickActionIcon: {
-    fontSize: 24,
-    marginBottom: spacing.xs,
-  },
-  quickActionIconDisabled: {
-    opacity: 0.5,
-  },
-  quickActionText: {
+  sectionCount: {
     ...typography.small,
     color: colors.textSecondary,
-    textAlign: 'center',
   },
-  quickActionTextDisabled: {
-    opacity: 0.5,
+  cardsWrapper: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
   },
-  logoutContainer: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    zIndex: 1000,
+  notificationSection: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.lg,
   },
-  logoutButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 25,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+  notificationHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    marginBottom: spacing.sm,
   },
-  logoutIconContainer: {
-    marginRight: 8,
-  },
-  logoutText: {
-    color: colors.cardBackground,
-    fontSize: 14,
-    fontFamily: 'Manrope-SemiBold',
+  viewAllText: {
+    ...typography.small,
+    color: colors.primary,
     fontWeight: '600',
   },
-}); 
+  dashboardNotificationCard: {
+    backgroundColor: '#fff',
+  },
+  modemCard: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
+    elevation: 3,
+    marginBottom: spacing.md,
+  },
+  modemCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  modemId: {
+    ...typography.h3,
+    color: colors.textPrimary,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.round,
+    marginTop: spacing.xs,
+    gap: 4,
+  },
+  statusText: {
+    ...typography.small,
+    fontWeight: '600',
+  },
+  directionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.secondary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.round,
+  },
+  directionText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  modemInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  infoBlock: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  infoLabel: {
+    ...typography.small,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  infoValue: {
+    ...typography.body,
+    color: colors.textPrimary,
+  },
+  infoHighlight: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  photoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eef2ff',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.round,
+  },
+  photoText: {
+    color: colors.primary,
+    marginLeft: spacing.xs,
+    fontWeight: '600',
+  },
+  signalText: {
+    ...typography.small,
+    color: colors.textSecondary,
+  },
+  sideMenuRoot: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 99,
+  },
+  sideMenuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  sideMenuPanel: {
+    flex: 1,
+    backgroundColor: COLORS.brandBlueColor,
+    paddingTop: 75,
+    paddingHorizontal: 30,
+  },
+  sideMenuTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 35,
+  },
+  sideMenuCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  circleLight: {
+    backgroundColor: COLORS.secondaryFontColor,
+  },
+  circleSecondary: {
+    backgroundColor: COLORS.secondaryColor,
+  },
+  circleIconLight: {
+    backgroundColor: '#fff',
+  },
+  sideMenuContent: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  menuListWrapper: {
+    width: '45%',
+    paddingRight: 20,
+    justifyContent: 'space-between',
+  },
+  menuList: {},
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  menuIcon: {
+    marginRight: 20,
+    opacity: 0.5,
+  },
+  menuText: {
+    fontSize: 16,
+    fontFamily: 'Manrope-Medium',
+    color: COLORS.secondaryFontColor,
+    opacity: 0.7,
+  },
+  menuTextActive: {
+    opacity: 1,
+    fontFamily: 'Manrope-Bold',
+  },
+  menuFooter: {
+    paddingBottom: 30,
+  },
+  logoutButtonRow: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  logoutText: {
+    fontSize: 16,
+    fontFamily: 'Manrope-Medium',
+    color: COLORS.secondaryFontColor,
+    opacity: 0.7,
+  },
+  logoutIcon: {
+    marginRight: 20,
+    opacity: 0.6,
+  },
+  menuVersion: {
+    fontSize: 12,
+    fontFamily: 'Manrope-Medium',
+    color: '#89A1F3',
+    marginTop: 10,
+  },
+  menuPreviewWrapper: {
+    flex: 1,
+    position: 'relative',
+    paddingLeft: 40,
+  },
+  previewCard: {
+    flex: 1,
+    backgroundColor: '#eef8f0',
+    borderTopLeftRadius: 20,
+    borderBottomLeftRadius: 20,
+    padding: 24,
+    elevation: 10,
+  },
+  previewGhost: {
+    position: 'absolute',
+    top: 80,
+    bottom: 0,
+    left: 25,
+    right: 0,
+    backgroundColor: '#eef8f0',
+    opacity: 0.3,
+    borderTopLeftRadius: 30,
+    borderBottomLeftRadius: 20,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontFamily: 'Manrope-Bold',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  previewSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Manrope-Medium',
+    color: colors.textSecondary,
+  },
+});
+
+const MENU_ITEMS = [
+  {
+    key: 'Dashboard',
+    label: 'Dashboard',
+    Icon: DashboardIcon,
+    ActiveIcon: ActiveDashboard,
+  },
+  {
+    key: 'Usage',
+    label: 'Usage',
+    Icon: UsageIcon,
+    ActiveIcon: ActiveUsage,
+  },
+  {
+    key: 'PostPaidRechargePayments',
+    label: 'Payments',
+    Icon: PaymentsIcon,
+    ActiveIcon: ActivePayments,
+  },
+  {
+    key: 'Transactions',
+    label: 'Transactions',
+    Icon: TransactionsIcon,
+    ActiveIcon: ActiveTransactions,
+  },
+  {
+    key: 'DG',
+    label: 'Diesel Generator',
+    Icon: TicketsIcon,
+    ActiveIcon: ActiveTickets,
+  },
+  {
+    key: 'Settings',
+    label: 'Settings',
+    Icon: SettingsIcon,
+    ActiveIcon: ActiveSettings,
+  },
+];
+
+const SideMenuOverlay = ({ activeItem, onSelect, onClose, onLogout }) => (
+  <View pointerEvents="box-none" style={styles.sideMenuRoot}>
+    <Pressable style={styles.sideMenuBackdrop} onPress={onClose} />
+
+    <View style={styles.sideMenuPanel}>
+      <View style={styles.sideMenuTopRow}>
+        <Pressable style={[styles.sideMenuCircle, styles.circleLight]} onPress={onClose}>
+          <MenuIcon width={18} height={18} fill="#202d59" />
+        </Pressable>
+
+        <Logo variant="white" size="medium" />
+
+        <Pressable
+          style={[styles.sideMenuCircle, styles.circleIconLight]}
+          onPress={() => {
+            onClose();
+          }}
+        >
+          <NotificationIcon width={18} height={18} fill="#0c1f3d" />
+        </Pressable>
+      </View>
+
+      <View style={styles.sideMenuContent}>
+        <View style={styles.menuListWrapper}>
+          <SideMenuNavigation activeItem={activeItem} onSelect={onSelect} onLogout={onLogout} />
+        </View>
+
+        <View style={styles.menuPreviewWrapper}>
+          <View style={styles.previewCard}>
+            <Text style={styles.previewTitle}>Need quick insights?</Text>
+            <Text style={styles.previewSubtitle}>
+              Access your modem diagnostics, payments, and tickets without leaving the field.
+            </Text>
+          </View>
+          <View style={styles.previewGhost} />
+        </View>
+      </View>
+    </View>
+  </View>
+);
+
+const SideMenuNavigation = ({ activeItem, onSelect, onLogout }) => (
+  <>
+    <View style={styles.menuList}>
+      {MENU_ITEMS.map((item) => {
+        const ItemIcon = activeItem === item.key ? item.ActiveIcon : item.Icon;
+        return (
+          <Pressable key={item.key} style={styles.menuRow} onPress={() => onSelect(item.key)}>
+            <ItemIcon width={18} height={18} style={styles.menuIcon} />
+            <Text
+              style={[
+                styles.menuText,
+                activeItem === item.key && styles.menuTextActive,
+              ]}
+            >
+              {item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+
+    <View style={styles.menuFooter}>
+      <Button
+        title="Logout"
+        variant="ghost"
+        size="small"
+        onPress={onLogout}
+        style={styles.logoutButtonRow}
+        textStyle={styles.logoutText}
+      >
+        {activeItem === 'Logout' ? (
+          <ActiveLogout width={18} height={18} style={styles.logoutIcon} />
+        ) : (
+          <LogoutIcon width={18} height={18} style={styles.logoutIcon} />
+        )}
+      </Button>
+      <Text style={styles.menuVersion}>Version 1.0.26</Text>
+    </View>
+  </>
+);

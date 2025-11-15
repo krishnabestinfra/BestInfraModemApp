@@ -1,170 +1,421 @@
-// ModemDetailsScreen.js
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, borderRadius, typography, shadows } from '../styles/theme';
-import { Picker } from '@react-native-picker/picker';
+import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import Logo from '../components/global/Logo';
+import Button from '../components/global/Button';
+import { colors, spacing, borderRadius, typography } from '../styles/theme';
+import { modemErrors } from '../data/dummyData';
+
+const fallbackDetails = {
+  drtSlNo: '2345',
+  feederNo: '123456783',
+  feederName: 'Tadepalligudem - Rural',
+  substationNo: '1234533423',
+  substationName: 'Tadepalligudem - Rural',
+  section: 'Tadepalligudem',
+  subDivision: 'Tadepalligudem',
+  division: 'Tadepalligudem',
+  circle: 'Tadepalligudem - Rural',
+  organisation: 'NPDCL',
+};
+
+const statusMetaMap = {
+  warning: { label: 'Warning', color: '#F57C00', bg: '#FFF3E0' },
+  disconnected: { label: 'Non-Communicating', color: '#C62828', bg: '#FFE9E9' },
+  default: { label: 'Active', color: colors.secondary, bg: '#E6F7EE' },
+};
 
 const ModemDetailsScreen = ({ route, navigation }) => {
-  const { modem, isNonCommunicating } = route.params; // modem object and tab info passed from ErrorDetailsScreen
-  const [selectedReason, setSelectedReason] = useState('');
-  const [notes, setNotes] = useState('');
+  const modem = route?.params?.modem ?? {
+    modemId: 'MDM000',
+    status: 'warning',
+    error: 'Unknown',
+    reason: '—',
+    location: '—',
+    date: new Date().toISOString(),
+    signalStrength: '—',
+  };
+
+  const statusMeta =
+    statusMetaMap[modem.status] ??
+    (modem.status?.toLowerCase?.() === 'non-communicating'
+      ? statusMetaMap.disconnected
+      : statusMetaMap.default);
+
+  const detailFields = useMemo(() => {
+    const merged = {
+      ...fallbackDetails,
+      ...modem.details,
+    };
+
+    return [
+      { label: 'DRT SL No.', value: merged.drtSlNo },
+      { label: 'Feeder Name', value: merged.feederName },
+      { label: 'Feeder No.', value: merged.feederNo },
+      { label: 'Substation Name', value: merged.substationName },
+      { label: 'Substation No.', value: merged.substationNo },
+      { label: 'Section', value: merged.section },
+      { label: 'Sub Division', value: merged.subDivision },
+      { label: 'Division', value: merged.division },
+      { label: 'Circle', value: merged.circle },
+      { label: 'Organisation', value: merged.organisation },
+    ];
+  }, [modem.details]);
+
+  const relatedIssues = useMemo(
+    () => modemErrors.filter((item) => item.modemId === modem.modemId),
+    [modem.modemId]
+  );
 
   const handleResolve = () => {
-    // Add API call or state update logic here
-    alert(`Modem ${modem.modemId} marked as resolved with reason: ${selectedReason}`);
-    navigation.goBack();
+    navigation?.navigate?.('Troubleshoot', { modem, status: statusMeta.label });
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Modem Details</Text>
-        <View style={styles.placeholder} />
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar style="dark" />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <LinearGradient
+          colors={['#f4fbf7', '#e6f4ed']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          <View style={styles.heroOverlayCircleLarge} />
+          <View style={styles.heroOverlayCircleSmall} />
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Modem Info */}
-        <View style={styles.infoCard}>
-          <Text style={styles.label}>Modem ID</Text>
-          <Text style={styles.value}>{modem.modemId}</Text>
+          <View style={styles.heroTopRow}>
+            <TouchableOpacity style={styles.iconChip} onPress={() => navigation?.goBack?.()}>
+              <Ionicons name="chevron-back" size={18} color={colors.primary} />
+            </TouchableOpacity>
 
-          <Text style={styles.label}>Status</Text>
-          <Text style={styles.value}>{modem.status}</Text>
+            <Logo width={60} height={24} />
 
-          <Text style={styles.label}>Error</Text>
-          <Text style={styles.value}>{modem.error}</Text>
+            <TouchableOpacity
+              style={styles.iconChip}
+              onPress={() => navigation?.navigate?.('Profile')}
+            >
+              <Ionicons name="notifications-outline" size={18} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
 
-          <Text style={styles.label}>Reason</Text>
-          <Text style={styles.value}>{modem.reason}</Text>
+          <View style={styles.heroContent}>
+            <View>
+              <Text style={styles.heroLabel}>Modem No</Text>
+              <Text style={styles.heroValue}>{modem.modemId}</Text>
+            </View>
+            <View style={[styles.statusPill, { backgroundColor: statusMeta.bg }]}>
+              <View style={[styles.statusDot, { backgroundColor: statusMeta.color }]} />
+              <Text style={[styles.statusText, { color: statusMeta.color }]}>
+                {statusMeta.label}
+              </Text>
+            </View>
+          </View>
+        </LinearGradient>
 
-          <Text style={styles.label}>Location</Text>
-          <Text style={styles.value}>{modem.location}</Text>
-
-          <Text style={styles.label}>Date</Text>
-          <Text style={styles.value}>{modem.date}</Text>
-
-          <Text style={styles.label}>Signal Strength</Text>
-          <Text style={styles.value}>{modem.signalStrength}</Text>
+        <View style={styles.detailCard}>
+          <DetailGrid fields={detailFields} />
         </View>
 
-        {/* Conditional rendering based on tab */}
-        {!isNonCommunicating && (
-          <>
-            {/* Dropdown */}
-            <Text style={styles.label}>Resolution Type</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={selectedReason}
-                onValueChange={(itemValue) => setSelectedReason(itemValue)}
-              >
-                <Picker.Item label="Select resolution..." value="" />
-                <Picker.Item label="Restarted Modem" value="restarted" />
-                <Picker.Item label="Replaced Hardware" value="replaced" />
-                <Picker.Item label="Network Issue Fixed" value="network_fixed" />
-              </Picker>
-            </View>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Issue History</Text>
+          <Text style={styles.sectionCount}>{relatedIssues.length} entries</Text>
+        </View>
 
-            {/* Notes */}
-            <Text style={styles.label}>Notes</Text>
-            <TextInput
-              style={styles.textArea}
-              placeholder="Write any additional notes..."
-              placeholderTextColor={colors.textSecondary}
-              multiline
-              numberOfLines={4}
-              value={notes}
-              onChangeText={setNotes}
-            />
-
-            {/* Resolve Button */}
-            <TouchableOpacity style={styles.resolveButton} onPress={handleResolve}>
-              <Text style={styles.resolveButtonText}>Mark as Resolved</Text>
-            </TouchableOpacity>
-          </>
-        )}
+        <View style={styles.issuesWrapper}>
+          {relatedIssues.length === 0 ? (
+            <Text style={styles.emptyIssuesText}>No issues logged for this modem.</Text>
+          ) : (
+            relatedIssues.map((issue) => <IssueCard key={issue.id} issue={issue} />)
+          )}
+        </View>
       </ScrollView>
+
+      <View style={styles.footer}>
+        <Button title="Resolve Issue" onPress={handleResolve} style={styles.resolveButton} />
+      </View>
     </SafeAreaView>
   );
 };
 
+const DetailGrid = ({ fields }) => (
+  <View style={styles.detailGrid}>
+    {fields.map((field) => (
+      <View key={field.label} style={styles.detailItem}>
+        <Text style={styles.detailLabel}>{field.label}</Text>
+        <Text style={styles.detailValue}>{field.value ?? '—'}</Text>
+      </View>
+    ))}
+  </View>
+);
+
+const IssueCard = ({ issue }) => {
+  const statusMeta = statusMetaMap[issue.status] ?? statusMetaMap.default;
+
+  return (
+    <View style={styles.issueCard}>
+      <View style={styles.issueHeader}>
+        <View>
+          <Text style={styles.issueId}>{issue.modemId}</Text>
+          <View style={[styles.issueBadge, { backgroundColor: statusMeta.bg }]}>
+            <View style={[styles.statusDot, { backgroundColor: statusMeta.color }]} />
+            <Text style={[styles.issueBadgeText, { color: statusMeta.color }]}>
+              {statusMeta.label}
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.directionButton}>
+          <Text style={styles.directionText}>Get Direction</Text>
+          <Ionicons name="navigate-outline" size={14} color="#fff" style={{ marginLeft: 4 }} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.issueRow}>
+        <View style={styles.issueInfoBlock}>
+          <Text style={styles.issueLabel}>Error</Text>
+          <Text style={styles.issueHighlight}>{issue.error}</Text>
+        </View>
+        <View style={styles.issueInfoBlock}>
+          <Text style={styles.issueLabel}>Meter Type</Text>
+          <Text style={styles.issueValue}>Smart</Text>
+        </View>
+      </View>
+
+      <View style={styles.issueRow}>
+        <View style={styles.issueInfoBlock}>
+          <Text style={styles.issueLabel}>Location</Text>
+          <Text style={styles.issueValue}>{issue.location}</Text>
+        </View>
+        <View style={styles.issueInfoBlock}>
+          <Text style={styles.issueLabel}>Issue Occurrence</Text>
+          <Text style={styles.issueValue}>{issue.date}</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xxl,
+  },
+  heroCard: {
+    margin: spacing.md,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    overflow: 'hidden',
+  },
+  heroOverlayCircleLarge: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    borderWidth: 1,
+    borderColor: '#d6e8dc',
+    top: -80,
+    right: -80,
+  },
+  heroOverlayCircleSmall: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 1,
+    borderColor: '#d6e8dc',
+    top: 10,
+    right: 20,
+  },
+  heroTopRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacing.md,
-    backgroundColor: colors.cardBackground,
-    ...shadows.small,
+    alignItems: 'center',
   },
-  backButton: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '600',
+  iconChip: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.lg,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
   },
-  title: {
+  heroContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.lg,
+  },
+  heroLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  heroValue: {
     ...typography.h2,
     color: colors.textPrimary,
   },
-  placeholder: {
-    width: 50,
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.round,
   },
-  content: {
-    padding: spacing.md,
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: spacing.xs,
   },
-  infoCard: {
+  statusText: {
+    ...typography.small,
+    fontWeight: '600',
+  },
+  detailCard: {
     backgroundColor: colors.cardBackground,
-    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
     borderRadius: borderRadius.lg,
-    marginBottom: spacing.lg,
-    ...shadows.small,
+    padding: spacing.md,
   },
-  label: {
+  detailGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  detailItem: {
+    width: '48%',
+    marginBottom: spacing.md,
+  },
+  detailLabel: {
     ...typography.caption,
     color: colors.textSecondary,
-    marginTop: spacing.sm,
+    marginBottom: 4,
   },
-  value: {
+  detailValue: {
     ...typography.body,
     color: colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  pickerContainer: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.lg,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
   },
-  textArea: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    fontSize: 14,
+  sectionTitle: {
+    ...typography.h3,
     color: colors.textPrimary,
-    textAlignVertical: 'top',
-    marginBottom: spacing.lg,
+  },
+  sectionCount: {
+    ...typography.small,
+    color: colors.textSecondary,
+  },
+  issuesWrapper: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
+  },
+  emptyIssuesText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginVertical: spacing.lg,
+  },
+  issueCard: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
+    elevation: 3,
+    marginBottom: spacing.md,
+  },
+  issueHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  issueId: {
+    ...typography.h3,
+    color: colors.textPrimary,
+  },
+  issueBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.round,
+    marginTop: spacing.xs,
+    gap: 4,
+  },
+  issueBadgeText: {
+    ...typography.small,
+    fontWeight: '600',
+  },
+  directionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.secondary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.round,
+  },
+  directionText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  issueRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  issueInfoBlock: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  issueLabel: {
+    ...typography.small,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  issueValue: {
+    ...typography.body,
+    color: colors.textPrimary,
+  },
+  issueHighlight: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  footer: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.sm,
+    backgroundColor: colors.background,
   },
   resolveButton: {
-    backgroundColor: colors.primary,
     borderRadius: borderRadius.round,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  resolveButtonText: {
-    color: colors.cardBackground,
-    fontWeight: '600',
-    fontSize: 16,
   },
 });
 
