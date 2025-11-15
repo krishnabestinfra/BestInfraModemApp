@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Logo from '../components/global/Logo';
 import Button from '../components/global/Button';
+import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { modemErrors } from '../data/dummyData';
 
@@ -106,18 +107,13 @@ const ModemDetailsScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.heroContent}>
-            <View>
-              <Text style={styles.heroLabel}>Modem No</Text>
-              <Text style={styles.heroValue}>{modem.modemId}</Text>
-            </View>
-            <View style={[styles.statusPill, { backgroundColor: statusMeta.bg }]}>
-              <View style={[styles.statusDot, { backgroundColor: statusMeta.color }]} />
-              <Text style={[styles.statusText, { color: statusMeta.color }]}>
-                {statusMeta.label}
-              </Text>
-            </View>
-          </View>
+          <ModemStatusCard
+            modemId={modem.modemId}
+            statusLabel={statusMeta.label}
+            statusColor={statusMeta.color}
+            statusBackground={statusMeta.bg}
+            style={styles.heroStatusCard}
+          />
         </LinearGradient>
 
         <View style={styles.detailCard}>
@@ -254,38 +250,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 2,
   },
-  heroContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  heroStatusCard: {
     marginTop: spacing.lg,
-  },
-  heroLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  heroValue: {
-    ...typography.h2,
-    color: colors.textPrimary,
-  },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.round,
   },
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     marginRight: spacing.xs,
-  },
-  statusText: {
-    ...typography.small,
-    fontWeight: '600',
   },
   detailCard: {
     backgroundColor: colors.cardBackground,

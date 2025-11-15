@@ -32,8 +32,11 @@ export const colors = {
 
 export const spacing = {
   xs: 4,
+  xsm: 6,
   sm: 8,
+  ms:12,
   md: 16,
+  ml: 18,
   lg: 24,
   xl: 32,
   xxl: 48,
@@ -41,6 +44,7 @@ export const spacing = {
 
 export const borderRadius = {
   sm: 4,
+  xs: 6,
   md: 8,
   lg: 12,
   xl: 16,
@@ -71,7 +75,7 @@ export const typography = {
   caption: {
     fontSize: 14,
     fontWeight: 'normal',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   small: {
     fontSize: 12,

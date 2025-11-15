@@ -13,34 +13,39 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Logo from '../components/global/Logo';
 import Button from '../components/global/Button';
+import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
+import checkWireImg from '../../assets/check-wire.png';
+import checkVoltageImg from '../../assets/check-voltage.png';
+import checkCommImg from '../../assets/communication.png';
+import successImg from '../../assets/success.png';
+
 
 const troubleshootSteps = [
   {
     id: 1,
     title: 'Check Wire Connection',
     description: 'Verify if the main supply wire is properly connected to the meter terminals.',
-    question: 'Is the wire properly connected now?',
-    image: 'https://res.cloudinary.com/dk3rdh3yo/image/upload/v1731598800/bestinfra-wire.png',
+    question: 'Is The Wire Properly Connected Now?',
+    image: checkWireImg,
   },
   {
     id: 2,
     title: 'Check Voltage Input',
     description: 'Use the test device to confirm voltage is present in the input line.',
-    question: 'Is voltage present at the input line?',
-    image: 'https://res.cloudinary.com/dk3rdh3yo/image/upload/v1731598800/bestinfra-voltage.png',
+    question: 'Is Voltage Present At The Input Line?',
+    image: checkVoltageImg,
   },
   {
     id: 3,
     title: 'Confirm Communication',
     description: 'Check if the meter symbol on your device shows active communication.',
-    question: 'Is the meter communicating now?',
-    image: 'https://res.cloudinary.com/dk3rdh3yo/image/upload/v1731598800/bestinfra-communication.png',
+    question: 'Is The Meter Communicating Now?',
+    image: checkCommImg,
   },
 ];
 
-const successImage =
-  'https://res.cloudinary.com/dk3rdh3yo/image/upload/v1731598800/bestinfra-success.png';
+const successImage = successImg;
 
 const TroubleshootScreen = ({ navigation, route }) => {
   const modem = route?.params?.modem;
@@ -107,25 +112,21 @@ const TroubleshootScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.heroContent}>
-            <View>
-              <Text style={styles.heroLabel}>Modem No</Text>
-              <Text style={styles.heroValue}>{modem?.modemId ?? 'MDM000'}</Text>
-            </View>
-            <View style={styles.statusBadge}>
-              <View
-                style={[
-                  styles.statusDot,
-                  { backgroundColor: statusMeta.color ?? colors.secondary },
-                ]}
-              />
-              <Text style={styles.statusBadgeText}>{statusMeta.label}</Text>
-            </View>
-          </View>
+          <ModemStatusCard
+            modemId={modem?.modemId ?? 'MDM000'}
+            statusLabel={statusMeta.label}
+            statusColor={statusMeta.color ?? colors.secondary}
+            statusBackground="#fff"
+            style={styles.heroStatusCard}
+          />
         </LinearGradient>
 
-        <StepIndicator currentStepIndex={currentStepIndex} totalSteps={troubleshootSteps.length} />
-
+        {!isComplete && (
+          <StepIndicator
+            currentStepIndex={currentStepIndex}
+            totalSteps={troubleshootSteps.length}
+          />
+        )}
         {isComplete ? (
           <SuccessCard image={successImage} onComplete={handleComplete} />
         ) : (
@@ -171,8 +172,9 @@ const StepIndicator = ({ currentStepIndex, totalSteps }) => (
 
 const StepContent = ({ step, onRespond, feedback }) => (
   <View style={styles.stepWrapper}>
+    
     <View style={styles.stepCard}>
-      <Image source={{ uri: step.image }} style={styles.stepImage} resizeMode="contain" />
+    <Image source={step.image} style={styles.stepImage} resizeMode="contain" />
       <View style={styles.stepTextBlock}>
         <Text style={styles.stepTitle}>{step.title}</Text>
         <Text style={styles.stepDescription}>{step.description}</Text>
@@ -202,7 +204,7 @@ const StepContent = ({ step, onRespond, feedback }) => (
 
 const SuccessCard = ({ image, onComplete }) => (
   <View style={styles.successWrapper}>
-    <Image source={{ uri: image }} style={styles.successImage} resizeMode="contain" />
+   <Image source={image} style={styles.successImage} resizeMode="contain" />
     <Text style={styles.successTitle}>Success</Text>
     <Text style={styles.successSubtitle}>Issue successfully resolved</Text>
     <Text style={styles.successBody}>The meter is now communicating properly.</Text>
@@ -213,7 +215,7 @@ const SuccessCard = ({ image, onComplete }) => (
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#fff',
   },
   scroll: {
     flex: 1,
@@ -261,40 +263,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 2,
   },
-  heroContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  heroStatusCard: {
     marginTop: spacing.lg,
-  },
-  heroLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  heroValue: {
-    ...typography.h2,
-    color: colors.textPrimary,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.round,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: spacing.xs,
-  },
-  statusBadgeText: {
-    ...typography.small,
-    color: colors.textPrimary,
-    fontWeight: '600',
   },
   stepIndicatorRow: {
     flexDirection: 'row',
@@ -327,10 +297,12 @@ const styles = StyleSheet.create({
   },
   stepDivider: {
     flex: 1,
-    height: 1,
-    backgroundColor: '#d7e2d9',
+    borderWidth: 0.8,
+    borderColor: '#d7e2d9',
+    borderStyle: 'dashed',
     marginHorizontal: spacing.xs,
   },
+
   stepWrapper: {
     marginHorizontal: spacing.md,
     marginTop: spacing.lg,
@@ -339,7 +311,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: borderRadius.xl,
     padding: spacing.md,
-    elevation: 3,
     marginBottom: spacing.lg,
   },
   stepImage: {
@@ -350,22 +321,25 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   stepTitle: {
-    ...typography.h3,
-    color: colors.textPrimary,
+    ...typography.caption,
+    color: '#163B7C',
+    fontWeight: '500',
   },
   stepDescription: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
+    ...typography.small,
+    color: '#898992',
+    fontWeight: '400',
+    marginTop: spacing.sm,
   },
   questionBlock: {
+    marginHorizontal: spacing.md,
     marginTop: spacing.md,
     paddingBottom: spacing.xl,
   },
   questionLabel: {
-    ...typography.h4,
+    ...typography.caption,
     color: colors.textPrimary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.lg,
   },
   responseRow: {
     flexDirection: 'row',
@@ -384,12 +358,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#eef0f4',
   },
   responseTextYes: {
+    fontSize: 14,
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   responseTextNo: {
-    color: colors.textSecondary,
-    fontWeight: '600',
+    fontSize: 14,
+    color: '#6E6E6E',
+    fontWeight: '500',
   },
   feedbackText: {
     marginTop: spacing.md,
@@ -403,7 +379,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     backgroundColor: '#fff',
     borderRadius: borderRadius.xl,
-    elevation: 3,
   },
   successImage: {
     width: 180,
