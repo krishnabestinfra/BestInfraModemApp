@@ -126,13 +126,16 @@ const DashboardScreen = ({ navigation }) => {
       >
         <View style={styles.bluecontainer}>
           <View style={styles.TopMenu}>
-            <Pressable style={styles.barsIcon}>
+            <Pressable style={styles.barsIcon} onPress={() => setIsMenuOpen(true)}>
               <Menu width={18} height={18} fill="#202d59" />
             </Pressable>
             <View style={styles.logoWrapper}>
               <RippleLogo size={68} />
             </View>
-            <Pressable style={styles.bellIcon}>
+            <Pressable 
+              style={styles.bellIcon}
+              onPress={() => navigation?.navigate?.('Profile')}
+            >
               <NotificationLight width={18} height={18} fill="#202d59" />
             </Pressable>
           </View>
