@@ -1,6 +1,6 @@
 export const modemStats = {
-  connected: 25,
-  disconnected: 8,
+  connected: "1,823",
+  disconnected: 47,
   totalIssues: 9,
   mostCommon: { label: "Low Signal", count: 4 }
 };
@@ -13,7 +13,7 @@ export const modemErrors = [
     error: "Low Signal",
     reason: "Heavy Rain",
     date: "2025-08-07 09:50",
-    location: "Bangalore",
+    location: "86136 52958 79253",
     signalStrength: 8
   },
   {
@@ -23,7 +23,7 @@ export const modemErrors = [
     error: "No SIM",
     reason: "SIM Card Removed",
     date: "2025-08-07 08:30",
-    location: "Mumbai",
+    location: "86136 52958 79254",
     signalStrength: 0
   },
   {
@@ -33,7 +33,7 @@ export const modemErrors = [
     error: "Timeout",
     reason: "Network Congestion",
     date: "2025-08-07 10:15",
-    location: "Delhi",
+    location: "86136 52958 79255",
     signalStrength: 12
   },
   {
@@ -43,7 +43,7 @@ export const modemErrors = [
     error: "Wire Damage",
     reason: "Physical Damage",
     date: "2025-08-07 07:45",
-    location: "Chennai",
+    location: "86136 52958 79256",
     signalStrength: 0
   },
   {
@@ -53,7 +53,7 @@ export const modemErrors = [
     error: "Low Signal",
     reason: "Poor Coverage",
     date: "2025-08-07 11:20",
-    location: "Hyderabad",
+    location: "86136 52958 79257",
     signalStrength: 6
   },
   {
@@ -63,7 +63,7 @@ export const modemErrors = [
     error: "None",
     reason: "Working Fine",
     date: "2025-08-07 12:00",
-    location: "Pune",
+    location: "86136 52958 79258",
     signalStrength: 15
   },
   {
@@ -73,7 +73,7 @@ export const modemErrors = [
     error: "Timeout",
     reason: "Server Issues",
     date: "2025-08-07 09:10",
-    location: "Kolkata",
+    location: "86136 52958 79259",
     signalStrength: 10
   },
   {
@@ -83,7 +83,7 @@ export const modemErrors = [
     error: "No SIM",
     reason: "SIM Expired",
     date: "2025-08-07 08:55",
-    location: "Ahmedabad",
+    location: "86136 52958 79260",
     signalStrength: 0
   }
 ];

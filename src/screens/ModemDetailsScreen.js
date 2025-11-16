@@ -5,9 +5,12 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Logo from '../components/global/Logo';
+import RippleLogo from '../components/global/RippleLogo';
 import Button from '../components/global/Button';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { modemErrors } from '../data/dummyData';
+import Menu from '../../assets/icons/bars.svg';
+import NotificationLight from '../../assets/icons/notification.svg';
 
 const fallbackDetails = {
   drtSlNo: '2345',
@@ -88,21 +91,22 @@ const ModemDetailsScreen = ({ route, navigation }) => {
           end={{ x: 1, y: 1 }}
           style={styles.heroCard}
         >
-          <View style={styles.heroOverlayCircleLarge} />
-          <View style={styles.heroOverlayCircleSmall} />
+
 
           <View style={styles.heroTopRow}>
-            <TouchableOpacity style={styles.iconChip} onPress={() => navigation?.goBack?.()}>
-              <Ionicons name="chevron-back" size={18} color={colors.primary} />
+            <TouchableOpacity style={styles.barsIcon} onPress={() => navigation?.goBack?.()}>
+              <Menu width={18} height={18} fill="#202d59" />
             </TouchableOpacity>
 
-            <Logo width={60} height={24} />
+            <View style={styles.logoWrapper}>
+              <RippleLogo size={68} />
+            </View>
 
             <TouchableOpacity
-              style={styles.iconChip}
+              style={styles.bellIcon}
               onPress={() => navigation?.navigate?.('Profile')}
             >
-              <Ionicons name="notifications-outline" size={18} color={colors.primary} />
+              <NotificationLight width={18} height={18} fill="#202d59" />
             </TouchableOpacity>
           </View>
 
@@ -206,7 +210,7 @@ const IssueCard = ({ issue }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#fff',
   },
   scroll: {
     flex: 1,
@@ -215,9 +219,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   heroCard: {
-    margin: spacing.md,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
     overflow: 'hidden',
   },
   heroOverlayCircleLarge: {
@@ -244,6 +245,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 5,
+    paddingHorizontal: 15,
+  },
+  logoWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
   iconChip: {
     width: 40,
@@ -253,6 +262,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 2,
+  },
+  barsIcon: {
+    backgroundColor: '#ffffff',
+    width: 54,
+    height: 54,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+    zIndex: 2,
+  },
+  bellIcon: {
+    backgroundColor: '#ffffff',
+    width: 54,
+    height: 54,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+    zIndex: 2,
   },
   heroContent: {
     flexDirection: 'row',
