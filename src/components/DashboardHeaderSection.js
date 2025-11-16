@@ -1,67 +1,15 @@
-import { View, Text, StyleSheet, Pressable, Dimensions } from "react-native";
-import React, { useEffect, useRef, useState } from "react";
+import { View, Text, StyleSheet, Pressable } from "react-native";
+import React, { useState } from "react";
 import { COLORS } from "../constants/colors";
 import GlobeShield from "../../assets/icons/globe-shield.svg";
 import Hand from "../../assets/icons/hand.svg";
 import Plus from "../../assets/icons/plus.svg";
 import Menu from "../../assets/icons/bars.svg";
 import Notification from "../../assets/icons/notification.svg";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  interpolate,
-  runOnJS,
-} from "react-native-reanimated";
-import { Easing } from "react-native-reanimated";
-import Logo from "./global/Logo";
-
-const { width, height } = Dimensions.get("window");
-
-const RING_COUNT = 100;
-const RING_DELAY = 800;
-const ANIMATION_DURATION = 5000;
-
-const Ring = ({ index, progress }) => {
-  const ringStyle = useAnimatedStyle(() => {
-    const delay = index * RING_DELAY;
-    const localProgress =
-      Math.max(0, progress.value - delay) / ANIMATION_DURATION;
-    const clamped = Math.min(localProgress, 1);
-
-    return {
-      opacity: interpolate(clamped, [0, 0.1, 1], [0, 0.6, 0]),
-
-      transform: [
-        {
-          scale: interpolate(clamped, [0, 1], [0.4, 4]),
-        },
-      ],
-    };
-  });
-
-  return <Animated.View style={[styles.ring, ringStyle]} />;
-};
+import RippleLogo from "./global/RippleLogo";
 
 const DashboardHeaderSection = ({ navigation, onLogout }) => {
-  const progress = useSharedValue(0);
   const [userName, setUserName] = useState("Field Engineer");
-
-  const loopAnimation = () => {
-    progress.value = 0;
-    progress.value = withTiming(
-      RING_DELAY * (RING_COUNT - 1) + ANIMATION_DURATION,
-      {
-        duration: RING_DELAY * (RING_COUNT - 1) + ANIMATION_DURATION,
-        easing: Easing.inOut(Easing.ease), // Smooth easing
-      },
-      () => runOnJS(loopAnimation)()
-    );
-  };
-
-  useEffect(() => {
-    loopAnimation();
-  }, []);
 
   return (
     <>
@@ -73,10 +21,7 @@ const DashboardHeaderSection = ({ navigation, onLogout }) => {
             <Menu width={18} height={18} fill="#202d59" />
           </Pressable>
           <View style={styles.logoWrapper}>
-            {Array.from({ length: RING_COUNT }).map((_, index) => (
-              <Ring key={index} index={index} progress={progress} />
-            ))}
-            <Logo variant="blue" size="medium" />
+            <RippleLogo size={68} />
           </View>
           <Pressable
             style={styles.bellIcon}
