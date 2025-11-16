@@ -6,18 +6,48 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Logo from '../components/global/Logo';
+import RippleLogo from '../components/global/RippleLogo';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
+import { COLORS } from '../constants/colors';
 import checkWireImg from '../../assets/check-wire.png';
 import checkVoltageImg from '../../assets/check-voltage.png';
 import checkCommImg from '../../assets/communication.png';
+import Menu from '../../assets/icons/bars.svg';
+import MenuIcon from '../../assets/icons/bars.svg';
+import NotificationLight from '../../assets/icons/notification.svg';
+import NotificationIcon from '../../assets/icons/notificationDark.svg';
+import DashboardIcon from '../../assets/icons/dashboardMenu.svg';
+import ActiveDashboard from '../../assets/icons/activeDashboard.svg';
+import UsageIcon from '../../assets/icons/usageMenu.svg';
+import ActiveUsage from '../../assets/icons/activeUsage.svg';
+import PaymentsIcon from '../../assets/icons/paymentsMenu.svg';
+import ActivePayments from '../../assets/icons/activePayments.svg';
+import TransactionsIcon from '../../assets/icons/transactionMenu.svg';
+import ActiveTransactions from '../../assets/icons/transactionsActive.svg';
+import TicketsIcon from '../../assets/icons/ticketsMenu.svg';
+import ActiveTickets from '../../assets/icons/activeTickets.svg';
+import SettingsIcon from '../../assets/icons/settingMenu.svg';
+import ActiveSettings from '../../assets/icons/activeSettings.svg';
+import LogoutIcon from '../../assets/icons/logoutMenu.svg';
+import ActiveLogout from '../../assets/icons/activeLogout.svg';
+
+// Ensure all text on this screen uses Manrope by default without changing sizes
+if (!Text.defaultProps) {
+  Text.defaultProps = {};
+}
+Text.defaultProps.style = [
+  Text.defaultProps.style,
+  { fontFamily: 'Manrope-Regular' },
+];
 import successImg from '../../assets/success.png';
 
 
@@ -51,6 +81,8 @@ const TroubleshootScreen = ({ navigation, route }) => {
   const modem = route?.params?.modem;
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [feedback, setFeedback] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeMenuItem, setActiveMenuItem] = useState('Dashboard');
 
   const currentStep = troubleshootSteps[currentStepIndex];
   const isComplete = currentStepIndex >= troubleshootSteps.length;
@@ -94,22 +126,22 @@ const TroubleshootScreen = ({ navigation, route }) => {
           end={{ x: 1, y: 1 }}
           style={styles.heroCard}
         >
-          <View style={styles.heroOverlayCircleLarge} />
-          <View style={styles.heroOverlayCircleSmall} />
 
           <View style={styles.heroTopRow}>
-            <TouchableOpacity style={styles.iconChip} onPress={() => navigation?.goBack?.()}>
-              <Ionicons name="chevron-back" size={18} color={colors.primary} />
-            </TouchableOpacity>
+            <Pressable style={styles.barsIcon} onPress={() => setIsMenuOpen(true)}>
+              <Menu width={18} height={18} fill="#202d59" />
+            </Pressable>
 
-            <Logo width={60} height={24} />
+            <View style={styles.logoWrapper}>
+              <RippleLogo size={68} />
+            </View>
 
-            <TouchableOpacity
-              style={styles.iconChip}
+            <Pressable
+              style={styles.bellIcon}
               onPress={() => navigation?.navigate?.('Profile')}
             >
-              <Ionicons name="notifications-outline" size={18} color={colors.primary} />
-            </TouchableOpacity>
+              <NotificationLight width={18} height={18} fill="#202d59" />
+            </Pressable>
           </View>
 
           <ModemStatusCard
@@ -137,8 +169,41 @@ const TroubleshootScreen = ({ navigation, route }) => {
           />
         )}
       </ScrollView>
+
+      {isMenuOpen && (
+        <SideMenuOverlay
+          activeItem={activeMenuItem}
+          onSelect={(itemKey) => {
+            setActiveMenuItem(itemKey);
+            handleMenuNavigation(itemKey, navigation);
+            setIsMenuOpen(false);
+          }}
+          onClose={() => setIsMenuOpen(false)}
+          onLogout={() => {
+            setActiveMenuItem('Logout');
+            navigation?.replace?.('Login');
+            setIsMenuOpen(false);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
+};
+
+const handleMenuNavigation = (itemKey, navigation) => {
+  const routeMap = {
+    Dashboard: 'Dashboard',
+    Usage: 'Dashboard',
+    PostPaidRechargePayments: 'Alerts',
+    Transactions: 'ModemDetails',
+    DG: 'Dashboard',
+    Settings: 'Dashboard',
+  };
+
+  const routeName = routeMap[itemKey];
+  if (routeName) {
+    navigation?.navigate?.(routeName);
+  }
 };
 
 const StepIndicator = ({ currentStepIndex, totalSteps }) => (
@@ -208,7 +273,7 @@ const SuccessCard = ({ image, onComplete }) => (
     <Text style={styles.successTitle}>Success</Text>
     <Text style={styles.successSubtitle}>Issue successfully resolved</Text>
     <Text style={styles.successBody}>The meter is now communicating properly.</Text>
-    <Button title="Complete Job" onPress={onComplete} style={styles.completeButton} />
+    <Button title="Resolve Completed" onPress={onComplete} style={styles.completeButton} />
   </View>
 );
 
@@ -224,10 +289,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   heroCard: {
-    margin: spacing.md,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    overflow: 'hidden',
+    paddingHorizontal:18,
+    paddingBottom:15  
   },
   heroOverlayCircleLarge: {
     position: 'absolute',
@@ -235,7 +298,6 @@ const styles = StyleSheet.create({
     height: 280,
     borderRadius: 140,
     borderWidth: 1,
-    borderColor: '#d6e8dc',
     top: -80,
     right: -80,
   },
@@ -254,6 +316,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  logoWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
   iconChip: {
     width: 40,
     height: 40,
@@ -262,6 +329,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 2,
+  },
+  barsIcon: {
+    backgroundColor: COLORS.secondaryFontColor,
+    width: 54,
+    height: 54,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+    zIndex: 2,
+  },
+  bellIcon: {
+    backgroundColor: COLORS.secondaryFontColor,
+    width: 54,
+    height: 54,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+    zIndex: 2,
   },
   heroStatusCard: {
     marginTop: spacing.lg,
@@ -274,9 +361,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   stepCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 35,
+    height: 35,
+    borderRadius: 35,
     borderWidth: 1,
     borderColor: '#d7e2d9',
     alignItems: 'center',
@@ -290,6 +377,8 @@ const styles = StyleSheet.create({
   stepNumber: {
     ...typography.small,
     color: colors.textSecondary,
+    fontSize:14,
+    fontFamily: 'Manrope-SemiBold',
   },
   stepNumberActive: {
     color: '#fff',
@@ -323,13 +412,15 @@ const styles = StyleSheet.create({
   stepTitle: {
     ...typography.caption,
     color: '#163B7C',
-    fontWeight: '500',
+    fontFamily: 'Manrope-SemiBold',
+    fontSize:16
   },
   stepDescription: {
     ...typography.small,
     color: '#898992',
-    fontWeight: '400',
     marginTop: spacing.sm,
+    fontSize:13,
+    fontFamily: 'Manrope-Regular',
   },
   questionBlock: {
     marginHorizontal: spacing.md,
@@ -339,7 +430,8 @@ const styles = StyleSheet.create({
   questionLabel: {
     ...typography.caption,
     color: colors.textPrimary,
-    marginBottom: spacing.lg,
+    marginBottom: 10,
+    color: '#163B7C'
   },
   responseRow: {
     flexDirection: 'row',
@@ -348,7 +440,7 @@ const styles = StyleSheet.create({
   responseButton: {
     flex: 1,
     paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
+    borderRadius: 5,
     alignItems: 'center',
   },
   responseButtonYes: {
@@ -390,22 +482,275 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   successSubtitle: {
-    ...typography.body,
+    ...typography.caption,
     color: colors.primary,
-    fontWeight: '600',
+    fontFamily: 'Manrope-Medium',
+    fontSize:16,
     marginTop: spacing.xs,
   },
   successBody: {
     ...typography.body,
-    color: colors.textSecondary,
+    fontSize:14,
     marginTop: spacing.xs,
     textAlign: 'center',
+    fontFamily:'Manrope-Regular',
   },
   completeButton: {
     marginTop: spacing.lg,
     alignSelf: 'stretch',
+    borderRadius:5,
+    marginTop:40,
+  },
+  sideMenuRoot: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 99,
+  },
+  sideMenuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  sideMenuPanel: {
+    flex: 1,
+    backgroundColor: COLORS.brandBlueColor,
+    paddingTop: 75,
+    paddingHorizontal: 30,
+  },
+  sideMenuTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 35,
+  },
+  sideMenuCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  circleLight: {
+    backgroundColor: COLORS.secondaryFontColor,
+  },
+  circleSecondary: {
+    backgroundColor: COLORS.secondaryColor,
+  },
+  circleIconLight: {
+    backgroundColor: '#fff',
+  },
+  sideMenuContent: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  menuListWrapper: {
+    width: '45%',
+    paddingRight: 20,
+    justifyContent: 'space-between',
+  },
+  menuList: {},
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  menuIcon: {
+    marginRight: 20,
+    opacity: 0.5,
+  },
+  menuText: {
+    fontSize: 16,
+    fontFamily: 'Manrope-Medium',
+    color: COLORS.secondaryFontColor,
+    opacity: 0.7,
+  },
+  menuTextActive: {
+    opacity: 1,
+    fontFamily: 'Manrope-Bold',
+  },
+  menuFooter: {
+    paddingBottom: 30,
+  },
+  logoutButtonRow: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  logoutText: {
+    fontSize: 16,
+    fontFamily: 'Manrope-Medium',
+    color: COLORS.secondaryFontColor,
+    opacity: 0.7,
+  },
+  logoutIcon: {
+    marginRight: 20,
+    opacity: 0.6,
+  },
+  menuVersion: {
+    fontSize: 12,
+    fontFamily: 'Manrope-Medium',
+    color: '#89A1F3',
+    marginTop: 10,
+  },
+  menuPreviewWrapper: {
+    flex: 1,
+    position: 'relative',
+    paddingLeft: 40,
+  },
+  previewCard: {
+    flex: 1,
+    backgroundColor: '#eef8f0',
+    borderTopLeftRadius: 20,
+    borderBottomLeftRadius: 20,
+    padding: 24,
+    elevation: 10,
+  },
+  previewGhost: {
+    position: 'absolute',
+    top: 80,
+    bottom: 0,
+    left: 25,
+    right: 0,
+    backgroundColor: '#eef8f0',
+    opacity: 0.3,
+    borderTopLeftRadius: 30,
+    borderBottomLeftRadius: 20,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontFamily: 'Manrope-Bold',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  previewSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Manrope-Medium',
+    color: colors.textSecondary,
   },
 });
+
+const MENU_ITEMS = [
+  {
+    key: 'Dashboard',
+    label: 'Dashboard',
+    Icon: DashboardIcon,
+    ActiveIcon: ActiveDashboard,
+  },
+  {
+    key: 'Usage',
+    label: 'Usage',
+    Icon: UsageIcon,
+    ActiveIcon: ActiveUsage,
+  },
+  {
+    key: 'PostPaidRechargePayments',
+    label: 'Payments',
+    Icon: PaymentsIcon,
+    ActiveIcon: ActivePayments,
+  },
+  {
+    key: 'Transactions',
+    label: 'Transactions',
+    Icon: TransactionsIcon,
+    ActiveIcon: ActiveTransactions,
+  },
+  {
+    key: 'DG',
+    label: 'Diesel Generator',
+    Icon: TicketsIcon,
+    ActiveIcon: ActiveTickets,
+  },
+  {
+    key: 'Settings',
+    label: 'Settings',
+    Icon: SettingsIcon,
+    ActiveIcon: ActiveSettings,
+  },
+];
+
+const SideMenuOverlay = ({ activeItem, onSelect, onClose, onLogout }) => (
+  <View pointerEvents="box-none" style={styles.sideMenuRoot}>
+    <Pressable style={styles.sideMenuBackdrop} onPress={onClose} />
+
+    <View style={styles.sideMenuPanel}>
+      <View style={styles.sideMenuTopRow}>
+        <Pressable style={[styles.sideMenuCircle, styles.circleLight]} onPress={onClose}>
+          <MenuIcon width={18} height={18} fill="#202d59" />
+        </Pressable>
+
+        <Logo variant="white" size="medium" />
+
+        <Pressable
+          style={[styles.sideMenuCircle, styles.circleIconLight]}
+          onPress={() => {
+            onClose();
+          }}
+        >
+          <NotificationIcon width={18} height={18} fill="#0c1f3d" />
+        </Pressable>
+      </View>
+
+      <View style={styles.sideMenuContent}>
+        <View style={styles.menuListWrapper}>
+          <SideMenuNavigation activeItem={activeItem} onSelect={onSelect} onLogout={onLogout} />
+        </View>
+
+        <View style={styles.menuPreviewWrapper}>
+          <View style={styles.previewCard}>
+            <Text style={styles.previewTitle}>Need quick insights?</Text>
+            <Text style={styles.previewSubtitle}>
+              Access your modem diagnostics, payments, and tickets without leaving the field.
+            </Text>
+          </View>
+          <View style={styles.previewGhost} />
+        </View>
+      </View>
+    </View>
+  </View>
+);
+
+const SideMenuNavigation = ({ activeItem, onSelect, onLogout }) => (
+  <>
+    <View style={styles.menuList}>
+      {MENU_ITEMS.map((item) => {
+        const ItemIcon = activeItem === item.key ? item.ActiveIcon : item.Icon;
+        return (
+          <Pressable key={item.key} style={styles.menuRow} onPress={() => onSelect(item.key)}>
+            <ItemIcon width={18} height={18} style={styles.menuIcon} />
+            <Text
+              style={[
+                styles.menuText,
+                activeItem === item.key && styles.menuTextActive,
+              ]}
+            >
+              {item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+
+    <View style={styles.menuFooter}>
+      <Button
+        title="Logout"
+        variant="ghost"
+        size="small"
+        onPress={onLogout}
+        style={styles.logoutButtonRow}
+        textStyle={styles.logoutText}
+      >
+        {activeItem === 'Logout' ? (
+          <ActiveLogout width={18} height={18} style={styles.logoutIcon} />
+        ) : (
+          <LogoutIcon width={18} height={18} style={styles.logoutIcon} />
+        )}
+      </Button>
+      <Text style={styles.menuVersion}>Version 1.0.26</Text>
+    </View>
+  </>
+);
 
 export default TroubleshootScreen;
 
