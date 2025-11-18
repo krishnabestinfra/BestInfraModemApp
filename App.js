@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import AppNavigator from './src/navigation/AppNavigator';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import AppNavigator from './src/navigation/AppNavigator';
+import { SidebarProvider } from './src/context/SidebarContext';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -29,7 +30,9 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <AppNavigator />
+      <SidebarProvider>
+        <AppNavigator />
+      </SidebarProvider>
     </SafeAreaProvider>
   );
 }
