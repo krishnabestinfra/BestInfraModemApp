@@ -129,7 +129,7 @@ const DashboardScreen = ({ navigation }) => {
           <View style={styles.metricsRow}>
             <TouchableOpacity
               style={styles.metricCard}
-              onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'ALL' })}
+              onPress={() => navigation.navigate("ModemDetails")}
               activeOpacity={0.7}
             >
               <View style={styles.textContainer}>
@@ -142,7 +142,7 @@ const DashboardScreen = ({ navigation }) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.metricCard}
-              onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'COMMISSIONED' })}
+              onPress={() => navigation.navigate("ModemDetails")}
               activeOpacity={0.7}
             >
               <View style={styles.textContainer}>
