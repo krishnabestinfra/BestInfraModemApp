@@ -6,8 +6,7 @@ import MenuIcon from "../../assets/icons/barsWhite.svg";
 import NotificationIcon from "../../assets/icons/notification.svg";
 import Logo from "../components/global/Logo";
 
-import Dashboard from "../screens/DashboardScreen";
-import Alerts from "../screens/AlertsScreen";
+import DashboardScreen from "../screens/DashboardScreen";
 import Troubleshoot from "../screens/TroubleshootScreen";
 import Profile from "../screens/ProfileScreen";
 import { useSidebar } from "../context/SidebarContext";
@@ -27,21 +26,27 @@ import ModemsIcon from "../../assets/icons/modem.svg";
 const SideMenu = ({ navigation }) => {
   const { activeItem, setActiveItem } = useSidebar();
 
-  // WHICH SCREEN TO SHOW INSIDE THE RIGHT PANEL
+
   const renderContent = () => {
     switch (activeItem) {
-      case "Dashboard":
-        return <Dashboard />;
-      case "Alerts":
-        return <Alerts />;
-      case "Troubleshoot":
-        return <Troubleshoot />;
-      case "Profile":
-        return <Profile />;
+      case "Accounts":
+        return <DashboardScreen navigation={navigation} />;
+  
+      case "Modems":
+        return <DashboardScreen navigation={navigation} />;
+  
+      case "Resolved":
+        return <Troubleshoot navigation={navigation} />;
+      
+      case "Support":
+        return <ProfileScreen navigation={navigation} />;
+  
       default:
-        return <Dashboard />;
+        return <DashboardScreen navigation={navigation} />;
     }
   };
+  
+  
 
 
   const handleMenuPress = (item) => {
@@ -87,7 +92,7 @@ const SideMenu = ({ navigation }) => {
               {
                 key: "Modems",
                 label: "Modems",
-                route: "Alerts",
+                route: "Dashboard",
                 Icon: ModemsIcon,
                 ActiveIcon: ActiveUsage
               },
