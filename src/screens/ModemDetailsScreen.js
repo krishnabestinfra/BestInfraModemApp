@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable } from 'react-native';
+import React, { useMemo, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -49,11 +49,16 @@ const statusMetaMap = {
   default: { label: 'Active', color: colors.secondary, bg: '#E6F7EE' },
 };
 
+const API_BASE_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
+
 const ModemDetailsScreen = ({ route, navigation }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeMenuItem, setActiveMenuItem] = useState('Transactions');
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(true);
   
-  const modem = route?.params?.modem ?? {
+  const modemSlNo = route?.params?.modemSlNo || route?.params?.modem?.modemId;
+  const fallbackModem = route?.params?.modem ?? {
     modemId: 'MDM000',
     status: 'warning',
     error: 'Unknown',
@@ -63,6 +68,112 @@ const ModemDetailsScreen = ({ route, navigation }) => {
     signalStrength: '—',
   };
 
+  const getStatusFromCode = (code) => {
+    const codeMap = {
+      202: 'warning', // Modem / DCU Auto Restart
+      213: 'success', // Meter COM Restored
+      214: 'disconnected', // DCU / Modem Power Failed
+      215: 'success', // DCU / Modem Power Restored
+      212: 'disconnected', // Meter COM Failed
+    };
+    return codeMap[code] || 'default';
+  };
+
+  useEffect(() => {
+    if (modemSlNo && modemSlNo !== 'N/A') {
+      fetchModemDetails();
+    } else {
+      console.warn('No modemSlNo provided, using fallback data');
+      setLoading(false);
+    }
+  }, [modemSlNo]);
+
+  const fetchModemDetails = async () => {
+    try {
+      setLoading(true);
+      const url = `${API_BASE_URL}/${encodeURIComponent(modemSlNo)}`;
+      console.log('Fetching modem details from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const json = await response.json();
+      console.log('API Response:', JSON.stringify(json, null, 2));
+      
+      // Handle different response structures
+      let alertData = null;
+      
+      if (json.success !== undefined) {
+        // Response has success field
+        if (json.success) {
+          // Try different possible structures
+          alertData = json.alert || json.data || json.result || (json.alerts && json.alerts[0]) || null;
+        }
+      } else if (json.modemSlNo || json.sno) {
+        // Direct alert object without success wrapper
+        alertData = json;
+      } else if (Array.isArray(json) && json.length > 0) {
+        // Array response, take first item
+        alertData = json[0];
+      }
+      
+      if (alertData && (alertData.modemSlNo || alertData.sno)) {
+        setApiData(alertData);
+        console.log('Successfully set API data:', alertData.modemSlNo);
+      } else {
+        console.warn('API response missing valid alert data, using fallback');
+        setApiData(null);
+      }
+    } catch (error) {
+      console.error('Error fetching modem details:', error.message);
+      setApiData(null);
+      // Continue with fallback data
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Use API data if available, otherwise use fallback
+  const modem = useMemo(() => {
+    if (apiData && (apiData.modemSlNo || apiData.sno)) {
+      return {
+        modemId: apiData.modemSlNo || fallbackModem.modemId,
+        status: getStatusFromCode(apiData.code),
+        error: apiData.codeDesc || fallbackModem.error,
+        reason: apiData.codeDesc || fallbackModem.reason,
+        location: apiData.imei || fallbackModem.location,
+        date: apiData.modemDate ? `${apiData.modemDate} ${apiData.modemTime || ''}` : fallbackModem.date,
+        signalStrength: apiData.signalStrength1 || apiData.signalStrength2 || fallbackModem.signalStrength,
+        discom: apiData.discom || 'N/A',
+        meterSlNo: apiData.meterSlNo || 'N/A',
+        fwVer: apiData.fwVer || 'N/A',
+        meterMake: apiData.meterMake || 'N/A',
+        apn: apiData.apn || 'N/A',
+        simService: apiData.simService || 'N/A',
+        simNumber: apiData.simNumber || 'N/A',
+        sysmode: apiData.sysmode || 'N/A',
+        freqMode: apiData.freqMode || 'N/A',
+        uid: apiData.uid || 'N/A',
+        logTimestamp: apiData.logTimestamp || 'N/A',
+        prevFwver: apiData.prevFwver || 'N/A',
+        updatedFwver: apiData.updatedFwver || 'N/A',
+        originalData: apiData,
+      };
+    }
+    return fallbackModem;
+  }, [apiData, fallbackModem]);
+
   const statusMeta =
     statusMetaMap[modem.status] ??
     (modem.status?.toLowerCase?.() === 'non-communicating'
@@ -70,24 +181,46 @@ const ModemDetailsScreen = ({ route, navigation }) => {
       : statusMetaMap.default);
 
   const detailFields = useMemo(() => {
-    const merged = {
-      ...fallbackDetails,
-      ...modem.details,
-    };
-
-    return [
-      { label: 'DRT SL No.', value: merged.drtSlNo },
-      { label: 'Feeder Name', value: merged.feederName },
-      { label: 'Feeder No.', value: merged.feederNo },
-      { label: 'Substation Name', value: merged.substationName },
-      { label: 'Substation No.', value: merged.substationNo },
-      { label: 'Section', value: merged.section },
-      { label: 'Sub Division', value: merged.subDivision },
-      { label: 'Division', value: merged.division },
-      { label: 'Circle', value: merged.circle },
-      { label: 'Organisation', value: merged.organisation },
-    ];
-  }, [modem.details]);
+    // Use API data if available, otherwise use fallback
+    const fields = [];
+    
+    if (apiData) {
+      // Show API data fields
+      fields.push(
+        { label: 'Modem SL No.', value: modem.modemId || modemSlNo || 'N/A' },
+        { label: 'Meter SL No.', value: modem.meterSlNo || 'N/A' },
+        { label: 'IMEI', value: modem.location || 'N/A' },
+        { label: 'Discom', value: modem.discom || 'N/A' },
+        { label: 'FW Version', value: modem.fwVer || 'N/A' },
+        { label: 'Meter Make', value: modem.meterMake || 'N/A' },
+        { label: 'APN', value: modem.apn || 'N/A' },
+        { label: 'SIM Service', value: modem.simService || 'N/A' },
+        { label: 'SIM Number', value: modem.simNumber || 'N/A' },
+        { label: 'System Mode', value: modem.sysmode || 'N/A' },
+        { label: 'Frequency Mode', value: modem.freqMode || 'N/A' },
+        { label: 'Signal Strength', value: modem.signalStrength && modem.signalStrength !== '—' ? `${modem.signalStrength} dBm` : 'N/A' },
+        { label: 'UID', value: modem.uid || 'N/A' },
+        { label: 'Log Timestamp', value: modem.logTimestamp || 'N/A' },
+      );
+    } else {
+      // Show fallback fields
+      fields.push(
+        { label: 'Modem SL No.', value: modem.modemId || 'N/A' },
+        { label: 'DRT SL No.', value: fallbackDetails.drtSlNo },
+        { label: 'Feeder Name', value: fallbackDetails.feederName },
+        { label: 'Feeder No.', value: fallbackDetails.feederNo },
+        { label: 'Substation Name', value: fallbackDetails.substationName },
+        { label: 'Substation No.', value: fallbackDetails.substationNo },
+        { label: 'Section', value: fallbackDetails.section },
+        { label: 'Sub Division', value: fallbackDetails.subDivision },
+        { label: 'Division', value: fallbackDetails.division },
+        { label: 'Circle', value: fallbackDetails.circle },
+        { label: 'Organisation', value: fallbackDetails.organisation },
+      );
+    }
+    
+    return fields;
+  }, [modem, apiData, modemSlNo]);
 
   const relatedIssues = useMemo(
     () => modemErrors.filter((item) => item.modemId === modem.modemId),
@@ -97,6 +230,18 @@ const ModemDetailsScreen = ({ route, navigation }) => {
   const handleResolve = () => {
     navigation?.navigate?.('Troubleshoot', { modem, status: statusMeta.label });
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style="dark" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading modem details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -682,6 +827,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Manrope-Medium',
     color: colors.textSecondary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
   },
 });
 

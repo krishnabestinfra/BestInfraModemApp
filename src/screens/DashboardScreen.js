@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TextInput,
   Pressable,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -48,6 +49,7 @@ import Hand from '../../assets/icons/hand.svg';
 import Plus from '../../assets/icons/plus.svg';
 import MeterInstallIcon from '../../assets/icons/meterWhite.svg';
 import MeterStatusIcon from '../../assets/icons/meterBolt.svg';
+import CalendarIcon from '../../assets/icons/CalendarNew.svg';
 
 // Ensure all text on this screen uses Manrope by default without altering sizes.
 if (!Text.defaultProps) {
@@ -60,18 +62,161 @@ Text.defaultProps.style = [
 
 const { width } = Dimensions.get('window');
 
+const API_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
+
 const DashboardScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeMenuItem, setActiveMenuItem] = useState('Dashboard');
   const [notificationList] = useState(notificationSeed);
   const [userName] = useState('Field Engineer');
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchApiData();
+  }, []);
+
+  const fetchApiData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(API_URL);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const json = await response.json();
+      if (json.success && json.alerts && Array.isArray(json.alerts)) {
+        setApiData(json);
+      } else {
+        console.warn('API response missing expected data structure');
+        setApiData(null);
+      }
+    } catch (error) {
+      console.error('Error fetching API data:', error);
+      // Fallback to dummy data on error
+      setApiData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Map API code to status
+  const getStatusFromCode = (code) => {
+    const codeMap = {
+      202: 'warning', // Modem / DCU Auto Restart
+      213: 'success', // Meter COM Restored
+      214: 'disconnected', // DCU / Modem Power Failed
+      215: 'success', // DCU / Modem Power Restored
+      212: 'disconnected', // Meter COM Failed
+    };
+    return codeMap[code] || 'default';
+  };
+
+  // Transform API alerts to modem format
+  const transformedAlerts = useMemo(() => {
+    if (!apiData?.alerts || !Array.isArray(apiData.alerts) || apiData.alerts.length === 0) {
+      return modemErrors;
+    }
+    
+    return apiData.alerts.map((alert, index) => ({
+      id: alert.sno?.toString() || alert.modemSlNo || `alert-${index}`,
+      modemId: alert.modemSlNo || 'N/A',
+      location: alert.imei || 'N/A',
+      error: alert.codeDesc || 'N/A',
+      reason: alert.codeDesc || 'N/A',
+      date: alert.modemDate ? `${alert.modemDate} ${alert.modemTime || ''}` : 'N/A',
+      status: getStatusFromCode(alert.code),
+      signalStrength: alert.signalStrength1 || 0,
+      discom: alert.discom || 'N/A',
+      meterSlNo: alert.meterSlNo || 'N/A',
+      code: alert.code,
+      // Keep original alert data for details screen
+      originalAlert: alert,
+    }));
+  }, [apiData]);
+
+  // Calculate metrics from API data
+  const dashboardMetrics = useMemo(() => {
+    if (!apiData) {
+      return {
+        communicatingModems: 0,
+        nonCommunicatingModems: 0,
+        totalTasksToday: 0,
+        completedTasksToday: 0,
+      };
+    }
+
+    // Calculate communicating vs non-communicating modems from alertsByCode
+    let communicatingCount = 0;
+    let nonCommunicatingCount = 0;
+
+    if (apiData.alertsByCode && Array.isArray(apiData.alertsByCode)) {
+      apiData.alertsByCode.forEach((item) => {
+        // Codes 202 (Auto Restart), 213 (COM Restored), 215 (Power Restored) = communicating
+        if ([202, 213, 215].includes(item.code)) {
+          communicatingCount += item.uniqueModems || 0;
+        }
+        // Codes 214 (Power Failed), 212 (COM Failed) = non-communicating
+        if ([214, 212].includes(item.code)) {
+          nonCommunicatingCount += item.uniqueModems || 0;
+        }
+      });
+    }
+
+    // Calculate today's tasks from timelineData
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let totalTasksToday = 0;
+    let completedTasksToday = 0;
+
+    // Find today's data from timelineData
+    if (apiData.timelineData && Array.isArray(apiData.timelineData)) {
+      const todayData = apiData.timelineData.find((item) => {
+        const itemDate = new Date(item.date);
+        itemDate.setHours(0, 0, 0, 0);
+        return itemDate.getTime() === today.getTime();
+      });
+      
+      if (todayData) {
+        totalTasksToday = todayData.count || 0;
+      }
+    }
+
+    // Calculate completed tasks (success codes 213, 215) from today's alerts
+    if (apiData.alerts && Array.isArray(apiData.alerts)) {
+      const todayAlerts = apiData.alerts.filter((alert) => {
+        if (!alert.logTimestamp) return false;
+        const alertDate = new Date(alert.logTimestamp);
+        alertDate.setHours(0, 0, 0, 0);
+        return alertDate.getTime() === today.getTime();
+      });
+
+      completedTasksToday = todayAlerts.filter(
+        (alert) => [213, 215].includes(alert.code)
+      ).length;
+    }
+
+    return {
+      communicatingModems: communicatingCount || 0,
+      nonCommunicatingModems: nonCommunicatingCount || 0,
+      totalTasksToday: totalTasksToday || 0,
+      completedTasksToday: completedTasksToday || 0,
+    };
+  }, [apiData]);
+
   const wipData = useMemo(
     () => ({
-      metersInstalled: modemStats.connected,
-      metersCommissioned: modemStats.disconnected,
+      metersInstalled: apiData?.stats?.uniqueModems || modemStats.connected,
+      metersCommissioned: apiData?.stats?.totalAlerts || modemStats.disconnected,
+      totalAlerts: apiData?.stats?.totalAlerts || '0',
+      uniqueMeters: apiData?.stats?.uniqueMeters || '0',
+      uniqueDiscoms: apiData?.stats?.uniqueDiscoms || '0',
+      avgSignalStrength: apiData?.stats?.avgSignalStrength1 || '0',
+      // Add dashboard metrics
+      ...dashboardMetrics,
     }),
-    []
+    [apiData, dashboardMetrics]
   );
 
   const notificationIconMapper = useMemo(
@@ -105,17 +250,26 @@ const DashboardScreen = ({ navigation }) => {
   );
 
   const filteredModems = useMemo(() => {
+    const dataToFilter = transformedAlerts;
     if (!searchQuery.trim()) {
-      return modemErrors;
+      return dataToFilter;
     }
     const query = searchQuery.toLowerCase();
-    return modemErrors.filter((item) =>
-      [item.modemId, item.location, item.error, item.reason]
+    return dataToFilter.filter((item) => {
+      const searchableText = [
+        item.modemId || '',
+        item.location || '',
+        item.error || '',
+        item.reason || '',
+        item.discom || '',
+        item.meterSlNo || '',
+      ]
+        .filter(Boolean) // Remove empty strings
         .join(' ')
-        .toLowerCase()
-        .includes(query)
-    );
-  }, [searchQuery]);
+        .toLowerCase();
+      return searchableText.includes(query);
+    });
+  }, [searchQuery, transformedAlerts]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -156,8 +310,10 @@ const DashboardScreen = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Connected Modems</Text>
-                <Text style={styles.metricValue}>{wipData?.metersInstalled ?? 0}</Text>
+                <Text style={styles.metricTitle}>Communicating Modems</Text>
+                <Text style={styles.metricValue}>
+                  {loading ? '...' : (wipData?.communicatingModems ?? 0)}
+                </Text>
               </View>
               <View style={styles.metricIconContainer}>
                 <MeterInstallIcon width={24} height={24} />
@@ -169,11 +325,45 @@ const DashboardScreen = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Disconnected Modems</Text>
-                <Text style={styles.metricValue}>{wipData?.metersCommissioned ?? 0}</Text>
+                <Text style={styles.metricTitle}>Non- Communicating Modems</Text>
+                <Text style={styles.metricValue}>
+                  {loading ? '...' : (wipData?.nonCommunicatingModems ?? 0)}
+                </Text>
               </View>
               <View style={styles.metricIconContainer}>
                 <MeterInstallIcon width={24} height={24} />
+              </View>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.metricsRow}>
+            <TouchableOpacity
+              style={styles.metricCard}
+              onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'ALL' })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.textContainer}>
+                <Text style={styles.metricTitle}>Total Tasks Today</Text>
+                <Text style={styles.metricValue}>
+                  {loading ? '...' : (wipData?.totalTasksToday ?? 0)}
+                </Text>
+              </View>
+              <View style={styles.metricIconContainer}>
+                <CalendarIcon width={24} height={24} />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.metricCard}
+              onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'COMMISSIONED' })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.textContainer}>
+                <Text style={styles.metricTitle}>Completed Tasks Today</Text>
+                <Text style={styles.metricValue}>
+                  {loading ? '...' : (wipData?.completedTasksToday ?? 0)}
+                </Text>
+              </View>
+              <View style={[styles.metricIconContainer, styles.metricIconContainerSuccess]}>
+                <CalendarIcon width={24} height={24} />
               </View>
             </TouchableOpacity>
           </View>
@@ -190,7 +380,10 @@ const DashboardScreen = ({ navigation }) => {
             />
             <SearchIcon width={16} height={16} />
           </View>
-          <TouchableOpacity style={styles.scanButton}>
+          <TouchableOpacity 
+            style={styles.scanButton}
+            onPress={() => navigation?.navigate?.('Demo')}
+          >
             <Text style={styles.scanText}>Scan</Text>
             <FilterIcon width={16} height={16} />
           </TouchableOpacity>
@@ -199,11 +392,21 @@ const DashboardScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-
         <View style={styles.cardsWrapper}>
-          {filteredModems.map((modem) => (
-            <ModemCard key={modem.id} modem={modem} navigation={navigation} />
-          ))}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Loading alerts...</Text>
+            </View>
+          ) : filteredModems.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No alerts found</Text>
+            </View>
+          ) : (
+            filteredModems.map((modem) => (
+              <ModemCard key={modem.id} modem={modem} navigation={navigation} />
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -268,22 +471,48 @@ const ModemCard = ({ modem, navigation }) => {
   const meta = statusConfig[modem.status] ?? statusConfig.default;
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return dateString;
-    const day = date.toLocaleDateString(undefined, {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-    const time = date.toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-    return `${day}  ·  ${time}`;
+    if (!dateString || dateString === 'N/A') return 'N/A';
+    try {
+      // Handle API date format: "17 Nov 2025 06:30:00 PM" or "17 Nov 2025 06:30:00 PM 11:45:24"
+      const dateStr = dateString.split(' ').slice(0, 4).join(' '); // Take first 4 parts (date + time)
+      const date = new Date(dateStr);
+      if (Number.isNaN(date.getTime())) {
+        // If parsing fails, try to return formatted string
+        return dateString.length > 20 ? dateString.substring(0, 20) : dateString;
+      }
+      const day = date.toLocaleDateString(undefined, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+      const time = date.toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      return `${day}  ·  ${time}`;
+    } catch {
+      return dateString.length > 20 ? dateString.substring(0, 20) : dateString;
+    }
   };
 
   const handleCardPress = () => {
-    navigation?.navigate?.('ModemDetails', { modem });
+    // Pass modemSlNo for API fetch, and keep modem data for fallback
+    const modemSlNo = modem.modemId || modem.originalAlert?.modemSlNo || modem.modemId;
+    
+    if (!modemSlNo || modemSlNo === 'N/A') {
+      console.warn('No valid modemSlNo found for navigation');
+      // Still navigate but with available data
+      navigation?.navigate?.('ModemDetails', { 
+        modem,
+        modemSlNo: modem.modemId 
+      });
+      return;
+    }
+
+    navigation?.navigate?.('ModemDetails', { 
+      modem,
+      modemSlNo: modemSlNo
+    });
   };
 
   const handleGetDirection = () => {
@@ -321,12 +550,16 @@ const ModemCard = ({ modem, navigation }) => {
           <View style={styles.subDataRow}>
             <View style={styles.subDataItem}>
               <Text style={styles.detailLabel}>Error</Text>
-              <Text style={styles.detailValueGreen}>{modem.error}</Text>
+              <Text style={styles.detailValueGreen} numberOfLines={1}>
+                {modem.error || 'N/A'}
+              </Text>
             </View>
 
             <View style={styles.subDataItem}>
-              <Text style={styles.detailLabel}>Meter Type</Text>
-              <Text style={styles.detailValueGreen}>Smart</Text>
+              <Text style={styles.detailLabel}>Discom</Text>
+              <Text style={styles.detailValueGreen} numberOfLines={1}>
+                {modem.discom || 'N/A'}
+              </Text>
             </View>
           </View>
 
@@ -389,7 +622,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 5,
     padding: 15,
-    width: (width - 48) / 2,
+    width: (width - 40) / 2,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -421,6 +654,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     fontFamily: 'Manrope-Regular',
+  },
+  metricSubtext: {
+    fontSize: 10,
+    color: '#999',
+    fontFamily: 'Manrope-Regular',
+    marginTop: 2,
+  },
+  metricIconContainerWarning: {
+    backgroundColor: '#FF9800',
+  },
+  metricIconContainerSuccess: {
+    backgroundColor: '#4CAF50',
   },
   searchCardWrapper: {
     flexDirection: 'row',
@@ -850,6 +1095,25 @@ const styles = StyleSheet.create({
   previewSubtitle: {
     fontSize: 14,
     fontFamily: 'Manrope-Medium',
+    color: colors.textSecondary,
+  },
+  loadingContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+  },
+  emptyContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    ...typography.body,
     color: colors.textSecondary,
   },
 });
