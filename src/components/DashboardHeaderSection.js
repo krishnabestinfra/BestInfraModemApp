@@ -127,6 +127,7 @@ const styles = StyleSheet.create({
   bluecontainer: {
     backgroundColor: "#eef8f0",
     padding: 15,
+    
   },
   TopMenu: {
     display: "flex",
