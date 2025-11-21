@@ -64,7 +64,7 @@ const SideMenu = ({ navigation }) => {
     <View style={styles.Container}>
       <StatusBar style="light" />
 
-      {/* TOP BAR */}
+
       <View style={styles.TopMenu}>
         <Pressable style={styles.barsIcon} onPress={() => navigation.navigate("Dashboard")}>
           <MenuIcon width={18} height={18} fill="#fff" />
@@ -142,6 +142,7 @@ const styles = StyleSheet.create({
   Container: {
     backgroundColor: COLORS.brandBlueColor,
     height: "100%",
+
   },
   TopMenu: {
     flexDirection: "row",
