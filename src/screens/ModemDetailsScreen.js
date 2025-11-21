@@ -15,6 +15,9 @@ import Menu from '../../assets/icons/bars.svg';
 import MenuIcon from '../../assets/icons/bars.svg';
 import NotificationLight from '../../assets/icons/notification.svg';
 import NotificationIcon from '../../assets/icons/notificationDark.svg';
+import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
+import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
+import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
 import DashboardIcon from '../../assets/icons/dashboardMenu.svg';
 import ActiveDashboard from '../../assets/icons/activeDashboard.svg';
 import UsageIcon from '../../assets/icons/usageMenu.svg';
@@ -50,6 +53,51 @@ const statusMetaMap = {
 };
 
 const API_BASE_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
+
+const formatDisplayDateTime = (dateString) => {
+  if (!dateString || dateString === 'N/A') return 'N/A';
+
+  const normalizeInput = (value) => value.replace(/\s+/g, ' ').trim();
+  const formatParts = (date) => {
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    const day = date.getDate().toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const formattedHour = ((hours % 12) || 12).toString().padStart(2, '0');
+    const formattedMinute = minutes.toString().padStart(2, '0');
+    return `${month} ${day}, ${year} ${formattedHour}:${formattedMinute} ${period}`;
+  };
+
+  try {
+    const normalized = normalizeInput(dateString);
+    const parts = normalized.split(' ');
+    const candidate = parts.length >= 5 ? parts.slice(0, 5).join(' ') : normalized;
+    const parsed = new Date(candidate);
+    if (!Number.isNaN(parsed.getTime())) {
+      return formatParts(parsed);
+    }
+  } catch {
+    // fall through to regex fallback
+  }
+
+  const regex =
+    /(\d{1,2})\s([A-Za-z]{3})\s(\d{4})\s(\d{1,2}):(\d{2})(?::\d{2})?\s?(AM|PM)?/i;
+  const match = dateString.match(regex);
+  if (match) {
+    const [, day, monthStr, year, hourStr, minuteStr, suffix] = match;
+    const month =
+      monthStr.charAt(0).toUpperCase() + monthStr.slice(1).toLowerCase();
+    const hourNum = Number(hourStr);
+    const period = suffix?.toUpperCase() ?? 'AM';
+    const formattedHour = ((hourNum % 12) || 12).toString().padStart(2, '0');
+    const formattedMinute = minuteStr.padStart(2, '0');
+    return `${month} ${day.padStart(2, '0')}, ${year} ${formattedHour}:${formattedMinute} ${period}`;
+  }
+
+  return dateString.length > 20 ? dateString.substring(0, 20) : dateString;
+};
 
 const ModemDetailsScreen = ({ route, navigation }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -151,10 +199,11 @@ const ModemDetailsScreen = ({ route, navigation }) => {
         modemId: apiData.modemSlNo || fallbackModem.modemId,
         status: getStatusFromCode(apiData.code),
         error: apiData.codeDesc || fallbackModem.error,
+        errorCode: apiData.code || 'N/A',
         reason: apiData.codeDesc || fallbackModem.reason,
-        location: apiData.imei || fallbackModem.location,
+        location: apiData.discom || 'N/A', // Using discom as location
         date: apiData.modemDate ? `${apiData.modemDate} ${apiData.modemTime || ''}` : fallbackModem.date,
-        signalStrength: apiData.signalStrength1 || apiData.signalStrength2 || fallbackModem.signalStrength,
+        signalStrength: apiData.signalStrength1 || apiData.signalStrength2 || 0,
         discom: apiData.discom || 'N/A',
         meterSlNo: apiData.meterSlNo || 'N/A',
         fwVer: apiData.fwVer || 'N/A',
@@ -165,7 +214,8 @@ const ModemDetailsScreen = ({ route, navigation }) => {
         sysmode: apiData.sysmode || 'N/A',
         freqMode: apiData.freqMode || 'N/A',
         uid: apiData.uid || 'N/A',
-        logTimestamp: apiData.logTimestamp || 'N/A',
+        imei: apiData.imei || 'N/A',
+        logTimestamp: apiData.logTimestamp || apiData.modemDate ? `${apiData.modemDate} ${apiData.modemTime || ''}` : 'N/A',
         prevFwver: apiData.prevFwver || 'N/A',
         updatedFwver: apiData.updatedFwver || 'N/A',
         originalData: apiData,
@@ -180,47 +230,55 @@ const ModemDetailsScreen = ({ route, navigation }) => {
       ? statusMetaMap.disconnected
       : statusMetaMap.default);
 
+  // Format last update date
+  const formatLastUpdate = (dateString) => formatDisplayDateTime(dateString);
+
+  // Get signal strength icon based on value - moved outside to be accessible
+
+  // Map network type to display format
+  const getNetworkType = (sysmode) => {
+    if (!sysmode || sysmode === 'N/A') return 'N/A';
+    if (sysmode.includes('LTE')) return '4G';
+    if (sysmode.includes('GSM')) return '2G';
+    if (sysmode.includes('UMTS') || sysmode.includes('WCDMA')) return '3G';
+    return sysmode;
+  };
+
   const detailFields = useMemo(() => {
-    // Use API data if available, otherwise use fallback
+    // Always show the required fields in the specified order
     const fields = [];
     
-    if (apiData) {
-      // Show API data fields
+    if (apiData && modem) {
       fields.push(
-        { label: 'Modem SL No.', value: modem.modemId || modemSlNo || 'N/A' },
-        { label: 'Meter SL No.', value: modem.meterSlNo || 'N/A' },
-        { label: 'IMEI', value: modem.location || 'N/A' },
-        { label: 'Discom', value: modem.discom || 'N/A' },
-        { label: 'FW Version', value: modem.fwVer || 'N/A' },
-        { label: 'Meter Make', value: modem.meterMake || 'N/A' },
-        { label: 'APN', value: modem.apn || 'N/A' },
-        { label: 'SIM Service', value: modem.simService || 'N/A' },
-        { label: 'SIM Number', value: modem.simNumber || 'N/A' },
-        { label: 'System Mode', value: modem.sysmode || 'N/A' },
-        { label: 'Frequency Mode', value: modem.freqMode || 'N/A' },
-        { label: 'Signal Strength', value: modem.signalStrength && modem.signalStrength !== '—' ? `${modem.signalStrength} dBm` : 'N/A' },
-        { label: 'UID', value: modem.uid || 'N/A' },
-        { label: 'Log Timestamp', value: modem.logTimestamp || 'N/A' },
+        { label: 'Error Code', value: modem.errorCode || 'N/A', type: 'text' },
+        { label: 'Error Type', value: modem.error || 'N/A', type: 'text' },
+        { label: 'IMEI Number', value: modem.imei || 'N/A', type: 'text' },
+        { label: 'Firmware Version', value: modem.fwVer || 'N/A', type: 'text' },
+        { label: 'SIM Number', value: modem.simNumber || 'N/A', type: 'text' },
+        { label: 'Location', value: modem.location || modem.discom || 'N/A', type: 'text' },
+        { label: 'Network Type', value: getNetworkType(modem.sysmode), type: 'text' },
+        { label: 'Operator', value: modem.simService || 'N/A', type: 'text' },
+        { label: 'Signal Strength', value: modem.signalStrength || 0, type: 'signal' },
+        { label: 'Last Update', value: formatLastUpdate(modem.logTimestamp), type: 'text' },
       );
     } else {
-      // Show fallback fields
+      // Fallback fields
       fields.push(
-        { label: 'Modem SL No.', value: modem.modemId || 'N/A' },
-        { label: 'DRT SL No.', value: fallbackDetails.drtSlNo },
-        { label: 'Feeder Name', value: fallbackDetails.feederName },
-        { label: 'Feeder No.', value: fallbackDetails.feederNo },
-        { label: 'Substation Name', value: fallbackDetails.substationName },
-        { label: 'Substation No.', value: fallbackDetails.substationNo },
-        { label: 'Section', value: fallbackDetails.section },
-        { label: 'Sub Division', value: fallbackDetails.subDivision },
-        { label: 'Division', value: fallbackDetails.division },
-        { label: 'Circle', value: fallbackDetails.circle },
-        { label: 'Organisation', value: fallbackDetails.organisation },
+        { label: 'Error Code', value: 'N/A', type: 'text' },
+        { label: 'Error Type', value: 'N/A', type: 'text' },
+        { label: 'IMEI Number', value: 'N/A', type: 'text' },
+        { label: 'Firmware Version', value: 'N/A', type: 'text' },
+        { label: 'SIM Number', value: 'N/A', type: 'text' },
+        { label: 'Location', value: 'N/A', type: 'text' },
+        { label: 'Network Type', value: 'N/A', type: 'text' },
+        { label: 'Operator', value: 'N/A', type: 'text' },
+        { label: 'Signal Strength', value: 0, type: 'signal' },
+        { label: 'Last Update', value: 'N/A', type: 'text' },
       );
     }
     
     return fields;
-  }, [modem, apiData, modemSlNo]);
+  }, [modem, apiData]);
 
   const relatedIssues = useMemo(
     () => modemErrors.filter((item) => item.modemId === modem.modemId),
@@ -288,20 +346,13 @@ const ModemDetailsScreen = ({ route, navigation }) => {
         </LinearGradient>
 
         <View style={styles.detailCard}>
-          <DetailGrid fields={detailFields} />
+          <DetailGrid fields={detailFields} getSignalIcon={getSignalIcon} />
         </View>
 
-        <View style={styles.issuesWrapper}>
-          {relatedIssues.length === 0 ? (
-            <Text style={styles.emptyIssuesText}>No issues logged for this modem.</Text>
-          ) : (
-            relatedIssues.map((issue) => <IssueCard key={issue.id} issue={issue} />)
-          )}
-        </View>
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button title="Resolve Issue" onPress={handleResolve} style={styles.resolveButton} />
+        <Button title="Start Troubleshooting" onPress={handleResolve} style={styles.resolveButton} />
       </View>
 
       {isMenuOpen && (
@@ -324,6 +375,18 @@ const ModemDetailsScreen = ({ route, navigation }) => {
   );
 };
 
+// Get signal strength icon based on value
+const getSignalIcon = (signalStrength) => {
+  const strength = signalStrength || 0;
+  if (strength < 15) {
+    return <SignalWeaknessIcon width={16} height={16} />;
+  } else if (strength >= 15 && strength <= 20) {
+    return <SignalAverageIcon width={16} height={16} />;
+  } else {
+    return <SignalStrongIcon width={16} height={16} />;
+  }
+};
+
 const handleMenuNavigation = (itemKey, navigation) => {
   const routeMap = {
     Dashboard: 'Dashboard',
@@ -340,12 +403,21 @@ const handleMenuNavigation = (itemKey, navigation) => {
   }
 };
 
-const DetailGrid = ({ fields }) => (
+const DetailGrid = ({ fields, getSignalIcon }) => (
   <View style={styles.detailGrid}>
-    {fields.map((field) => (
+    {fields.map((field, index) => (
       <View key={field.label} style={styles.detailItem}>
         <Text style={styles.detailLabel}>{field.label}</Text>
-        <Text style={styles.detailValue}>{field.value ?? '—'}</Text>
+        {field.type === 'signal' ? (
+          <View style={styles.signalStrengthContainer}>
+            {getSignalIcon(field.value)}
+            <Text style={styles.signalStrengthText}>
+              {field.value || 0} dBm
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.detailValue}>{field.value ?? '—'}</Text>
+        )}
       </View>
     ))}
   </View>
@@ -353,21 +425,6 @@ const DetailGrid = ({ fields }) => (
 
 const IssueCard = ({ issue }) => {
   const statusMeta = statusMetaMap[issue.status] ?? statusMetaMap.default;
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return dateString;
-    const day = date.toLocaleDateString(undefined, {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-    const time = date.toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-    return `${day}  ·  ${time}`;
-  };
 
   return (
     <View style={styles.modemCard}>
@@ -420,7 +477,7 @@ const IssueCard = ({ issue }) => {
 
             <View style={styles.subDataItem}>
               <Text style={styles.detailLabel}>Issue Occurrence</Text>
-              <Text style={styles.datedetails}>{formatDate(issue.date)}</Text>
+              <Text style={styles.datedetails}>{formatDisplayDateTime(issue.date)}</Text>
             </View>
           </View>
         </View>
@@ -545,7 +602,17 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textPrimary,
     fontFamily: 'Manrope-SemiBold',
-    fontSize:14
+    fontSize: 14,
+  },
+  signalStrengthContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  signalStrengthText: {
+    fontSize: 13,
+    color: colors.textPrimary,
+    fontFamily: 'Manrope-Medium',
   },
   sectionHeader: {
     flexDirection: 'row',

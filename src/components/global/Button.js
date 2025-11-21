@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   medium: {
     paddingVertical: 12,
     paddingHorizontal: 24,
-    minHeight: 48,
+    minHeight: 42,
   },
   large: {
     paddingVertical: 16,

@@ -110,7 +110,7 @@ const OnBoarding = ({ onComplete }) => {
           <Button 
            title="Login" 
            variant="secondary"
-            size="small" 
+            size="medium" 
             style={styles.loginBox} 
             onPress={finishOnboarding}
           />

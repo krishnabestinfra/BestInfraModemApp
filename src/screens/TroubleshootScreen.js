@@ -4,10 +4,10 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
   Pressable,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,11 +17,12 @@ import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
-import checkWireImg from '../../assets/check-wire.png';
-import checkVoltageImg from '../../assets/check-voltage.png';
-import checkCommImg from '../../assets/communication.png';
+import checkConnectionGif from '../../assets/images/Check_connection.gif';
+import voltageCheckGif from '../../assets/images/voltageCheck.gif';
+import checkSignalGif from '../../assets/images/Check_singal.gif';
 import Menu from '../../assets/icons/bars.svg';
 import NotificationLight from '../../assets/icons/notification.svg';
+import CheckCircleIcon from '../../assets/icons/successIcon.svg';
 
 // Ensure all text on this screen uses Manrope by default without changing sizes
 if (!Text.defaultProps) {
@@ -31,30 +32,27 @@ Text.defaultProps.style = [
   Text.defaultProps.style,
   { fontFamily: 'Manrope-Regular' },
 ];
-import successImg from '../../assets/success.png';
+import successImg from '../../assets/images/Success_page.gif';
 
 
 const troubleshootSteps = [
   {
     id: 1,
-    title: 'Check Wire Connection',
-    description: 'Verify if the main supply wire is properly connected to the meter terminals.',
-    question: 'Is The Wire Properly Connected Now?',
-    image: checkWireImg,
+    title: 'Check Connection',
+    description: 'Ensure every cable and connector is firmly seated on the modem and meter.',
+    image: checkConnectionGif,
   },
   {
     id: 2,
-    title: 'Check Voltage Input',
-    description: 'Use the test device to confirm voltage is present in the input line.',
-    question: 'Is Voltage Present At The Input Line?',
-    image: checkVoltageImg,
+    title: 'Measure Input Voltage',
+    description: 'Use the multimeter to confirm the supply voltage is within the acceptable range.',
+    image: voltageCheckGif,
   },
   {
     id: 3,
-    title: 'Confirm Communication',
-    description: 'Check if the meter symbol on your device shows active communication.',
-    question: 'Is The Meter Communicating Now?',
-    image: checkCommImg,
+    title: 'Check Signal Strength',
+    description: 'Verify that the modem LED or app indicator shows a stable signal.',
+    image: checkSignalGif,
   },
 ];
 
@@ -96,132 +94,136 @@ const TroubleshootScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <LinearGradient
-          colors={['#f4fbf7', '#e6f4ed']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroCard}
+      <View style={styles.screenContent}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
+          <LinearGradient
+            colors={['#f4fbf7', '#e6f4ed']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroCard}
+          >
 
-          <View style={styles.heroTopRow}>
-            <Pressable
-              style={styles.barsIcon}
-              onPress={() => navigation?.navigate?.('SideMenu')}
-            >
-              <Menu width={18} height={18} fill="#202d59" />
-            </Pressable>
+            <View style={styles.heroTopRow}>
+              <Pressable
+                style={styles.barsIcon}
+                onPress={() => navigation?.navigate?.('SideMenu')}
+              >
+                <Menu width={18} height={18} fill="#202d59" />
+              </Pressable>
 
-            <View style={styles.logoWrapper}>
-              <RippleLogo size={68} />
+              <View style={styles.logoWrapper}>
+                <RippleLogo size={68} />
+              </View>
+
+              <Pressable
+                style={styles.bellIcon}
+                onPress={() => navigation?.navigate?.('Profile')}
+              >
+                <NotificationLight width={18} height={18} fill="#202d59" />
+              </Pressable>
             </View>
 
-            <Pressable
-              style={styles.bellIcon}
-              onPress={() => navigation?.navigate?.('Profile')}
-            >
-              <NotificationLight width={18} height={18} fill="#202d59" />
-            </Pressable>
-          </View>
+            {!isComplete && (
+              <ModemStatusCard
+                modemId={modem?.modemId ?? 'MDM000'}
+                statusLabel={statusMeta.label}
+                statusColor={statusMeta.color ?? colors.secondary}
+                statusBackground="#fff"
+                style={styles.heroStatusCard}
+              />
+            )}
+          </LinearGradient>
 
-          <ModemStatusCard
-            modemId={modem?.modemId ?? 'MDM000'}
-            statusLabel={statusMeta.label}
-            statusColor={statusMeta.color ?? colors.secondary}
-            statusBackground="#fff"
-            style={styles.heroStatusCard}
-          />
-        </LinearGradient>
+          {!isComplete && (
+            <View style={styles.progressContainer}>
+              <ProgressBars currentStep={currentStepIndex + 1} totalSteps={troubleshootSteps.length} />
+            </View>
+          )}
+        {isComplete ? (
+            <SuccessCard image={successImage} onComplete={handleComplete} />
+          ) : (
+            <StepContent
+              step={currentStep}
+            />
+          )}
+        </ScrollView>
 
         {!isComplete && (
-          <StepIndicator
-            currentStepIndex={currentStepIndex}
-            totalSteps={troubleshootSteps.length}
-          />
+          <View style={styles.bottomResponseBar}>
+            <View style={styles.responseRow}>
+              <TouchableOpacity
+                style={[styles.responseButton, styles.responseButtonYes]}
+                onPress={() => handleResponse(true)}
+              >
+                <Text style={styles.responseTextYes}>Yes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.responseButton, styles.responseButtonNo]}
+                onPress={() => handleResponse(false)}
+              >
+                <Text style={styles.responseTextNo}>No</Text>
+              </TouchableOpacity>
+            </View>
+            {feedback ? <Text style={styles.feedbackText}>{feedback}</Text> : null}
+          </View>
         )}
-      {isComplete ? (
-          <SuccessCard image={successImage} onComplete={handleComplete} />
-        ) : (
-          <StepContent
-            step={currentStep}
-            onRespond={handleResponse}
-            feedback={feedback}
-          />
-        )}
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
 
-const StepIndicator = ({ currentStepIndex, totalSteps }) => (
-  <View style={styles.stepIndicatorRow}>
-    {Array.from({ length: totalSteps }).map((_, index) => {
-      const isActive = index === currentStepIndex;
-      const isComplete = index < currentStepIndex;
-      return (
-        <React.Fragment key={`step-${index}`}>
-          <View
-            style={[
-              styles.stepCircle,
-              (isActive || isComplete) && styles.stepCircleActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.stepNumber,
-                (isActive || isComplete) && styles.stepNumberActive,
-              ]}
-            >
-              {index + 1}
-            </Text>
-          </View>
-          {index < totalSteps - 1 && <View style={styles.stepDivider} />}
-        </React.Fragment>
-      );
-    })}
-  </View>
-);
+// Progress Bars Component - Shows bars filling up step by step
+const ProgressBars = ({ currentStep = 1, totalSteps = 3 }) => {
+  const steps = useMemo(() => Array.from({ length: totalSteps }, (_, idx) => idx + 1), [totalSteps]);
+  return (
+    <View style={styles.progressBarsWrapper}>
+      {steps.map((step) => (
+        <View
+          key={step}
+          style={[
+            styles.progressBar,
+            step <= currentStep ? styles.progressBarActive : styles.progressBarInactive,
+          ]}
+        />
+      ))}
+    </View>
+  );
+};
 
-const StepContent = ({ step, onRespond, feedback }) => (
+const StepContent = ({ step }) => (
   <View style={styles.stepWrapper}>
     
     <View style={styles.stepCard}>
-    <Image source={step.image} style={styles.stepImage} resizeMode="contain" />
+    <ExpoImage
+      source={step.image}
+      style={styles.stepImage}
+      contentFit="contain"
+      transition={0}
+    />
       <View style={styles.stepTextBlock}>
         <Text style={styles.stepTitle}>{step.title}</Text>
         <Text style={styles.stepDescription}>{step.description}</Text>
       </View>
-    </View>
-
-    <View style={styles.questionBlock}>
-      <Text style={styles.questionLabel}>{step.question}</Text>
-      <View style={styles.responseRow}>
-        <TouchableOpacity
-          style={[styles.responseButton, styles.responseButtonYes]}
-          onPress={() => onRespond(true)}
-        >
-          <Text style={styles.responseTextYes}>Yes</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.responseButton, styles.responseButtonNo]}
-          onPress={() => onRespond(false)}
-        >
-          <Text style={styles.responseTextNo}>No</Text>
-        </TouchableOpacity>
-      </View>
-      {feedback ? <Text style={styles.feedbackText}>{feedback}</Text> : null}
     </View>
   </View>
 );
 
 const SuccessCard = ({ image, onComplete }) => (
   <View style={styles.successWrapper}>
-   <Image source={image} style={styles.successImage} resizeMode="contain" />
-    <Text style={styles.successTitle}>Success</Text>
+   <ExpoImage
+     source={image}
+     style={styles.successImage}
+     contentFit="contain"
+     transition={0}
+   />
+    <View style={styles.successImageContainer}>
+      <CheckCircleIcon width={18} height={18}/>
+      <Text style={styles.successTitle}>Success</Text>
+    </View>
     <Text style={styles.successSubtitle}>Issue successfully resolved</Text>
     <Text style={styles.successBody}>The meter is now communicating properly.</Text>
     <Button title="Resolve Completed" onPress={onComplete} style={styles.completeButton} />
@@ -233,11 +235,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  screenContent: {
+    flex: 1,
+  },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.xxl * 2,
   },
   heroCard: {
     paddingHorizontal:18,
@@ -304,45 +309,37 @@ const styles = StyleSheet.create({
   heroStatusCard: {
     marginTop: spacing.lg,
   },
-  stepIndicatorRow: {
+  progressContainer: {
+    backgroundColor: colors.cardBackground,
+    marginHorizontal: spacing.md,
+    marginTop: 1,
+    borderRadius: 5,
+    padding: spacing.md,
+  },
+  progressTitle: {
+    ...typography.body,
+    color: colors.textPrimary,
+    fontFamily: 'Manrope-SemiBold',
+    fontSize: 14,
+    marginBottom: spacing.sm,
+  },
+  progressBarsWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.lg,
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  stepCircle: {
-    width: 35,
-    height: 35,
-    borderRadius: 35,
-    borderWidth: 1,
-    borderColor: '#d7e2d9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  stepCircleActive: {
-    backgroundColor: colors.secondary,
-    borderColor: colors.secondary,
-  },
-  stepNumber: {
-    ...typography.small,
-    color: colors.textSecondary,
-    fontSize:14,
-    fontFamily: 'Manrope-SemiBold',
-  },
-  stepNumberActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  stepDivider: {
+  progressBar: {
     flex: 1,
-    borderWidth: 0.8,
-    borderColor: '#d7e2d9',
-    borderStyle: 'dashed',
-    marginHorizontal: spacing.xs,
+    height: 8,
+    borderRadius: 4,
   },
-
+  progressBarActive: {
+    backgroundColor: '#4CAF50', // Green color for active/completed steps
+  },
+  progressBarInactive: {
+    backgroundColor: '#E0E0E0', // Light gray for inactive steps
+  },
   stepWrapper: {
     marginHorizontal: spacing.md,
     marginTop: spacing.lg,
@@ -352,10 +349,13 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     padding: spacing.md,
     marginBottom: spacing.lg,
+    elevation: 1,
   },
   stepImage: {
     width: '100%',
-    height: 180,
+    height: 260,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
   },
   stepTextBlock: {
     marginTop: spacing.md,
@@ -373,24 +373,13 @@ const styles = StyleSheet.create({
     fontSize:13,
     fontFamily: 'Manrope-Regular',
   },
-  questionBlock: {
-    marginHorizontal: spacing.md,
-    marginTop: spacing.md,
-    paddingBottom: spacing.xl,
-  },
-  questionLabel: {
-    ...typography.caption,
-    color: colors.textPrimary,
-    marginBottom: 10,
-    color: '#163B7C'
-  },
   responseRow: {
     flexDirection: 'row',
     gap: spacing.md,
   },
   responseButton: {
     flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: 12,
     borderRadius: 5,
     alignItems: 'center',
   },
@@ -415,22 +404,37 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.error,
   },
+  bottomResponseBar: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+    backgroundColor: '#fff',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#e0e0e0',
+  },
   successWrapper: {
     marginHorizontal: spacing.md,
     marginTop: spacing.lg,
     alignItems: 'center',
     padding: spacing.lg,
-    backgroundColor: '#fff',
+    backgroundColor: '',
     borderRadius: borderRadius.xl,
   },
   successImage: {
-    width: 180,
-    height: 180,
+    width: '100%',
+    height: 150,
+    borderRadius: borderRadius.lg,
+  },
+  successImageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: spacing.sm,
   },
   successTitle: {
     ...typography.h3,
     color: colors.secondary,
-    marginTop: spacing.sm,
   },
   successSubtitle: {
     ...typography.caption,

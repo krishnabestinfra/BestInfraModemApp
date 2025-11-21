@@ -9,6 +9,7 @@ import {
   Pressable,
   Dimensions,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -25,6 +26,13 @@ import NotificationLight from '../../assets/icons/notification.svg';
 import Hand from '../../assets/icons/hand.svg';
 import MeterInstallIcon from '../../assets/icons/meterWhite.svg';
 import CalendarIcon from '../../assets/icons/CalendarNew.svg';
+import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
+import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
+import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
+import TotalTasksIcon from '../../assets/icons/totaltasks.svg';
+import CompletedTasksIcon from '../../assets/icons/completedtasks.svg';
+import CommunicatingModemsIcon from '../../assets/icons/communicating.svg';
+import NonCommunicatingModemsIcon from '../../assets/icons/noncommicating.svg';
 
 // Ensure all text on this screen uses Manrope by default without altering sizes.
 if (!Text.defaultProps) {
@@ -39,11 +47,70 @@ const { width } = Dimensions.get('window');
 
 const API_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
 
+const STATUS_FILTERS = [
+  { label: 'Communicating', value: 'success' },
+  { label: 'Warning', value: 'warning' },
+  { label: 'Disconnected', value: 'disconnected' },
+];
+
+const SIGNAL_FILTERS = [
+  { label: 'All', value: 'all' },
+  { label: 'Strong (>20 dBm)', value: 'strong' },
+  { label: 'Average (15-20 dBm)', value: 'average' },
+  { label: 'Weak (<15 dBm)', value: 'weak' },
+];
+
+const getSignalBand = (signalStrength = 0) => {
+  const strength = Number(signalStrength) || 0;
+  if (strength < 15) return 'weak';
+  if (strength <= 20) return 'average';
+  return 'strong';
+};
+
 const DashboardScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [userName] = useState('Field Engineer');
+  const [userName] = useState('Field Officer');
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState({ statuses: [], signal: 'all' });
+  const [draftFilters, setDraftFilters] = useState({ statuses: [], signal: 'all' });
+  const hasActiveFilters =
+    appliedFilters.statuses.length > 0 || appliedFilters.signal !== 'all';
+
+  const openFilterModal = () => {
+    setDraftFilters({
+      statuses: [...appliedFilters.statuses],
+      signal: appliedFilters.signal,
+    });
+    setFilterModalVisible(true);
+  };
+
+  const closeFilterModal = () => setFilterModalVisible(false);
+
+  const toggleDraftStatus = (value) => {
+    setDraftFilters((prev) => {
+      const statuses = prev.statuses.includes(value)
+        ? prev.statuses.filter((item) => item !== value)
+        : [...prev.statuses, value];
+      return { ...prev, statuses };
+    });
+  };
+
+  const setDraftSignal = (value) => {
+    setDraftFilters((prev) => ({ ...prev, signal: value }));
+  };
+
+  const handleApplyFilters = () => {
+    setAppliedFilters(draftFilters);
+    setFilterModalVisible(false);
+  };
+
+  const handleResetFilters = () => {
+    const cleared = { statuses: [], signal: 'all' };
+    setAppliedFilters(cleared);
+    setDraftFilters(cleared);
+  };
 
   useEffect(() => {
     fetchApiData();
@@ -190,29 +257,73 @@ const DashboardScreen = ({ navigation }) => {
     }),
     [apiData, dashboardMetrics]
   );
-
+  // Helper to get status label for search
+  const getStatusLabel = (status) => {
+    const statusMap = {
+      warning: 'warning',
+      disconnected: 'disconnected',
+      success: 'communicating',
+      default: 'info',
+    };
+    return statusMap[status] || '';
+  };
 
   const filteredModems = useMemo(() => {
-    const dataToFilter = transformedAlerts;
-    if (!searchQuery.trim()) {
-      return dataToFilter;
+    const query = searchQuery.trim().toLowerCase();
+    
+    if (query.length === 0) {
+      // No search query, just apply filters
+      return transformedAlerts.filter((item) => {
+        const matchesStatus =
+          appliedFilters.statuses.length === 0 || appliedFilters.statuses.includes(item.status);
+        const matchesSignal =
+          appliedFilters.signal === 'all' ||
+          getSignalBand(item.signalStrength) === appliedFilters.signal;
+        return matchesStatus && matchesSignal;
+      });
     }
-    const query = searchQuery.toLowerCase();
-    return dataToFilter.filter((item) => {
-      const searchableText = [
+
+    // Enhanced search across all relevant fields
+    return transformedAlerts.filter((item) => {
+      // Get status label for searching
+      const statusLabel = getStatusLabel(item.status);
+      
+      // Build comprehensive searchable text
+      const searchableFields = [
         item.modemId || '',
         item.location || '',
         item.error || '',
         item.reason || '',
         item.discom || '',
         item.meterSlNo || '',
-      ]
-        .filter(Boolean) // Remove empty strings
+        item.code?.toString() || '',
+        item.signalStrength?.toString() || '',
+        statusLabel,
+        // Search in formatted date parts
+        item.date || '',
+      ];
+
+      // Create searchable text string
+      const searchableText = searchableFields
+        .filter(Boolean)
         .join(' ')
         .toLowerCase();
-      return searchableText.includes(query);
+
+      // Check if query matches any part of the searchable text
+      // Split query into words for better matching (all words must match)
+      const queryWords = query.split(/\s+/).filter(Boolean);
+      const matchesSearch = queryWords.every(word => searchableText.includes(word));
+
+      // Apply filters
+      const matchesStatus =
+        appliedFilters.statuses.length === 0 || appliedFilters.statuses.includes(item.status);
+      const matchesSignal =
+        appliedFilters.signal === 'all' ||
+        getSignalBand(item.signalStrength) === appliedFilters.signal;
+
+      return matchesSearch && matchesStatus && matchesSignal;
     });
-  }, [searchQuery, transformedAlerts]);
+  }, [searchQuery, transformedAlerts, appliedFilters]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -237,7 +348,7 @@ const DashboardScreen = ({ navigation }) => {
             </Pressable>
           </View>
           <View style={styles.ProfileBox}>
-            <View>
+            <View style={styles.profileGreetingContainer}>
               <View style={styles.profileGreetingRow}>
                 <Text style={styles.hiText}>Hi, {userName} </Text>
                 <Hand width={30} height={30} fill="#55B56C" />
@@ -246,6 +357,39 @@ const DashboardScreen = ({ navigation }) => {
             </View>
           </View>
 
+
+          <View style={styles.metricsRow}>
+            <TouchableOpacity
+              style={styles.metricCard}
+              onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'ALL' })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.textContainer}>
+                <Text style={styles.metricTitle}>Total Tasks</Text>
+                <Text style={styles.metricValue}>
+                  {loading ? '...' : (wipData?.totalTasksToday ?? 0)}
+                </Text>
+              </View>
+              <View style={styles.metricIconContainer}>
+                <TotalTasksIcon width={21} height={21} />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.metricCard}
+              onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'COMMISSIONED' })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.textContainer}>
+                <Text style={styles.metricTitle}>Completed Tasks</Text>
+                <Text style={styles.metricValue}>
+                  {loading ? '...' : (wipData?.completedTasksToday ?? 0)}
+                </Text>
+              </View>
+              <View style={[styles.metricIconContainer, styles.metricIconContainerSuccess]}>
+                <CompletedTasksIcon width={21} height={21} />
+              </View>
+            </TouchableOpacity>
+          </View>
           <View style={styles.metricsRow}>
             <TouchableOpacity
               style={styles.metricCard}
@@ -259,7 +403,7 @@ const DashboardScreen = ({ navigation }) => {
                 </Text>
               </View>
               <View style={styles.metricIconContainer}>
-                <MeterInstallIcon width={24} height={24} />
+                <CommunicatingModemsIcon width={21} height={21} />
               </View>
             </TouchableOpacity>
             <TouchableOpacity
@@ -268,45 +412,13 @@ const DashboardScreen = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Non- Communicating Modems</Text>
+                <Text style={styles.metricTitle}>Non-Communicating Modems</Text>
                 <Text style={styles.metricValue}>
                   {loading ? '...' : (wipData?.nonCommunicatingModems ?? 0)}
                 </Text>
               </View>
               <View style={styles.metricIconContainer}>
-                <MeterInstallIcon width={24} height={24} />
-              </View>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.metricsRow}>
-            <TouchableOpacity
-              style={styles.metricCard}
-              onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'ALL' })}
-              activeOpacity={0.7}
-            >
-              <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Total Tasks Today</Text>
-                <Text style={styles.metricValue}>
-                  {loading ? '...' : (wipData?.totalTasksToday ?? 0)}
-                </Text>
-              </View>
-              <View style={styles.metricIconContainer}>
-                <CalendarIcon width={24} height={24} />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.metricCard}
-              onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'COMMISSIONED' })}
-              activeOpacity={0.7}
-            >
-              <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Completed Tasks Today</Text>
-                <Text style={styles.metricValue}>
-                  {loading ? '...' : (wipData?.completedTasksToday ?? 0)}
-                </Text>
-              </View>
-              <View style={[styles.metricIconContainer, styles.metricIconContainerSuccess]}>
-                <CalendarIcon width={24} height={24} />
+                <NonCommunicatingModemsIcon width={21} height={21} />
               </View>
             </TouchableOpacity>
           </View>
@@ -323,15 +435,19 @@ const DashboardScreen = ({ navigation }) => {
             />
             <SearchIcon width={16} height={16} />
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.scanButton}
-            onPress={() => navigation?.navigate?.('Demo')}
+            onPress={() => navigation.navigate('ScanScreen')}
           >
             <Text style={styles.scanText}>Scan</Text>
-            <FilterIcon width={16} height={16} />
+            <ScanIcon width={20} height={20} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.filterButton}>
-            <ScanIcon width={23} height={23} />
+          <TouchableOpacity
+            style={styles.filterButton}
+            onPress={openFilterModal}
+          >
+            <FilterIcon width={20} height={20} />
+            {hasActiveFilters && <View style={styles.filterActiveDot} />}
           </TouchableOpacity>
         </View>
 
@@ -353,6 +469,93 @@ const DashboardScreen = ({ navigation }) => {
         </View>
       </ScrollView>
 
+      <Modal
+        transparent
+        visible={filterModalVisible}
+        animationType="fade"
+        onRequestClose={closeFilterModal}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={closeFilterModal} />
+          <View style={styles.filterModalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter alerts</Text>
+              <Pressable onPress={closeFilterModal}>
+                <Ionicons name="close" size={20} color="#1b1f3b" />
+              </Pressable>
+            </View>
+
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionLabel}>Status</Text>
+              <View style={styles.chipGroup}>
+                {STATUS_FILTERS.map((option) => {
+                  const isActive = draftFilters.statuses.includes(option.value);
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[styles.filterChip, isActive && styles.filterChipActive]}
+                      onPress={() => toggleDraftStatus(option.value)}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          isActive && styles.filterChipTextActive,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionLabel}>Signal Strength</Text>
+              <View style={styles.chipGroup}>
+                {SIGNAL_FILTERS.map((option) => {
+                  const isActive = draftFilters.signal === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[styles.filterChip, isActive && styles.filterChipActive]}
+                      onPress={() => setDraftSignal(option.value)}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          isActive && styles.filterChipTextActive,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonGhost]}
+                onPress={handleResetFilters}
+              >
+                <Text style={[styles.modalButtonText, styles.modalButtonGhostText]}>
+                  Reset
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary]}
+                onPress={handleApplyFilters}
+              >
+                <Text style={styles.modalButtonText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -383,26 +586,58 @@ const ModemCard = ({ modem, navigation }) => {
 
   const formatDate = (dateString) => {
     if (!dateString || dateString === 'N/A') return 'N/A';
+
+    const normalizeInput = (value) => value.replace(/\s+/g, ' ').trim();
+    const formatParts = (date) => {
+      const month = date.toLocaleString('en-US', { month: 'short' });
+      const day = date.getDate().toString().padStart(2, '0');
+      const year = date.getFullYear();
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const formattedHour = ((hours % 12) || 12).toString().padStart(2, '0');
+      const formattedMinute = minutes.toString().padStart(2, '0');
+      return `${month} ${day}, ${year} ${formattedHour}:${formattedMinute} ${period}`;
+    };
+
     try {
-      // Handle API date format: "17 Nov 2025 06:30:00 PM" or "17 Nov 2025 06:30:00 PM 11:45:24"
-      const dateStr = dateString.split(' ').slice(0, 4).join(' '); // Take first 4 parts (date + time)
-      const date = new Date(dateStr);
-      if (Number.isNaN(date.getTime())) {
-        // If parsing fails, try to return formatted string
-        return dateString.length > 20 ? dateString.substring(0, 20) : dateString;
+      const normalized = normalizeInput(dateString);
+      const parts = normalized.split(' ');
+      const candidate = parts.length >= 5 ? parts.slice(0, 5).join(' ') : normalized;
+      const parsed = new Date(candidate);
+      if (!Number.isNaN(parsed.getTime())) {
+        return formatParts(parsed);
       }
-      const day = date.toLocaleDateString(undefined, {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-      const time = date.toLocaleTimeString(undefined, {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      return `${day}  ·  ${time}`;
     } catch {
-      return dateString.length > 20 ? dateString.substring(0, 20) : dateString;
+      // fall through to regex fallback
+    }
+
+    const regex =
+      /(\d{1,2})\s([A-Za-z]{3})\s(\d{4})\s(\d{1,2}):(\d{2})(?::\d{2})?\s?(AM|PM)?/i;
+    const match = dateString.match(regex);
+    if (match) {
+      const [, day, monthStr, year, hourStr, minuteStr, suffix] = match;
+      const month = monthStr.charAt(0).toUpperCase() + monthStr.slice(1).toLowerCase();
+      const hourNum = Number(hourStr);
+      const period = suffix?.toUpperCase() ?? 'AM';
+      const formattedHour = ((hourNum % 12) || 12).toString().padStart(2, '0');
+      const formattedMinute = minuteStr.padStart(2, '0');
+      return `${month} ${day.padStart(2, '0')}, ${year} ${formattedHour}:${formattedMinute} ${period}`;
+    }
+
+    return dateString.length > 20 ? dateString.substring(0, 20) : dateString;
+  };
+
+  // Get signal strength icon based on signal strength value
+  const getSignalIcon = () => {
+    const signalStrength = modem.signalStrength || 0;
+    // Signal strength ranges: Weak (< 15), Average (15-20), Strong (> 20)
+    if (signalStrength < 15) {
+      return <SignalWeaknessIcon width={20} height={20} />;
+    } else if (signalStrength >= 15 && signalStrength <= 20) {
+      return <SignalAverageIcon width={20} height={20} />;
+    } else {
+      return <SignalStrongIcon width={20} height={20} />;
     }
   };
 
@@ -436,8 +671,7 @@ const ModemCard = ({ modem, navigation }) => {
       <View style={styles.itemHeader}>
         <View style={styles.itemIdContainer}>
           <Text style={styles.itemId}>{modem.modemId}</Text>
-          {/* Update this line once IMEI is available in data */}
-          <Text style={styles.itemImei}>IMEI - {modem.location}</Text>
+          <Text style={styles.itemImei}>Error Code - {modem.code || 'N/A'}</Text>
         </View>
 
         <TouchableOpacity style={styles.directionButton} onPress={handleGetDirection}>
@@ -460,17 +694,20 @@ const ModemCard = ({ modem, navigation }) => {
           {/* Row 1: Error + Meter Type */}
           <View style={styles.subDataRow}>
             <View style={styles.subDataItem}>
-              <Text style={styles.detailLabel}>Error</Text>
-              <Text style={styles.detailValueGreen} numberOfLines={1}>
+              <Text style={styles.detailLabel}>Error Type</Text>
+              <Text style={styles.detailValueGreen} numberOfLines={2}>
                 {modem.error || 'N/A'}
               </Text>
             </View>
 
             <View style={styles.subDataItem}>
-              <Text style={styles.detailLabel}>Discom</Text>
-              <Text style={styles.detailValueGreen} numberOfLines={1}>
-                {modem.discom || 'N/A'}
-              </Text>
+              <Text style={styles.detailLabel}>Signal Strength</Text>
+              <View style={styles.signalStrengthContainer}>
+                {getSignalIcon()}
+                <Text style={styles.signalStrengthText}>
+                  {modem.signalStrength || 0} dBm
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -484,7 +721,7 @@ const ModemCard = ({ modem, navigation }) => {
             </View>
 
             <View style={styles.subDataItem}>
-              <Text style={styles.detailLabel}>Issue Occurrence</Text>
+              <Text style={styles.detailLabel}>Issue Occurred On</Text>
               <Text style={[styles.datedetails]}>
                 {formatDate(modem.date)}
               </Text>
@@ -532,11 +769,13 @@ const styles = StyleSheet.create({
   metricCard: {
     backgroundColor: '#fff',
     borderRadius: 5,
-    padding: 15,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     width: (width - 40) / 2,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    height: 100,
     // shadowColor: '#6E6E6E',
     // shadowOffset: { width: 0, height: 2 },
     // shadowOpacity: 0.1,
@@ -544,22 +783,24 @@ const styles = StyleSheet.create({
     // elevation: 3,
   },
   metricIconContainer: {
-    width: 38,
-    height: 38,
+    width: 34,
+    height: 34,
     borderRadius: 19,
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.secondary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   textContainer: {
-    width: 110,
+    width: 120,
     alignItems: 'flex-start',
+    height: "100%",
+    justifyContent: "space-between",
   },
   metricValue: {
-    fontSize: 18,
-    color: '#55B56C',
+    fontSize: 20,
+    color: colors.secondary,
     fontFamily: 'Manrope-Bold',
-    marginTop: 4,
+    // marginTop: 4,
   },
   metricTitle: {
     fontSize: 12,
@@ -582,8 +823,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    elevation: 0.5,
-    paddingBottom: 10,
+    elevation: 1,
+    paddingBottom: 7,
     // justifyContent: 'space-between',
   },
   searchCard: {
@@ -591,8 +832,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: "#F8F8F8",
     marginHorizontal: 20,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    height: 45,
+    paddingHorizontal: 10,
+    // paddingVertical: spacing.sm,
     borderRadius: 5,
     // elevation: 2,
     marginTop: 10,
@@ -601,7 +843,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     paddingHorizontal: spacing.sm,
-    color: colors.textPrimary,
+    color: "#6E6E6E",
     fontFamily: 'Manrope-Regular',
     fontSize: 14,
   },
@@ -614,8 +856,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: 5,
     marginRight: spacing.sm,
-    height: 55,
-    width: '22%',
+    height: 45,
+    width: '23%',
     marginTop: 9,
   },
   scanText: {
@@ -624,15 +866,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   filterButton: {
-    width: 60,
-    height: 60,
-    // borderRadius: 18,
+    // width: 50,
+    // height: 50,
+    // borderRadius: 12,
     // borderWidth: 1,
     // borderColor: '#d7e2d9',
-    // alignItems: 'center',
+    alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 9,
-    marginLeft: 6,
+    // marginTop: 9,
+    marginLeft: 5,
+    backgroundColor: '#fff',
+    position: 'relative',
+    marginTop: 8,
+  },
+  filterButtonActive: {
+    borderColor: colors.secondary,
+    backgroundColor: '#e9f5ef',
+  },
+  filterActiveDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.secondary,
+    position: 'absolute',
+    top: 8,
+    right: 8,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -706,7 +964,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   directionButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.secondary,
     borderRadius: 5,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -718,6 +976,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 13,
+    fontFamily: 'Manrope-Bold',
   },
   itemHeader: {
     flexDirection: 'row',
@@ -787,6 +1046,16 @@ const styles = StyleSheet.create({
     color: '#55b56c',
     fontFamily: 'Manrope-Medium',
   },
+  signalStrengthContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  signalStrengthText: {
+    fontSize: 12,
+    color: '#55b56c',
+    fontFamily: 'Manrope-Medium',
+  },
   datedetails: {
     backgroundColor: '#F8F8F8',
     paddingVertical: 3,
@@ -843,12 +1112,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginHorizontal: 2,
-    marginBottom: 10,
+    marginBottom: 20,
+  },
+  profileGreetingContainer: {
+    gap: 6,
   },
   profileGreetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-
   },
   hiText: {
     color: COLORS.primaryFontColor,
@@ -898,5 +1169,95 @@ const styles = StyleSheet.create({
   emptyText: {
     ...typography.body,
     color: colors.textSecondary,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+    backgroundColor: 'rgba(4, 12, 34, 0.45)',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  filterModalCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: spacing.lg,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    fontSize: 18,
+  },
+  modalSection: {
+    marginBottom: spacing.lg,
+  },
+  modalSectionLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    fontFamily: 'Manrope-SemiBold',
+  },
+  chipGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  filterChip: {
+    borderWidth: 1,
+    borderColor: '#dfe5eb',
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: '#fff',
+  },
+  filterChipActive: {
+    backgroundColor: '#e6f4ed',
+    borderColor: colors.secondary,
+  },
+  filterChipText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontFamily: 'Manrope-Medium',
+  },
+  filterChipTextActive: {
+    color: colors.secondary,
+    fontFamily: 'Manrope-SemiBold',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalButtonGhost: {
+    borderWidth: 1,
+    borderColor: '#dfe5eb',
+    backgroundColor: '#fff',
+  },
+  modalButtonPrimary: {
+    backgroundColor: colors.secondary,
+  },
+  modalButtonText: {
+    fontSize: 15,
+    fontFamily: 'Manrope-SemiBold',
+    color: '#fff',
+  },
+  modalButtonGhostText: {
+    color: colors.textPrimary,
   },
 });
