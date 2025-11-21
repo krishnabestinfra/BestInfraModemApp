@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import Logo from '../components/global/Logo';
 import RippleLogo from '../components/global/RippleLogo';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
@@ -12,7 +11,6 @@ import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 import { modemErrors } from '../data/dummyData';
 import Menu from '../../assets/icons/bars.svg';
-import MenuIcon from '../../assets/icons/bars.svg';
 import NotificationLight from '../../assets/icons/notification.svg';
 import NotificationIcon from '../../assets/icons/notificationDark.svg';
 import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
@@ -318,9 +316,9 @@ const ModemDetailsScreen = ({ route, navigation }) => {
 
 
           <View style={styles.heroTopRow}>
-            <Pressable style={styles.barsIcon} onPress={() => setIsMenuOpen(true)}>
+            <View style={styles.barsIcon}>
               <Menu width={18} height={18} fill="#202d59" />
-            </Pressable>
+            </View>
 
             <View style={styles.logoWrapper}>
               <RippleLogo size={68} />
@@ -355,22 +353,6 @@ const ModemDetailsScreen = ({ route, navigation }) => {
         <Button title="Start Troubleshooting" onPress={handleResolve} style={styles.resolveButton} />
       </View>
 
-      {isMenuOpen && (
-        <SideMenuOverlay
-          activeItem={activeMenuItem}
-          onSelect={(itemKey) => {
-            setActiveMenuItem(itemKey);
-            handleMenuNavigation(itemKey, navigation);
-            setIsMenuOpen(false);
-          }}
-          onClose={() => setIsMenuOpen(false)}
-          onLogout={() => {
-            setActiveMenuItem('Logout');
-            navigation?.replace?.('Login');
-            setIsMenuOpen(false);
-          }}
-        />
-      )}
     </SafeAreaView>
   );
 };
