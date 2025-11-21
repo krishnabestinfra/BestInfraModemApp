@@ -9,6 +9,7 @@ import Logo from "../components/global/Logo";
 import DashboardScreen from "../screens/DashboardScreen";
 import Troubleshoot from "../screens/TroubleshootScreen";
 import Profile from "../screens/ProfileScreen";
+import ServicesScreen from "../screens/ServicesScreen";
 import { useSidebar } from "../context/SidebarContext";
 import SideMenuNavigation from "../components/SideMenuNavigation";
 import DashboardIcon from "../../assets/icons/dashboardMenu.svg";
@@ -39,7 +40,7 @@ const SideMenu = ({ navigation }) => {
         return <Troubleshoot navigation={navigation} />;
       
       case "Support":
-        return <ProfileScreen navigation={navigation} />;
+        return <ServicesScreen navigation={navigation} />;
   
       default:
         return <DashboardScreen navigation={navigation} />;
@@ -106,7 +107,7 @@ const SideMenu = ({ navigation }) => {
               {
                 key: "Support",
                 label: "Support",
-                route: "Profile",
+                route: "Services",
                 Icon: TicketsIcon,
                 ActiveIcon: ActiveSettings
               },

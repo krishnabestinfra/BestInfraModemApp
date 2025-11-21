@@ -17,6 +17,7 @@ const DashboardHeaderSection = ({ navigation, onLogout }) => {
         <View style={styles.TopMenu}>
           <Pressable
             style={styles.barsIcon}
+            onPress={() => navigation?.navigate?.('SideMenu')}
           >
             <Menu width={18} height={18} fill="#202d59" />
           </Pressable>
@@ -25,6 +26,7 @@ const DashboardHeaderSection = ({ navigation, onLogout }) => {
           </View>
           <Pressable
             style={styles.bellIcon}
+            onPress={() => navigation?.navigate?.('Profile')}
           >
             <Notification width={18} height={18} fill="#202d59" />
           </Pressable>
@@ -42,23 +44,6 @@ const DashboardHeaderSection = ({ navigation, onLogout }) => {
               <Hand width={30} height={30} fill="#55B56C" />
             </View>
             <Text style={styles.stayingText}>Monitoring modems today?</Text>
-          </View>
-          <View>
-            <Text style={styles.balanceText}>Status</Text>
-            <View
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                paddingHorizontal: 5,
-                justifyContent: "center",
-              }}
-            >
-              <Text style={styles.amountText}>Active</Text>
-              <View style={styles.plusBox}>
-                <Plus width={20} height={20} fill="#55B56C" />
-              </View>
-            </View>
           </View>
         </View>
         {/* <View style={{ marginTop: 20 }}>
