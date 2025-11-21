@@ -152,7 +152,7 @@ const NotificationCard = ({
   if (onPress && !disabled) {
     return (
       <Pressable style={styles.pressable} onPress={onPress}>
-        {cardContent}
+        {/* {cardContent} */}
       </Pressable>
     );
   }

@@ -45,6 +45,15 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
+        initialRouteName={
+          isLoading 
+            ? "Splash" 
+            : !isAuthenticated && showOnboarding 
+            ? "OnBoarding" 
+            : !isAuthenticated 
+            ? "Login" 
+            : "Dashboard"
+        }
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
@@ -74,19 +83,21 @@ const AppNavigator = () => {
 
         (
           <>
-            <Stack.Screen
-              name="SideMenu"
-              component={SideMenu}
-              options={{ headerShown: false }}
-            />
-
-            {/* ORIGINAL SCREENS */}
+            {/* Dashboard is the initial screen after login */}
             <Stack.Screen name="Dashboard">
               {(props) => (
                 <DashboardScreen {...props} onLogout={handleLogout} />
               )}
             </Stack.Screen>
 
+            {/* SideMenu is accessible but not the default */}
+            <Stack.Screen
+              name="SideMenu"
+              component={SideMenu}
+              options={{ headerShown: false }}
+            />
+
+            {/* Other screens */}
             <Stack.Screen name="ErrorDetails" component={ErrorDetailsScreen} />
             <Stack.Screen name="Alerts" component={AlertsScreen} />
             <Stack.Screen name="ModemDetails" component={ModemDetailsScreen} />

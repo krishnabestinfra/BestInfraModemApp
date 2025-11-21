@@ -30,7 +30,7 @@ const SideMenu = ({ navigation }) => {
 
   const renderContent = () => {
     switch (activeItem) {
-      case "Accounts":
+      case "Dashboard":
         return <DashboardScreen navigation={navigation} />;
   
       case "Modems":
@@ -84,8 +84,8 @@ const SideMenu = ({ navigation }) => {
           <SideMenuNavigation
             items={[
               {
-                key: "Accounts",
-                label: "Accounts",
+                key: "Dashboard",
+                label: "Dashboard",
                 route: "Dashboard",
                 Icon: DashboardIcon,
                 ActiveIcon: ActiveDashboard

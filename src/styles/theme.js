@@ -1,7 +1,7 @@
 export const colors = {
   // BestInfra Primary Colors
   primary: '#163b7c', // BestInfra Blue
-  secondary: '#55b56c', // BestInfra Green
+  secondary: '#55B56C', // BestInfra Green
   success: '#55b56c', // BestInfra Green
   warning: '#FF9800',
   error: '#F44336',
