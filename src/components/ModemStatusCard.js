@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderRadius: borderRadius.xs,
+    borderRadius: 5,
     paddingVertical: spacing.md,
     paddingRight: spacing.ms,
     paddingLeft: spacing.ml,
@@ -53,8 +53,7 @@ const styles = StyleSheet.create({
   },
   label: {
 ...typography.caption,
-    fontFamily: 'Manrope',
-    fontWeight: '500',
+    fontFamily: 'Manrope-Medium',
     fontSize: 12,
     lineHeight: 12,
     letterSpacing: 0,
@@ -63,7 +62,8 @@ const styles = StyleSheet.create({
   value: {
     ...typography.body,
     color: '#fff',
-    fontWeight: '800',
+    fontSize:16,
+    fontFamily:"Manrope-ExtraBold"
   },
   badge: {
     flexDirection: 'row',

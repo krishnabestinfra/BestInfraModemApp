@@ -16,6 +16,7 @@ import SideMenu from '../screens/Sidemenu';
 import ScanScreen from '../components/ScanScreen';
 import ServicesScreen from '../screens/ServicesScreen';
 import ServiceDetailsScreen from '../screens/ServiceDetailsScreen';
+import CompletedActivities from '../screens/CompletedActivities';
 
 const Stack = createNativeStackNavigator();
 
@@ -106,6 +107,7 @@ const AppNavigator = () => {
             <Stack.Screen name="ScanScreen" component={ScanScreen} />
             <Stack.Screen name="Services" component={ServicesScreen} />
             <Stack.Screen name="ServiceDetails" component={ServiceDetailsScreen} />
+            <Stack.Screen name="CompletedActivities" component={CompletedActivities} />
           </>
         )
         }

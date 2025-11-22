@@ -138,18 +138,20 @@ const TroubleshootScreen = ({ navigation, route }) => {
             )}
           </LinearGradient>
 
-          {!isComplete && (
-            <View style={styles.progressContainer}>
-              <ProgressBars currentStep={currentStepIndex + 1} totalSteps={troubleshootSteps.length} />
-            </View>
-          )}
-        {isComplete ? (
-            <SuccessCard image={successImage} onComplete={handleComplete} />
-          ) : (
-            <StepContent
-              step={currentStep}
-            />
-          )}
+          <View style={styles.GifContainer}>
+            {!isComplete && (
+              <View style={styles.progressContainer}>
+                <ProgressBars currentStep={currentStepIndex + 1} totalSteps={troubleshootSteps.length} />
+              </View>
+            )}
+            {isComplete ? (
+              <SuccessCard image={successImage} onComplete={handleComplete} />
+            ) : (
+              <StepContent
+                step={currentStep}
+              />
+            )}
+          </View>
         </ScrollView>
 
         {!isComplete && (
@@ -196,14 +198,14 @@ const ProgressBars = ({ currentStep = 1, totalSteps = 3 }) => {
 
 const StepContent = ({ step }) => (
   <View style={styles.stepWrapper}>
-    
+
     <View style={styles.stepCard}>
-    <ExpoImage
-      source={step.image}
-      style={styles.stepImage}
-      contentFit="contain"
-      transition={0}
-    />
+      <ExpoImage
+        source={step.image}
+        style={styles.stepImage}
+        contentFit="contain"
+        transition={0}
+      />
       <View style={styles.stepTextBlock}>
         <Text style={styles.stepTitle}>{step.title}</Text>
         <Text style={styles.stepDescription}>{step.description}</Text>
@@ -214,14 +216,14 @@ const StepContent = ({ step }) => (
 
 const SuccessCard = ({ image, onComplete }) => (
   <View style={styles.successWrapper}>
-   <ExpoImage
-     source={image}
-     style={styles.successImage}
-     contentFit="contain"
-     transition={0}
-   />
+    <ExpoImage
+      source={image}
+      style={styles.successImage}
+      contentFit="contain"
+      transition={0}
+    />
     <View style={styles.successImageContainer}>
-      <CheckCircleIcon width={18} height={18}/>
+      <CheckCircleIcon width={18} height={18} />
       <Text style={styles.successTitle}>Success</Text>
     </View>
     <Text style={styles.successSubtitle}>Issue successfully resolved</Text>
@@ -245,8 +247,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl * 2,
   },
   heroCard: {
-    paddingHorizontal:18,
-    paddingBottom:15  
+    paddingHorizontal: 18,
+    paddingBottom: 15
   },
   heroOverlayCircleLarge: {
     position: 'absolute',
@@ -271,6 +273,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 10,
+    paddingHorizontal: 5
   },
   logoWrapper: {
     alignItems: 'center',
@@ -307,7 +311,10 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   heroStatusCard: {
-    marginTop: spacing.lg,
+    marginTop: 0,
+  },
+  GifContainer:{
+    backgroundColor:"#fff"
   },
   progressContainer: {
     backgroundColor: colors.cardBackground,
@@ -364,13 +371,13 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: '#163B7C',
     fontFamily: 'Manrope-SemiBold',
-    fontSize:16
+    fontSize: 16
   },
   stepDescription: {
     ...typography.small,
     color: '#898992',
     marginTop: spacing.sm,
-    fontSize:13,
+    fontSize: 13,
     fontFamily: 'Manrope-Regular',
   },
   responseRow: {
@@ -440,21 +447,21 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.primary,
     fontFamily: 'Manrope-Medium',
-    fontSize:16,
+    fontSize: 16,
     marginTop: spacing.xs,
   },
   successBody: {
     ...typography.body,
-    fontSize:14,
+    fontSize: 14,
     marginTop: spacing.xs,
     textAlign: 'center',
-    fontFamily:'Manrope-Regular',
+    fontFamily: 'Manrope-Regular',
   },
   completeButton: {
     marginTop: spacing.lg,
     alignSelf: 'stretch',
-    borderRadius:5,
-    marginTop:40,
+    borderRadius: 5,
+    marginTop: 40,
   },
 });
 

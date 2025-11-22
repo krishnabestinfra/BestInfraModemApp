@@ -10,7 +10,7 @@ const Button = React.memo(({
   disabled = false,
   loading = false,
   style,
-  textStyle,
+  textStyle='mediumText',
   children,
   ...props
 }) => {
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   text: {
     fontFamily: 'Manrope-Medium',
     textAlign: 'center',
-
+    
   },
   smallText: {
     fontSize: 12,
