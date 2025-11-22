@@ -21,6 +21,7 @@ import voltageCheckGif from '../../assets/images/voltageCheck.gif';
 import checkSignalGif from '../../assets/images/Check_singal.gif';
 import successImg from '../../assets/images/Success_page.gif';
 
+
 import Menu from '../../assets/icons/bars.svg';
 import NotificationLight from '../../assets/icons/notification.svg';
 import CheckCircleIcon from '../../assets/icons/successIcon.svg';
@@ -157,7 +158,6 @@ const TroubleshootScreen = ({ navigation, route }) => {
           )}
         </LinearGradient>
 
-        {/* MAIN CONTENT (NO SCROLLVIEW NOW) */}
         <View style={styles.stepArea}>
           {!isComplete ? (
             <StepContent
@@ -170,7 +170,6 @@ const TroubleshootScreen = ({ navigation, route }) => {
           )}
         </View>
 
-        {/* FIXED BOTTOM BUTTONS */}
         {!isComplete && (
           <View style={styles.bottomResponseBar}>
 
@@ -291,10 +290,10 @@ const styles = StyleSheet.create({
   stepArea: {
     flex: 1,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
+     justifyContent: 'center',
+
   },
 
-  /* STEP CARD */
   stepCard: {
     backgroundColor: '#fff',
     borderRadius: borderRadius.xl,
@@ -317,8 +316,6 @@ const styles = StyleSheet.create({
     color: '#898992',
     marginTop: spacing.sm,
   },
-
-  /* BOTTOM BUTTONS */
   bottomResponseBar: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -344,7 +341,7 @@ const styles = StyleSheet.create({
   responseTextYes: { fontSize: 14, color: '#fff', fontWeight: '500' },
   responseTextNo: { fontSize: 14, color: '#6E6E6E', fontWeight: '500' },
 
-  /* FAILURE CONTENT */
+
   feedbackCardInside: {
     backgroundColor: '#F7F7F7',
     padding: spacing.md,
@@ -374,7 +371,6 @@ const styles = StyleSheet.create({
   successWrapper: {
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    marginTop: spacing.lg,
   },
   successImage: {
     width: '100%',
