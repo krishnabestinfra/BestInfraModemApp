@@ -10,6 +10,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Modal,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -33,6 +34,7 @@ import TotalTasksIcon from '../../assets/icons/totaltasks.svg';
 import CompletedTasksIcon from '../../assets/icons/completedtasks.svg';
 import CommunicatingModemsIcon from '../../assets/icons/communicating.svg';
 import NonCommunicatingModemsIcon from '../../assets/icons/noncommicating.svg';
+import Meter from '../../assets/images/meter.png';
 
 // Ensure all text on this screen uses Manrope by default without altering sizes.
 if (!Text.defaultProps) {
@@ -73,8 +75,19 @@ const DashboardScreen = ({ navigation }) => {
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [appliedFilters, setAppliedFilters] = useState({ statuses: [], signal: 'all' });
-  const [draftFilters, setDraftFilters] = useState({ statuses: [], signal: 'all' });
+  const [appliedFilters, setAppliedFilters] = useState({
+    statuses: [],
+    signal: 'all',
+    errorType: 'all',
+    sortBy: 'newest'
+  });
+
+  const [draftFilters, setDraftFilters] = useState({
+    statuses: [],
+    signal: 'all',
+    errorType: 'all',
+    sortBy: 'newest'
+  });
   const hasActiveFilters =
     appliedFilters.statuses.length > 0 || appliedFilters.signal !== 'all';
 
@@ -82,6 +95,8 @@ const DashboardScreen = ({ navigation }) => {
     setDraftFilters({
       statuses: [...appliedFilters.statuses],
       signal: appliedFilters.signal,
+      errorType: appliedFilters.errorType,
+      sortBy: appliedFilters.sortBy,
     });
     setFilterModalVisible(true);
   };
@@ -107,7 +122,7 @@ const DashboardScreen = ({ navigation }) => {
   };
 
   const handleResetFilters = () => {
-    const cleared = { statuses: [], signal: 'all' };
+    const cleared = { statuses: [], signal: 'all', errorType: 'all', sortBy: 'newest' };
     setAppliedFilters(cleared);
     setDraftFilters(cleared);
   };
@@ -156,7 +171,7 @@ const DashboardScreen = ({ navigation }) => {
     if (!apiData?.alerts || !Array.isArray(apiData.alerts) || apiData.alerts.length === 0) {
       return modemErrors;
     }
-    
+
     return apiData.alerts.map((alert, index) => ({
       id: alert.sno?.toString() || alert.modemSlNo || `alert-${index}`,
       modemId: alert.modemSlNo || 'N/A',
@@ -169,6 +184,7 @@ const DashboardScreen = ({ navigation }) => {
       discom: alert.discom || 'N/A',
       meterSlNo: alert.meterSlNo || 'N/A',
       code: alert.code,
+      photos: [Meter],
       // Keep original alert data for details screen
       originalAlert: alert,
     }));
@@ -205,7 +221,7 @@ const DashboardScreen = ({ navigation }) => {
     // Calculate today's tasks from timelineData
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     let totalTasksToday = 0;
     let completedTasksToday = 0;
 
@@ -216,7 +232,7 @@ const DashboardScreen = ({ navigation }) => {
         itemDate.setHours(0, 0, 0, 0);
         return itemDate.getTime() === today.getTime();
       });
-      
+
       if (todayData) {
         totalTasksToday = todayData.count || 0;
       }
@@ -269,60 +285,53 @@ const DashboardScreen = ({ navigation }) => {
   };
 
   const filteredModems = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    
-    if (query.length === 0) {
-      // No search query, just apply filters
-      return transformedAlerts.filter((item) => {
-        const matchesStatus =
-          appliedFilters.statuses.length === 0 || appliedFilters.statuses.includes(item.status);
-        const matchesSignal =
-          appliedFilters.signal === 'all' ||
-          getSignalBand(item.signalStrength) === appliedFilters.signal;
-        return matchesStatus && matchesSignal;
+    let list = [...transformedAlerts];
+
+    // STATUS FILTER
+    if (appliedFilters.statuses.length > 0) {
+      list = list.filter(item =>
+        appliedFilters.statuses.includes(item.status)
+      );
+    }
+
+    // SIGNAL FILTER
+    if (appliedFilters.signal !== "all") {
+      list = list.filter(
+        (item) => getSignalBand(item.signalStrength) === appliedFilters.signal
+      );
+    }
+
+    // ERROR TYPE FILTER
+    if (appliedFilters.errorType !== "all") {
+      list = list.filter(item => {
+        const err = (item.error || "").toLowerCase();
+        const t = appliedFilters.errorType;
+
+        if (t === "network") return err.includes("network");
+        if (t === "power") return err.includes("power");
+        if (t === "restart") return err.includes("restart");
+        return true;
       });
     }
 
-    // Enhanced search across all relevant fields
-    return transformedAlerts.filter((item) => {
-      // Get status label for searching
-      const statusLabel = getStatusLabel(item.status);
-      
-      // Build comprehensive searchable text
-      const searchableFields = [
-        item.modemId || '',
-        item.location || '',
-        item.error || '',
-        item.reason || '',
-        item.discom || '',
-        item.meterSlNo || '',
-        item.code?.toString() || '',
-        item.signalStrength?.toString() || '',
-        statusLabel,
-        // Search in formatted date parts
-        item.date || '',
-      ];
+    // SORTING
+    if (appliedFilters.sortBy === "newest") {
+      list.sort((a, b) => new Date(b.date) - new Date(a.date));
+    } else {
+      list.sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
 
-      // Create searchable text string
-      const searchableText = searchableFields
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
+    // SEARCH
+    const query = searchQuery.trim().toLowerCase();
+    if (query.length > 0) {
+      list = list.filter(item =>
+        `${item.modemId} ${item.error} ${item.location} ${item.date}`
+          .toLowerCase()
+          .includes(query)
+      );
+    }
 
-      // Check if query matches any part of the searchable text
-      // Split query into words for better matching (all words must match)
-      const queryWords = query.split(/\s+/).filter(Boolean);
-      const matchesSearch = queryWords.every(word => searchableText.includes(word));
-
-      // Apply filters
-      const matchesStatus =
-        appliedFilters.statuses.length === 0 || appliedFilters.statuses.includes(item.status);
-      const matchesSignal =
-        appliedFilters.signal === 'all' ||
-        getSignalBand(item.signalStrength) === appliedFilters.signal;
-
-      return matchesSearch && matchesStatus && matchesSignal;
-    });
+    return list;
   }, [searchQuery, transformedAlerts, appliedFilters]);
 
   return (
@@ -340,7 +349,7 @@ const DashboardScreen = ({ navigation }) => {
             <View style={styles.logoWrapper}>
               <RippleLogo size={68} />
             </View>
-            <Pressable 
+            <Pressable
               style={styles.bellIcon}
               onPress={() => navigation?.navigate?.('Profile')}
             >
@@ -365,7 +374,7 @@ const DashboardScreen = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Total Tasks</Text>
+                <Text style={styles.metricTitle}>Total Field Activities</Text>
                 <Text style={styles.metricValue}>
                   {loading ? '...' : (wipData?.totalTasksToday ?? 0)}
                 </Text>
@@ -376,11 +385,12 @@ const DashboardScreen = ({ navigation }) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.metricCard}
-              onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'COMMISSIONED' })}
+              // onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'COMMISSIONED' })}
+              onPress={() => navigation.navigate("CompletedActivities")}
               activeOpacity={0.7}
             >
               <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Completed Tasks</Text>
+                <Text style={styles.metricTitle}>Completed Field Activities</Text>
                 <Text style={styles.metricValue}>
                   {loading ? '...' : (wipData?.completedTasksToday ?? 0)}
                 </Text>
@@ -440,13 +450,13 @@ const DashboardScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('ScanScreen')}
           >
             <Text style={styles.scanText}>Scan</Text>
-            <ScanIcon width={20} height={20} />
+            <ScanIcon width={16} height={16} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.filterButton}
             onPress={openFilterModal}
           >
-            <FilterIcon width={20} height={20} />
+            <FilterIcon width={18} height={18} />
             {hasActiveFilters && <View style={styles.filterActiveDot} />}
           </TouchableOpacity>
         </View>
@@ -479,23 +489,34 @@ const DashboardScreen = ({ navigation }) => {
           <Pressable style={styles.modalBackdrop} onPress={closeFilterModal} />
           <View style={styles.filterModalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter alerts</Text>
+              <Text style={styles.modalTitle}>Filter Alerts</Text>
               <Pressable onPress={closeFilterModal}>
                 <Ionicons name="close" size={20} color="#1b1f3b" />
               </Pressable>
             </View>
-
             <View style={styles.modalSection}>
-              <Text style={styles.modalSectionLabel}>Status</Text>
+              <Text style={styles.modalSectionLabel}>Error Type</Text>
               <View style={styles.chipGroup}>
-                {STATUS_FILTERS.map((option) => {
-                  const isActive = draftFilters.statuses.includes(option.value);
+                {[
+                  { label: "All", value: "all" },
+                  { label: "Network Failure", value: "network" },
+                  { label: "Power Failure", value: "power" },
+                  { label: "Modem Restart", value: "restart" },
+                ].map((option) => {
+                  const isActive = draftFilters.errorType === option.value;
                   return (
                     <TouchableOpacity
                       key={option.value}
-                      style={[styles.filterChip, isActive && styles.filterChipActive]}
-                      onPress={() => toggleDraftStatus(option.value)}
-                      activeOpacity={0.8}
+                      style={[
+                        styles.filterChip,
+                        isActive && styles.filterChipActive,
+                      ]}
+                      onPress={() =>
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          errorType: option.value,
+                        }))
+                      }
                     >
                       <Text
                         style={[
@@ -512,16 +533,28 @@ const DashboardScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.modalSection}>
-              <Text style={styles.modalSectionLabel}>Signal Strength</Text>
+              <Text style={styles.modalSectionLabel}>Sort By</Text>
+
               <View style={styles.chipGroup}>
-                {SIGNAL_FILTERS.map((option) => {
-                  const isActive = draftFilters.signal === option.value;
+                {[
+                  { label: "Newest First", value: "newest" },
+                  { label: "Oldest First", value: "oldest" },
+                ].map((option) => {
+                  const isActive = draftFilters.sortBy === option.value;
+
                   return (
                     <TouchableOpacity
                       key={option.value}
-                      style={[styles.filterChip, isActive && styles.filterChipActive]}
-                      onPress={() => setDraftSignal(option.value)}
-                      activeOpacity={0.8}
+                      style={[
+                        styles.filterChip,
+                        isActive && styles.filterChipActive,
+                      ]}
+                      onPress={() =>
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          sortBy: option.value,
+                        }))
+                      }
                     >
                       <Text
                         style={[
@@ -536,7 +569,6 @@ const DashboardScreen = ({ navigation }) => {
                 })}
               </View>
             </View>
-
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonGhost]}
@@ -546,6 +578,7 @@ const DashboardScreen = ({ navigation }) => {
                   Reset
                 </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonPrimary]}
                 onPress={handleApplyFilters}
@@ -553,9 +586,12 @@ const DashboardScreen = ({ navigation }) => {
                 <Text style={styles.modalButtonText}>Apply Filters</Text>
               </TouchableOpacity>
             </View>
+
           </View>
         </View>
       </Modal>
+
+
     </SafeAreaView>
   );
 };
@@ -644,18 +680,18 @@ const ModemCard = ({ modem, navigation }) => {
   const handleCardPress = () => {
     // Pass modemSlNo for API fetch, and keep modem data for fallback
     const modemSlNo = modem.modemId || modem.originalAlert?.modemSlNo || modem.modemId;
-    
+
     if (!modemSlNo || modemSlNo === 'N/A') {
       console.warn('No valid modemSlNo found for navigation');
       // Still navigate but with available data
-      navigation?.navigate?.('ModemDetails', { 
+      navigation?.navigate?.('ModemDetails', {
         modem,
-        modemSlNo: modem.modemId 
+        modemSlNo: modem.modemId
       });
       return;
     }
 
-    navigation?.navigate?.('ModemDetails', { 
+    navigation?.navigate?.('ModemDetails', {
       modem,
       modemSlNo: modemSlNo
     });
@@ -682,11 +718,26 @@ const ModemCard = ({ modem, navigation }) => {
       {/* Body row: left photo block + right details */}
       <View style={styles.itemDetails}>
         {/* Photo Section - 25% */}
-        <View style={styles.photoSection}>
+        {/* <View style={styles.photoSection}>
           <View style={styles.photoSectionContent}>
             <Ionicons name="image-outline" size={22} color="#B0B0B0" />
             <Text style={styles.detailLabel}>Photos</Text>
           </View>
+        </View> */}
+
+        <View style={styles.photoSection}>
+          {modem?.photos && modem.photos.length > 0 ? (
+            <Image
+              source={modem.photos[0]}
+              style={styles.photoImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.photoSectionContent}>
+              <Ionicons name="image-outline" size={22} color="#B0B0B0" />
+              <Text style={styles.detailLabel}>Photos</Text>
+            </View>
+          )}
         </View>
 
         {/* Right details - 75% */}
@@ -823,8 +874,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    elevation: 1,
-    paddingBottom: 7,
+    elevation: 0.5,
+    paddingVertical: 7,
+    paddingBottom: 14,
     // justifyContent: 'space-between',
   },
   searchCard: {
@@ -1010,7 +1062,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 18,
-    height:115
+    height: 115
+  },
+  photoImage: {
+    width: "100%",
+    height: "140%",
+    borderRadius: 5,
   },
   photoSectionContent: {
     alignItems: 'center',
@@ -1037,7 +1094,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-Regular',
   },
   detailValue: {
-    fontSize:12,
+    fontSize: 12,
     color: '#333',
     fontFamily: 'Manrope-SemiBold',
   },
@@ -1062,7 +1119,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     textAlign: 'center',
     borderRadius: 5,
-    fontSize:9
+    fontSize: 9,
+    fontFamily: 'Manrope-Regular',
   },
   statusPillPending: {
     backgroundColor: '#FF8A00',
