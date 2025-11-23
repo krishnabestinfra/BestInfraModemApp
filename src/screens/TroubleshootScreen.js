@@ -13,20 +13,23 @@ import { LinearGradient } from 'expo-linear-gradient';
 import RippleLogo from '../components/global/RippleLogo';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
-import { colors, spacing, borderRadius } from '../styles/theme';
+import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 
 import checkConnectionGif from '../../assets/images/Check_connection.gif';
 import voltageCheckGif from '../../assets/images/voltageCheck.gif';
 import checkSignalGif from '../../assets/images/Check_singal.gif';
 import successImg from '../../assets/images/Success_page.gif';
+import checkConnection2Gif from '../../assets/icons/check_connection2.gif';
+import voltageCheck2Gif from '../../assets/icons/voltageCheck2.gif';
+import checkSignal2Gif from '../../assets/icons/Check_singal2.gif';
 
 
 import Menu from '../../assets/icons/bars.svg';
 import NotificationLight from '../../assets/icons/notification.svg';
 import CheckCircleIcon from '../../assets/icons/successIcon.svg';
 
-// Set default font
+// Default font
 if (!Text.defaultProps) Text.defaultProps = {};
 Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
 
@@ -39,13 +42,13 @@ const troubleshootSteps = [
 
     noTitle: 'Cable Not Connected Properly',
     noSubtitle: 'The cable connection check has failed. Please follow these steps.',
+    noImage: checkConnection2Gif,
     noSteps: [
       'Disconnect all cables and inspect for any visible damage',
       'Reconnect all cables firmly until you hear a click',
       'Wait 30 seconds for reconnection detection',
     ]
   },
-
   {
     id: 2,
     title: 'Measure Input Voltage',
@@ -53,6 +56,7 @@ const troubleshootSteps = [
     image: voltageCheckGif,
 
     noTitle: 'Voltage Not Detected',
+    noImage: voltageCheck2Gif,
     noSubtitle: 'Follow these corrective steps.',
     noSteps: [
       'Test the power outlet with another device',
@@ -60,7 +64,6 @@ const troubleshootSteps = [
       'Check if the circuit breaker has tripped',
     ]
   },
-
   {
     id: 3,
     title: 'Check Signal Strength',
@@ -69,6 +72,7 @@ const troubleshootSteps = [
 
     noTitle: 'Communication Not Established',
     noSubtitle: 'Follow these steps.',
+    noImage: checkSignal2Gif,
     noSteps: [
       'Power cycle the modem (30 seconds)',
       'Check network cables',
@@ -76,8 +80,6 @@ const troubleshootSteps = [
     ]
   },
 ];
-
-const successImage = successImg;
 
 const TroubleshootScreen = ({ navigation, route }) => {
   const modem = route?.params?.modem;
@@ -131,19 +133,13 @@ const TroubleshootScreen = ({ navigation, route }) => {
           style={styles.heroCard}
         >
           <View style={styles.heroTopRow}>
-            <Pressable
-              style={styles.barsIcon}
-              onPress={() => navigation.navigate('SideMenu')}
-            >
+            <Pressable style={styles.barsIcon} onPress={() => navigation.navigate('SideMenu')}>
               <Menu width={18} height={18} fill="#202d59" />
             </Pressable>
 
             <RippleLogo size={68} />
 
-            <Pressable
-              style={styles.bellIcon}
-              onPress={() => navigation.navigate('Profile')}
-            >
+            <Pressable style={styles.bellIcon} onPress={() => navigation.navigate('Profile')}>
               <NotificationLight width={18} height={18} fill="#202d59" />
             </Pressable>
           </View>
@@ -158,6 +154,7 @@ const TroubleshootScreen = ({ navigation, route }) => {
           )}
         </LinearGradient>
 
+        {/* MAIN CONTENT */}
         <View style={styles.stepArea}>
           {!isComplete ? (
             <StepContent
@@ -166,13 +163,13 @@ const TroubleshootScreen = ({ navigation, route }) => {
               showRetry={showRetry}
             />
           ) : (
-            <SuccessCard image={successImage} onComplete={handleComplete} />
+            <SuccessCard image={successImg} onComplete={handleComplete} />
           )}
         </View>
 
+        {/* BOTTOM BUTTONS */}
         {!isComplete && (
           <View style={styles.bottomResponseBar}>
-
             {showRetry ? (
               <TouchableOpacity
                 style={[styles.responseButton, styles.responseButtonRetry]}
@@ -200,7 +197,6 @@ const TroubleshootScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
               </View>
             )}
-
           </View>
         )}
 
@@ -209,13 +205,12 @@ const TroubleshootScreen = ({ navigation, route }) => {
   );
 };
 
-/* --- COMPONENTS --- */
-
+/* STEP CONTENT */
 const StepContent = ({ step, feedback, showRetry }) => (
   <View style={styles.stepCard}>
 
     <ExpoImage
-      source={step.image}
+      source={showRetry ? step.noImage : step.image}
       style={styles.stepImage}
       contentFit="contain"
     />
@@ -240,9 +235,11 @@ const StepContent = ({ step, feedback, showRetry }) => (
         </View>
       </>
     )}
+
   </View>
 );
 
+/* SUCCESS COMPONENT */
 const SuccessCard = ({ image, onComplete }) => (
   <View style={styles.successWrapper}>
     <ExpoImage
@@ -263,14 +260,14 @@ const SuccessCard = ({ image, onComplete }) => (
   </View>
 );
 
-/* --- STYLES --- */
-
+/* STYLES */
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
 
   container: { flex: 1 },
 
-  heroCard: { padding: 18, paddingBottom: 15 },
+  heroCard: { paddingHorizontal: 18, paddingBottom: 15 },
+
   heroTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -278,22 +275,27 @@ const styles = StyleSheet.create({
   },
   barsIcon: {
     backgroundColor: COLORS.secondaryFontColor,
-    width: 54, height: 54, borderRadius: 60,
-    justifyContent: 'center', alignItems: 'center'
+    width: 54, height: 54,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   bellIcon: {
     backgroundColor: COLORS.secondaryFontColor,
-    width: 54, height: 54, borderRadius: 60,
-    justifyContent: 'center', alignItems: 'center'
+    width: 54, height: 54,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
 
+  /* MAIN AREA */
   stepArea: {
     flex: 1,
+    justifyContent: 'center',
     paddingHorizontal: spacing.md,
-     justifyContent: 'center',
-
   },
 
+  /* STEP CARD */
   stepCard: {
     backgroundColor: '#fff',
     borderRadius: borderRadius.xl,
@@ -316,6 +318,8 @@ const styles = StyleSheet.create({
     color: '#898992',
     marginTop: spacing.sm,
   },
+
+  /* BOTTOM BUTTONS */
   bottomResponseBar: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -335,13 +339,12 @@ const styles = StyleSheet.create({
   },
   responseButtonYes: { backgroundColor: colors.secondary },
   responseButtonNo: { backgroundColor: '#eef0f4' },
-  responseButtonRetry: {
-    backgroundColor:colors.secondary,
-  },
+  responseButtonRetry: { backgroundColor: colors.secondary },
+
   responseTextYes: { fontSize: 14, color: '#fff', fontWeight: '500' },
   responseTextNo: { fontSize: 14, color: '#6E6E6E', fontWeight: '500' },
 
-
+  /* FAILURE CONTENT */
   feedbackCardInside: {
     backgroundColor: '#F7F7F7',
     padding: spacing.md,
@@ -359,7 +362,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: colors.textSecondary,
     marginRight: spacing.sm,
-    marginTop: 5,
+    marginTop: 6,
   },
   stepTextInside: {
     flex: 1,
@@ -369,6 +372,8 @@ const styles = StyleSheet.create({
 
   /* SUCCESS */
   successWrapper: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
   },
@@ -390,7 +395,7 @@ const styles = StyleSheet.create({
   },
   successSubtitle: {
     fontSize: 16,
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   successBody: {
     fontSize: 14,

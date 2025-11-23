@@ -46,7 +46,7 @@ const fallbackDetails = {
 
 const statusMetaMap = {
   warning: { label: 'Warning', color: '#F57C00', bg: '#FFF3E0' },
-  disconnected: { label: 'Non-Communicating', color: '#C62828', bg: '#FFE9E9' },
+  disconnected: { label: 'Non-Communicating', color: '#FF1E00', bg: '#FFF' },
   default: { label: 'Active', color: colors.secondary, bg: '#E6F7EE' },
 };
 
@@ -116,10 +116,10 @@ const ModemDetailsScreen = ({ route, navigation }) => {
 
   const getStatusFromCode = (code) => {
     const codeMap = {
-      202: 'warning', // Modem / DCU Auto Restart
-      213: 'success', // Meter COM Restored
+      202: 'disconnected', // Modem / DCU Auto Restart
+      213: 'disconnected', // Meter COM Restored
       214: 'disconnected', // DCU / Modem Power Failed
-      215: 'success', // DCU / Modem Power Restored
+      215: 'disconnected', // DCU / Modem Power Restored
       212: 'disconnected', // Meter COM Failed
     };
     return codeMap[code] || 'default';
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 10,
     paddingBottom: 5,
-    paddingHorizontal: 15,
+    paddingHorizontal: 27,
   },
   logoWrapper: {
     alignItems: 'center',
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   cardBackground:{
-    paddingHorizontal:18
+    paddingHorizontal:15
   },
   heroContent: {
     flexDirection: 'row',
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textPrimary,
     fontFamily: 'Manrope-SemiBold',
-    fontSize: 14,
+    fontSize: 12,
   },
   signalStrengthContainer: {
     flexDirection: 'row',
@@ -592,9 +592,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   signalStrengthText: {
-    fontSize: 13,
-    color: colors.textPrimary,
-    fontFamily: 'Manrope-Medium',
+    fontSize: 12,
+    color: "#262626",
+    fontFamily: 'Manrope-SemiBold',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -710,8 +710,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   detailLabel: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 14,
+    color: '#6E6E6E',
     marginBottom: 3,
     fontFamily: 'Manrope-Regular',
   },
@@ -744,7 +744,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.lg,
     paddingTop: spacing.sm,
-    backgroundColor: colors.background,
+    backgroundColor: "#EEF8F0",
   },
   resolveButton: {
     borderRadius:5,
