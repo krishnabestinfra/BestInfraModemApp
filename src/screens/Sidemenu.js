@@ -24,7 +24,7 @@ import MetersIcon from "../../assets/icons/meterWhite.svg";
 import ModemsIcon from "../../assets/icons/modem.svg";
 
 
-const SideMenu = ({ navigation }) => {
+const SideMenu = ({ navigation, onLogout }) => {
   const { activeItem, setActiveItem } = useSidebar();
 
 
@@ -57,7 +57,11 @@ const SideMenu = ({ navigation }) => {
 
   const handleLogout = () => {
     setActiveItem("Logout");
-    navigation.replace("Login");
+    if (onLogout) {
+      onLogout();
+    } else {
+      navigation?.replace?.("Login");
+    }
   };
 
 
