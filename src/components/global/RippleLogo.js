@@ -5,13 +5,13 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   interpolate,
-  runOnJS,
+  withRepeat,
 } from "react-native-reanimated";
 import { Easing } from "react-native-reanimated";
 import Logo from "./Logo";
 
-const RING_COUNT = 20;
-const RING_DELAY = 800;
+const RING_COUNT = 35;
+const RING_DELAY =500;
 const ANIMATION_DURATION = 5000;
 
 const Ring = ({ index, progress, maxScale }) => {
@@ -34,23 +34,19 @@ const Ring = ({ index, progress, maxScale }) => {
   return <Animated.View style={[styles.ring, ringStyle]} />;
 };
 
-const RippleLogo = ({ size = 60 }) => {
+const RippleLogo = ({ size = 60, logoVariant = "blue", logoSize = "medium" }) => {
   const progress = useSharedValue(0);
 
-  const loopAnimation = () => {
-    progress.value = 0;
-    progress.value = withTiming(
-      RING_DELAY * (RING_COUNT - 1) + ANIMATION_DURATION,
-      {
-        duration: RING_DELAY * (RING_COUNT - 1) + ANIMATION_DURATION,
-        easing: Easing.inOut(Easing.ease),
-      },
-      () => runOnJS(loopAnimation)()
-    );
-  };
-
   useEffect(() => {
-    loopAnimation();
+    const totalDuration = RING_DELAY * (RING_COUNT - 1) + ANIMATION_DURATION;
+    progress.value = withRepeat(
+      withTiming(totalDuration, {
+        duration: totalDuration,
+        easing: Easing.linear,
+      }),
+      -1,
+      false
+    );
   }, []);
 
   return (
@@ -58,7 +54,7 @@ const RippleLogo = ({ size = 60 }) => {
       {Array.from({ length: RING_COUNT }).map((_, index) => (
         <Ring key={index} index={index} progress={progress} maxScale={size / 12} />
       ))}
-      <Logo variant="blue" size="medium" />
+      <Logo variant={logoVariant} size={logoSize} />
     </View>
   );
 };
