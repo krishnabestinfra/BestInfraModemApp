@@ -56,7 +56,6 @@ const SideMenu = ({ navigation, onLogout }) => {
   };
 
   const handleLogout = () => {
-    setActiveItem("Logout");
     if (onLogout) {
       onLogout();
     } else {
