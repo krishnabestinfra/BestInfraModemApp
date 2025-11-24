@@ -92,11 +92,14 @@ const AppNavigator = () => {
             </Stack.Screen>
 
             {/* SideMenu is accessible but not the default */}
-            <Stack.Screen
-              name="SideMenu"
-              component={SideMenu}
-              options={{ headerShown: false }}
-            />
+            <Stack.Screen name="SideMenu" options={{ headerShown: false }}>
+              {(props) => (
+                <SideMenu
+                  {...props}
+                  onLogout={handleLogout}
+                />
+              )}
+            </Stack.Screen>
 
             {/* Other screens */}
             <Stack.Screen name="ErrorDetails" component={ErrorDetailsScreen} />
