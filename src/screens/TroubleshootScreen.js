@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import RippleLogo from '../components/global/RippleLogo';
+import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
@@ -25,7 +26,6 @@ import voltageCheck2Gif from '../../assets/icons/voltageCheck2.gif';
 import checkSignal2Gif from '../../assets/icons/Check_singal2.gif';
 
 
-import Menu from '../../assets/icons/bars.svg';
 import NotificationLight from '../../assets/icons/notification.svg';
 import CheckCircleIcon from '../../assets/icons/successIcon.svg';
 
@@ -132,17 +132,16 @@ const TroubleshootScreen = ({ navigation, route }) => {
           colors={['#f4fbf7', '#e6f4ed']}
           style={styles.heroCard}
         >
-          <View style={styles.heroTopRow}>
-            <Pressable style={styles.barsIcon} onPress={() => navigation.navigate('SideMenu')}>
-              <Menu width={18} height={18} fill="#202d59" />
-            </Pressable>
-
-            <RippleLogo size={68} />
-
-            <Pressable style={styles.bellIcon} onPress={() => navigation.navigate('Profile')}>
-              <NotificationLight width={18} height={18} fill="#202d59" />
-            </Pressable>
-          </View>
+          <AppHeader
+            containerStyle={styles.heroTopRow}
+            leftButtonStyle={styles.barsIcon}
+            rightButtonStyle={styles.bellIcon}
+            rightIcon={NotificationLight}
+            logo={<RippleLogo size={68} />}
+            onPressLeft={() => navigation.navigate('SideMenu')}
+            onPressCenter={() => navigation.navigate('Dashboard')}
+            onPressRight={() => navigation.navigate('Profile')}
+          />
 
           {!isComplete && (
             <ModemStatusCard
@@ -303,9 +302,9 @@ const styles = StyleSheet.create({
   },
 
   heroTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
   },
   barsIcon: {
     backgroundColor: COLORS.secondaryFontColor,

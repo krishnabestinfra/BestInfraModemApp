@@ -13,7 +13,6 @@ import { COLORS } from "../constants/colors";
 import React, { useEffect, useRef, useState } from "react";
 import GlobeShield from "../../assets/icons/globe-shield.svg";
 import Arrow from "../../assets/icons/arrow.svg";
-import Menu from "../../assets/icons/bars.svg";
 import Notification from "../../assets/icons/notification.svg";
 import Animated, {
   useSharedValue,
@@ -24,6 +23,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Easing } from "react-native-reanimated";
 import Logo from "../components/global/Logo";
+import AppHeader from "../components/global/AppHeader";
 import ServiceChatBox from "../components/ServiceChatBox";
 import DropdownIcon from "../../assets/icons/dropDown.svg";
 
@@ -89,26 +89,31 @@ const ServiceDetails = ({ navigation, route }) => {
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
       <View style={[styles.bluecontainer, { flex: 1 }]}>
-        <View style={styles.TopMenu}>
-          <Pressable
-            style={styles.barsIcon}
-            onPress={() => navigation.goBack()}
-          >
-            <Arrow width={18} height={18} fill="#202d59" style={{ transform: [{ rotate: '180deg' }] }} />
-          </Pressable>
-          <View style={styles.logoWrapper}>
-            {Array.from({ length: RING_COUNT }).map((_, index) => (
-              <Ring key={index} index={index} progress={progress} />
-            ))}
-            <Logo variant="blue" size="medium" />
-          </View>
-          <Pressable
-            style={styles.bellIcon}
-            onPress={() => navigation?.navigate?.('Profile')}
-          >
-            <Notification width={18} height={18} fill="#202d59" />
-          </Pressable>
-        </View>
+        <AppHeader
+          containerStyle={styles.TopMenu}
+          leftButtonStyle={styles.barsIcon}
+          rightButtonStyle={styles.bellIcon}
+          leftIcon={Arrow}
+          rightIcon={Notification}
+          leftIconProps={{
+            width: 18,
+            height: 18,
+            fill: '#202d59',
+            style: { transform: [{ rotate: '180deg' }] },
+          }}
+          rightIconProps={{ width: 18, height: 18, fill: '#202d59' }}
+          logo={
+            <View style={styles.logoWrapper}>
+              {Array.from({ length: RING_COUNT }).map((_, index) => (
+                <Ring key={index} index={index} progress={progress} />
+              ))}
+              <Logo variant="blue" size="medium" />
+            </View>
+          }
+          onPressLeft={() => navigation.goBack()}
+          onPressCenter={() => navigation.navigate('Dashboard')}
+          onPressRight={() => navigation?.navigate?.('Profile')}
+        />
 
         <View style={styles.ServiceDetailsContainer}>
           <TouchableOpacity
@@ -198,9 +203,6 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   },
   TopMenu: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     paddingTop: 60,
     paddingBottom: 30,
     paddingHorizontal: 15,

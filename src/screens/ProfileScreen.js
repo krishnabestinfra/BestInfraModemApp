@@ -18,7 +18,7 @@ import CheapDollar from '../../assets/icons/cheapDollar.svg';
 import Logo from '../components/global/Logo';
 import NotificationCard from '../components/global/NotificationCard';
 import { COLORS } from '../constants/colors';
-import { notifications as defaultNotifications } from '../data/dummyData';
+// import { notifications as defaultNotifications } from '../data/dummyData';
 
 const iconMapper = {
   payment: HandBill,
@@ -40,7 +40,7 @@ const variantMapper = {
 };
 
 const ProfileScreen = ({ navigation }) => {
-  const [notificationList, setNotificationList] = useState(defaultNotifications);
+  const [notificationList, setNotificationList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -81,18 +81,18 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.topMenu}>
         <Pressable
           style={styles.barsIcon}
-          onPress={() => navigation?.navigate?.('Dashboard')}
+          onPress={() => navigation?.navigate?.('SideMenu')}
         >
           <Menu width={18} height={18} fill="#202d59" />
         </Pressable>
 
-        <Pressable onPress={() => navigation?.navigate?.('Dashboard')}>
+        <Pressable onPress={() => navigation?.navigate?.('SideMenu')}>
           <Logo variant="white" size="medium" />
         </Pressable>
 
         <Pressable
           style={styles.bellIcon}
-          onPress={() => navigation?.navigate?.('Dashboard')}
+          onPress={() => navigation?.navigate?.('')}
         >
           <Notification width={18} height={18} fill="#ffffff" />
         </Pressable>
@@ -126,9 +126,11 @@ const ProfileScreen = ({ navigation }) => {
             </Pressable>
           </View>
         ) : displayNotifications.length === 0 ? (
+
           <View style={styles.emptyContainer}>
+            <Notification width={60} height={60}/>
+
             <Text style={styles.emptyText}>No notifications available</Text>
-            <Text style={styles.emptySubText}>for {consumerUid}</Text>
           </View>
         ) : (
           displayNotifications.map((notification) => (
@@ -230,6 +232,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Manrope-Medium',
     textAlign: 'center',
+    marginTop: 12,
   },
   emptySubText: {
     color: COLORS.secondaryFontColor,
@@ -253,4 +256,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

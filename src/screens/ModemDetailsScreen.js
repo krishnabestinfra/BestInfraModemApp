@@ -5,12 +5,12 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RippleLogo from '../components/global/RippleLogo';
+import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 import { modemErrors } from '../data/dummyData';
-import Menu from '../../assets/icons/bars.svg';
 import NotificationLight from '../../assets/icons/notification.svg';
 import NotificationIcon from '../../assets/icons/notificationDark.svg';
 import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
@@ -313,33 +313,25 @@ const ModemDetailsScreen = ({ route, navigation }) => {
           end={{ x: 1, y: 1 }}
           style={styles.heroCard}
         >
-
-
-          <View style={styles.heroTopRow}>
-            <View style={styles.barsIcon}>
-              <Menu width={18} height={18} fill="#202d59" />
-            </View>
-
-            <View style={styles.logoWrapper}>
-              <RippleLogo size={68} />
-            </View>
-
-            <Pressable
-              style={styles.bellIcon}
-              onPress={() => navigation?.navigate?.('Profile')}
-            >
-              <NotificationLight width={18} height={18} fill="#202d59" />
-            </Pressable>
-          </View>
-        <View style={styles.cardBackground}>
-        <ModemStatusCard
-            modemId={modem.modemId}
-            statusLabel={statusMeta.label}
-            statusColor={statusMeta.color}
-            statusBackground={statusMeta.bg}
-            style={styles.heroStatusCard}
+          <AppHeader
+            containerStyle={styles.heroTopRow}
+            leftButtonStyle={styles.barsIcon}
+            rightButtonStyle={styles.bellIcon}
+            rightIcon={NotificationLight}
+            logo={<RippleLogo size={68} />}
+            onPressLeft={() => navigation?.navigate?.('SideMenu')}
+            onPressCenter={() => navigation?.navigate?.('Dashboard')}
+            onPressRight={() => navigation?.navigate?.('Profile')}
           />
-        </View>
+          <View style={styles.cardBackground}>
+            <ModemStatusCard
+              modemId={modem.modemId}
+              statusLabel={statusMeta.label}
+              statusColor={statusMeta.color}
+              statusBackground={statusMeta.bg}
+              style={styles.heroStatusCard}
+            />
+          </View>
           
         </LinearGradient>
 
@@ -503,17 +495,9 @@ const styles = StyleSheet.create({
     right: 20,
   },
   heroTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingTop: 10,
     paddingBottom: 5,
     paddingHorizontal: 27,
-  },
-  logoWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
   },
   iconChip: {
     width: 40,
