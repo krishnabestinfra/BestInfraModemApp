@@ -5,6 +5,7 @@ import { COLORS } from "../constants/colors";
 import MenuIcon from "../../assets/icons/barsWhite.svg";
 import NotificationIcon from "../../assets/icons/notification.svg";
 import Logo from "../components/global/Logo";
+import AppHeader from "../components/global/AppHeader";
 
 import DashboardScreen from "../screens/DashboardScreen";
 import Troubleshoot from "../screens/TroubleshootScreen";
@@ -69,17 +70,19 @@ const SideMenu = ({ navigation, onLogout }) => {
       <StatusBar style="light" />
 
 
-      <View style={styles.TopMenu}>
-        <Pressable style={styles.barsIcon} onPress={() => navigation.navigate("Dashboard")}>
-          <MenuIcon width={18} height={18} fill="#fff" />
-        </Pressable>
-
-        <Logo variant="white" size="medium" />
-
-        <Pressable style={styles.bellIcon} onPress={() => navigation.navigate("Profile")}>
-          <NotificationIcon width={18} height={18} fill="#000" />
-        </Pressable>
-      </View>
+      <AppHeader
+        containerStyle={styles.TopMenu}
+        leftButtonStyle={styles.barsIcon}
+        rightButtonStyle={styles.bellIcon}
+        leftIcon={MenuIcon}
+        rightIcon={NotificationIcon}
+        leftIconProps={{ width: 18, height: 18, fill: "#fff" }}
+        rightIconProps={{ width: 18, height: 18, fill: "#000" }}
+        logo={<Logo variant="white" size="medium" />}
+        onPressLeft={() => navigation.navigate("Dashboard")}
+        onPressCenter={() => navigation.navigate("Dashboard")}
+        onPressRight={() => navigation.navigate("Profile")}
+      />
 
       <View style={styles.MenuContainer}>
 
@@ -149,9 +152,6 @@ const styles = StyleSheet.create({
 
   },
   TopMenu: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     paddingTop: 75,
     paddingBottom: 35,
     paddingHorizontal: 30,

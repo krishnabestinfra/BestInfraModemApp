@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import RippleLogo from "../components/global/RippleLogo";
-import Menu from "../../assets/icons/bars.svg";
+import AppHeader from "../components/global/AppHeader";
 import NotificationLight from "../../assets/icons/notification.svg";
 import { COLORS } from "../constants/colors";
 import CalendarIcon from "../../assets/icons/greenCalendar.svg";
@@ -69,23 +69,19 @@ const CompletedActivities = ({ navigation }) => {
                 end={{ x: 1, y: 1 }}
                 style={styles.headerContainer}
             >
-                <View style={styles.headerRow}>
-                    <Pressable
-                        style={styles.circleButton}
-                        onPress={() => navigation.navigate("SideMenu")}
-                    >
-                        <Menu width={20} height={20} fill="#202d59" />
-                    </Pressable>
-
-                    <RippleLogo size={64} />
-
-                    <Pressable
-                        style={styles.circleButton}
-                        onPress={() => navigation.navigate("Notifications")}
-                    >
-                        <NotificationLight width={20} height={20} fill="#202d59" />
-                    </Pressable>
-                </View>
+                <AppHeader
+                    containerStyle={styles.headerRow}
+                    leftButtonStyle={styles.circleButton}
+                    rightButtonStyle={styles.circleButton}
+                    rightIcon={NotificationLight}
+                    logo={<RippleLogo size={64} />}
+                    onPressLeft={() => navigation.navigate("SideMenu")}
+                    onPressCenter={() => navigation.navigate("Dashboard")}
+                    onPressRight={() => navigation.navigate("Notifications")}
+                    buttonSize={54}
+                    rightIconProps={{ width: 20, height: 20, fill: "#202d59" }}
+                    leftIconProps={{ width: 20, height: 20, fill: "#202d59" }}
+                />
             </LinearGradient>
             <View
                 style={styles.container}
@@ -161,9 +157,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     headerRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
         paddingHorizontal: 15,
         paddingTop: 10
     },

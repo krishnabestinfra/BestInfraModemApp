@@ -16,10 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RippleLogo from '../components/global/RippleLogo';
+import AppHeader from '../components/global/AppHeader';
 import { modemStats, modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
-import Menu from '../../assets/icons/bars.svg';
 import SearchIcon from '../../assets/icons/searchIcon.svg';
 import ScanIcon from '../../assets/icons/scan.svg';
 import FilterIcon from '../../assets/icons/filter.svg';
@@ -342,20 +342,16 @@ const DashboardScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.bluecontainer}>
-          <View style={styles.TopMenu}>
-            <Pressable style={styles.barsIcon} onPress={() => navigation.navigate("SideMenu")}>
-              <Menu width={18} height={18} fill="#202d59" />
-            </Pressable>
-            <View style={styles.logoWrapper}>
-              <RippleLogo size={68} />
-            </View>
-            <Pressable
-              style={styles.bellIcon}
-              onPress={() => navigation?.navigate?.('Profile')}
-            >
-              <NotificationLight width={18} height={18} fill="#202d59" />
-            </Pressable>
-          </View>
+          <AppHeader
+            containerStyle={styles.TopMenu}
+            leftButtonStyle={styles.barsIcon}
+            rightButtonStyle={styles.bellIcon}
+            rightIcon={NotificationLight}
+            logo={<RippleLogo size={68} />}
+            onPressLeft={() => navigation.navigate('SideMenu')}
+            onPressCenter={() => navigation.navigate('Dashboard')}
+            onPressRight={() => navigation.navigate('Profile')}
+          />
           <View style={styles.ProfileBox}>
             <View style={styles.profileGreetingContainer}>
               <View style={styles.profileGreetingRow}>
@@ -1139,9 +1135,6 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   TopMenu: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingTop: 10,
     paddingBottom: 5,
     paddingHorizontal: 15,
