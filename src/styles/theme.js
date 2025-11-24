@@ -34,7 +34,7 @@ export const spacing = {
   xs: 4,
   xsm: 6,
   sm: 8,
-  ms:12,
+  ms: 12,
   md: 16,
   ml: 18,
   lg: 24,
@@ -45,6 +45,7 @@ export const spacing = {
 
 export const borderRadius = {
   sm: 4,
+  xsm: 6,
   xs: 6,
   md: 8,
   lg: 12,
