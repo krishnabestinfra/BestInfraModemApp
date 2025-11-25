@@ -204,22 +204,27 @@ const DashboardScreen = ({ navigation }) => {
       };
     }
 
-    // Calculate communicating vs non-communicating modems from alertsByCode
-    let communicatingCount = 0;
-    let nonCommunicatingCount = 0;
 
-    if (apiData.alertsByCode && Array.isArray(apiData.alertsByCode)) {
-      apiData.alertsByCode.forEach((item) => {
-        // Codes 202 (Auto Restart), 213 (COM Restored), 215 (Power Restored) = communicating
-        if ([202, 213, 215].includes(item.code)) {
-          communicatingCount += item.uniqueModems || 0;
+    const communicatingModems = new Set();
+    const nonCommunicatingModems = new Set();
+
+    if (apiData.alerts && Array.isArray(apiData.alerts)) {
+      apiData.alerts.forEach((alert) => {
+        if (!alert.modemSlNo) return;
+        
+ 
+        if ([202, 213, 215].includes(alert.code)) {
+          communicatingModems.add(alert.modemSlNo);
         }
         // Codes 214 (Power Failed), 212 (COM Failed) = non-communicating
-        if ([214, 212].includes(item.code)) {
-          nonCommunicatingCount += item.uniqueModems || 0;
+        if ([214, 212].includes(alert.code)) {
+          nonCommunicatingModems.add(alert.modemSlNo);
         }
       });
     }
+
+    const communicatingCount = communicatingModems.size;
+    const nonCommunicatingCount = nonCommunicatingModems.size;
 
     // Calculate today's tasks from timelineData
     const today = new Date();
@@ -231,6 +236,7 @@ const DashboardScreen = ({ navigation }) => {
     // Find today's data from timelineData
     if (apiData.timelineData && Array.isArray(apiData.timelineData)) {
       const todayData = apiData.timelineData.find((item) => {
+        if (!item.date) return false;
         const itemDate = new Date(item.date);
         itemDate.setHours(0, 0, 0, 0);
         return itemDate.getTime() === today.getTime();
