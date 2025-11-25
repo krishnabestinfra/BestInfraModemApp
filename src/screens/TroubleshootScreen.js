@@ -441,6 +441,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 10,
     color: colors.textSecondary,
+    fontFamily: 'Manrope',
   },
 
   /* SUCCESS */

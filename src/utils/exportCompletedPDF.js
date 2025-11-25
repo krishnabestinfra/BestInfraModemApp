@@ -19,7 +19,7 @@ export const exportCompletedPDF = async (resolvedList = []) => {
     // Build HTML
     const html = `
       <html>
-        <body style="font-family: Arial; padding: 20px;">
+        <body style="font-family: 'Manrope-Regular'; padding: 20px;">
           <h2 style="text-align: center;">Completed Field Activities Report</h2>
 
           <table style="width:100%; border-collapse: collapse;" border="1">

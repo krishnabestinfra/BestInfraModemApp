@@ -92,7 +92,13 @@ const AppNavigator = () => {
             </Stack.Screen>
 
             {/* SideMenu is accessible but not the default */}
-            <Stack.Screen name="SideMenu" options={{ headerShown: false }}>
+            <Stack.Screen 
+              name="SideMenu" 
+              options={{ 
+                headerShown: false,
+                animation: 'slide_from_left'
+              }}
+            >
               {(props) => (
                 <SideMenu
                   {...props}
