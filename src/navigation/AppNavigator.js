@@ -91,7 +91,6 @@ const AppNavigator = () => {
               )}
             </Stack.Screen>
 
-            {/* SideMenu is accessible but not the default */}
             <Stack.Screen 
               name="SideMenu" 
               options={{ 

@@ -11,6 +11,9 @@ import {
   ActivityIndicator,
   Modal,
   Image,
+  Linking,
+  Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -693,8 +696,34 @@ const ModemCard = ({ modem, navigation }) => {
     });
   };
 
-  const handleGetDirection = () => {
-    // TODO: integrate maps navigation here
+  const handleGetDirection = async () => {
+    const latitude = 17.3850;  
+    const longitude = 78.4867;
+    
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+    const appleMapsUrl = `http://maps.apple.com/?daddr=${latitude},${longitude}`;
+    
+    try {
+      const url = Platform.OS === 'ios' ? appleMapsUrl : googleMapsUrl;
+      
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          'Maps Not Available',
+          'Unable to open maps application. Please install Google Maps or Apple Maps.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error opening maps:', error);
+      Alert.alert(
+        'Error',
+        'Unable to open maps. Please try again later.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   return (
