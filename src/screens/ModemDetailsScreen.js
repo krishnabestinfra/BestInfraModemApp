@@ -51,6 +51,7 @@ const statusMetaMap = {
 };
 
 const API_BASE_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
+const USE_MOCK_ALERTS = true; // flip to false to hit live endpoint
 
 const formatDisplayDateTime = (dateString) => {
   if (!dateString || dateString === 'N/A') return 'N/A';
@@ -126,6 +127,11 @@ const ModemDetailsScreen = ({ route, navigation }) => {
   };
 
   useEffect(() => {
+    if (USE_MOCK_ALERTS) {
+      setLoading(false);
+      return;
+    }
+
     if (modemSlNo && modemSlNo !== 'N/A') {
       fetchModemDetails();
     } else {
@@ -135,6 +141,10 @@ const ModemDetailsScreen = ({ route, navigation }) => {
   }, [modemSlNo]);
 
   const fetchModemDetails = async () => {
+    if (USE_MOCK_ALERTS) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const url = `${API_BASE_URL}/${encodeURIComponent(modemSlNo)}`;

@@ -22,23 +22,40 @@ import User from '../../assets/icons/user.svg';
 
 const screenHeight = Dimensions.get("window").height;
 
-const DUMMY_MOBILE_NUMBER = "1234567899";
-const DUMMY_OTP = "123456";
+const API_BASE_URL = "https://nexusenergy.tech/api/v1";
+const API_KEY = "eyaM-5N8mDzLykpA3n3igUgGgNnEcehUY9NJ9ui4Ic5LuZW1sqbZylAg1q_C1";
+const USE_MOCK_AUTH = true; // temporary dev flag; set false to hit real APIs
+const MOCK_MODEMS = [
+  {
+    id: "M-1001",
+    site: "Sector 21, Gurgaon",
+    status: "online",
+  },
+  {
+    id: "M-1002",
+    site: "Phase 9, Mohali",
+    status: "offline",
+  },
+];
+const PHONE_LENGTH = 10;
+const OTP_LENGTH = 6;
 
 const LoginScreen = ({ onLogin }) => {
-  const [mobileNumber, setMobileNumber] = useState("");
-  const [otpDigits, setOtpDigits] = useState(Array(6).fill(""));
+  const [mobileNumber, setMobileNumber] = useState(USE_MOCK_AUTH ? "9876543210" : "");
+  const [otpDigits, setOtpDigits] = useState(
+    USE_MOCK_AUTH ? ["1", "2", "3", "4", "5", "6"] : Array(OTP_LENGTH).fill("")
+  );
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
-  const [otpEnabled, setOtpEnabled] = useState(false);
+  const [otpEnabled, setOtpEnabled] = useState(USE_MOCK_AUTH);
   const [resendTimer, setResendTimer] = useState(0);
   const otpRefs = useRef([]);
 
   const otpValue = otpDigits.join("");
-  const hasCompletedOtp = otpEnabled && otpValue.length === 6;
-  const isGenerateEnabled = mobileNumber === DUMMY_MOBILE_NUMBER;
+  const hasCompletedOtp = otpEnabled && otpValue.length === OTP_LENGTH;
+  const isGenerateEnabled = USE_MOCK_AUTH || mobileNumber.length === PHONE_LENGTH;
   const formattedTimer = `${String(Math.floor(resendTimer / 60)).padStart(2, "0")}:${String(
     resendTimer % 60
   ).padStart(2, "0")}`;
@@ -67,6 +84,66 @@ const LoginScreen = ({ onLogin }) => {
     };
   }, [otpEnabled]);
 
+  const sendOtp = async (phone) => {
+    if (USE_MOCK_AUTH) {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      return;
+    }
+    const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ phone }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Failed to send OTP");
+    }
+  };
+
+  const validateOtp = async (phone, otp) => {
+    if (USE_MOCK_AUTH) {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      return;
+    }
+    const response = await fetch(`${API_BASE_URL}/auth/validate-otp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ phone, otp }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "OTP verification failed");
+    }
+  };
+
+  const fetchModemsByOfficer = async (phone) => {
+    if (USE_MOCK_AUTH) {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      return MOCK_MODEMS;
+    }
+    const response = await fetch(`${API_BASE_URL}/modem/user/all`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${API_KEY}`,
+        "X-CUSTOMER-ID": phone,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Unable to load assigned modems");
+    }
+
+    return response.json();
+  };
+
   const handleInputChange = (field, value) => {
     // Clear error when user starts typing
     if (errors[field]) {
@@ -75,36 +152,36 @@ const LoginScreen = ({ onLogin }) => {
 
     switch (field) {
       case 'mobile': {
-        const sanitized = value.replace(/\D/g, "").slice(0, 10);
+        const sanitized = value.replace(/\D/g, "").slice(0, PHONE_LENGTH);
         setMobileNumber(sanitized);
-        if (otpEnabled || sanitized !== DUMMY_MOBILE_NUMBER) {
+        if (otpEnabled) {
           setOtpEnabled(false);
-          setOtpDigits(Array(6).fill(""));
+          setOtpDigits(Array(OTP_LENGTH).fill(""));
         }
-        break;
+          break;
+        }
       }
-    }
-  };
+    };
 
-  const handleBlur = (field) => {
-    setTouched(prev => ({ ...prev, [field]: true }));
+    const handleBlur = (field) => {
+      setTouched(prev => ({ ...prev, [field]: true }));
 
-    let value;
-    switch (field) {
-      case 'mobile':
-        value = mobileNumber;
-        break;
-      case 'otp':
-        value = otpValue;
-        break;
-      default:
-        return;
-    }
+      let value;
+      switch (field) {
+        case 'mobile':
+          value = mobileNumber;
+          break;
+        case 'otp':
+          value = otpValue;
+          break;
+        default:
+          return;
+      }
 
-    // Simple validation
-    if (field === 'mobile' && value && value.length !== 10) {
+      // Simple validation
+      if (field === 'mobile' && value && value.length !== PHONE_LENGTH) {
       setErrors(prev => ({ ...prev, [field]: 'Enter a valid 10-digit mobile number' }));
-    } else if (field === 'otp' && value && value.length !== 6) {
+    } else if (field === 'otp' && value && value.length !== OTP_LENGTH) {
       setErrors(prev => ({ ...prev, [field]: 'Enter the OTP code' }));
     } else {
       setErrors(prev => ({ ...prev, [field]: null }));
@@ -123,7 +200,7 @@ const LoginScreen = ({ onLogin }) => {
       return updated;
     });
 
-    if (sanitized && index < otpDigits.length - 1) {
+    if (sanitized && index < OTP_LENGTH - 1) {
       otpRefs.current[index + 1]?.focus();
     }
   };
@@ -144,22 +221,24 @@ const LoginScreen = ({ onLogin }) => {
 
     if (!otpEnabled) {
       setTouched(prev => ({ ...prev, mobile: true }));
-      if (!mobileNumber || mobileNumber !== DUMMY_MOBILE_NUMBER) {
-        setErrors(prev => ({ ...prev, mobile: `Use the dummy number ${DUMMY_MOBILE_NUMBER}` }));
+      if (!USE_MOCK_AUTH && (!mobileNumber || mobileNumber.length !== PHONE_LENGTH)) {
+        setErrors(prev => ({ ...prev, mobile: 'Enter a valid 10-digit mobile number' }));
         setIsLoading(false);
         return;
       }
 
       try {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setOtpDigits(Array(6).fill(""));
+        await sendOtp(mobileNumber);
+        setOtpDigits(Array(OTP_LENGTH).fill(""));
         setOtpEnabled(true);
         setErrors(prev => ({ ...prev, otp: null }));
+        setTouched(prev => ({ ...prev, otp: false }));
         setTimeout(() => {
           otpRefs.current[0]?.focus();
         }, 100);
       } catch (error) {
         console.error('OTP request error:', error);
+        setErrors(prev => ({ ...prev, mobile: error.message || 'Unable to send OTP' }));
       } finally {
         setIsLoading(false);
       }
@@ -170,13 +249,11 @@ const LoginScreen = ({ onLogin }) => {
     setTouched({ mobile: true, otp: true });
 
     const newErrors = {};
-    if (!mobileNumber || mobileNumber !== DUMMY_MOBILE_NUMBER) {
-      newErrors.mobile = `Use the dummy number ${DUMMY_MOBILE_NUMBER}`;
+    if (!USE_MOCK_AUTH && (!mobileNumber || mobileNumber.length !== PHONE_LENGTH)) {
+      newErrors.mobile = 'Enter a valid 10-digit mobile number';
     }
-    if (otpValue.length !== 6) {
+    if (otpValue.length !== OTP_LENGTH) {
       newErrors.otp = 'Enter the OTP code';
-    } else if (otpValue !== DUMMY_OTP) {
-      newErrors.otp = `Enter the dummy OTP ${DUMMY_OTP}`;
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -186,10 +263,12 @@ const LoginScreen = ({ onLogin }) => {
     }
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      onLogin();
+      await validateOtp(mobileNumber, otpValue);
+      const modems = await fetchModemsByOfficer(mobileNumber);
+      onLogin ? onLogin(modems) : null;
     } catch (error) {
       console.error('Login error:', error);
+      setErrors(prev => ({ ...prev, otp: error.message || 'Unable to verify OTP' }));
     } finally {
       setIsLoading(false);
     }
@@ -291,11 +370,6 @@ const LoginScreen = ({ onLogin }) => {
                   <View style={styles.otpInputsRow}>
                     {otpDigits.map((digit, index) => (
                       <View key={`otp-${index}`} style={styles.otpInputWrapper}>
-                        {!otpEnabled && !digit && (
-                          <Text style={styles.otpPlaceholderText}>
-                            {DUMMY_OTP[index]}
-                          </Text>
-                        )}
                         <TextInput
                           ref={(ref) => (otpRefs.current[index] = ref)}
                           style={[
@@ -496,16 +570,6 @@ const styles = StyleSheet.create({
   },
   otpInputError: {
     borderColor: COLORS.color_danger,
-  },
-  otpPlaceholderText: {
-    position: "absolute",
-    top: 16,
-    left: 0,
-    right: 0,
-    textAlign: "center",
-    fontSize: 18,
-    color: COLORS.color_text_secondary,
-    fontFamily: "Manrope-SemiBold",
   },
   orContainer: {
     backgroundColor: "#e9eaee",

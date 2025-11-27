@@ -51,6 +51,7 @@ Text.defaultProps.style = [
 const { width } = Dimensions.get('window');
 
 const API_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
+const USE_MOCK_ALERTS = true; // set false when backend is ready
 
 const STATUS_FILTERS = [
   { label: 'Communicating', value: 'success' },
@@ -164,6 +165,12 @@ const DashboardScreen = ({ navigation }) => {
   }, []);
 
   const fetchApiData = async () => {
+    if (USE_MOCK_ALERTS) {
+      setLoading(false);
+      setApiData(null); // stay on dummy dataset
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await fetch(API_URL);
