@@ -9,6 +9,7 @@ import AppHeader from "../components/global/AppHeader";
 
 import DashboardScreen from "../screens/DashboardScreen";
 import Troubleshoot from "../screens/TroubleshootScreen";
+import CompletedActivities from "../screens/CompletedActivities";
 import Profile from "../screens/ProfileScreen";
 import { useSidebar } from "../context/SidebarContext";
 import SideMenuNavigation from "../components/SideMenuNavigation";
@@ -34,7 +35,7 @@ const SideMenu = ({ navigation, onLogout }) => {
         return <DashboardScreen navigation={navigation} />;
   
       case "Resolved":
-        return <Troubleshoot navigation={navigation} />;
+        return <CompletedActivities navigation={navigation} />;
       
       default:
         return <DashboardScreen navigation={navigation} />;
@@ -99,7 +100,7 @@ const SideMenu = ({ navigation, onLogout }) => {
               {
                 key: "Resolved",
                 label: "Resolved",
-                route: "Troubleshoot",
+                route: "CompletedActivities",
                 Icon: MetersIcon,
                 ActiveIcon: ActiveTickets
               },
@@ -107,6 +108,7 @@ const SideMenu = ({ navigation, onLogout }) => {
             activeItem={activeItem}
             onSelect={handleMenuPress}
             onLogout={handleLogout}
+            onScan={() => navigation.navigate("ScanScreen")}
           />
         </View>
 
