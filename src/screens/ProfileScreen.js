@@ -18,6 +18,7 @@ import CheapDollar from '../../assets/icons/cheapDollar.svg';
 import Logo from '../components/global/Logo';
 import NotificationCard from '../components/global/NotificationCard';
 import { COLORS } from '../constants/colors';
+import EmptyNotification from '../../assets/icons/NoNotification.svg';
 // import { notifications as defaultNotifications } from '../data/dummyData';
 
 const iconMapper = {
@@ -128,9 +129,11 @@ const ProfileScreen = ({ navigation }) => {
         ) : displayNotifications.length === 0 ? (
 
           <View style={styles.emptyContainer}>
-            <Notification width={60} height={60}/>
+            <EmptyNotification width={60} height={60}/>
 
-            <Text style={styles.emptyText}>No notifications available</Text>
+            <Text style={styles.emptyText}>No Notification</Text>
+            <Text style={styles.emptySubText}>We’ll let you know when there will be</Text>
+            <Text style={styles.emptySubText}>something to update you.</Text>
           </View>
         ) : (
           displayNotifications.map((notification) => (
@@ -222,25 +225,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptyContainer: {
-    flex: 1,
+    flex: 0.8,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
   },
   emptyText: {
-    color: COLORS.secondaryFontColor,
-    fontSize: 14,
-    fontFamily: 'Manrope-Medium',
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontFamily: 'Manrope',
+    fontWeight: '700',
     textAlign: 'center',
-    marginTop: 12,
+    marginBottom: 12,
+    marginTop: 24,
   },
   emptySubText: {
-    color: COLORS.secondaryFontColor,
-    fontSize: 12,
-    fontFamily: 'Manrope-Regular',
+    color: '#CDCDCD',
+    fontSize: 16,
+    fontFamily: 'Manrope',
     textAlign: 'center',
-    opacity: 0.7,
-    marginTop: 4,
   },
   retryButton: {
     backgroundColor: COLORS.primaryColor,
