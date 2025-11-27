@@ -10,17 +10,13 @@ import AppHeader from "../components/global/AppHeader";
 import DashboardScreen from "../screens/DashboardScreen";
 import Troubleshoot from "../screens/TroubleshootScreen";
 import Profile from "../screens/ProfileScreen";
-import ServicesScreen from "../screens/ServicesScreen";
 import { useSidebar } from "../context/SidebarContext";
 import SideMenuNavigation from "../components/SideMenuNavigation";
 import DashboardIcon from "../../assets/icons/dashboardMenu.svg";
 import ActiveDashboard from "../../assets/icons/activeDashboard.svg";
 import UsageIcon from "../../assets/icons/usageMenu.svg";
 import ActiveUsage from "../../assets/icons/activeUsage.svg";
-import TicketsIcon from "../../assets/icons/ticketsMenu.svg";
 import ActiveTickets from "../../assets/icons/activeTickets.svg";
-import SettingsIcon from "../../assets/icons/settingMenu.svg";
-import ActiveSettings from "../../assets/icons/activeSettings.svg";
 import MetersIcon from "../../assets/icons/meterWhite.svg";
 import ModemsIcon from "../../assets/icons/modem.svg";
 
@@ -40,9 +36,6 @@ const SideMenu = ({ navigation, onLogout }) => {
       case "Resolved":
         return <Troubleshoot navigation={navigation} />;
       
-      case "Support":
-        return <ServicesScreen navigation={navigation} />;
-  
       default:
         return <DashboardScreen navigation={navigation} />;
     }
@@ -109,13 +102,6 @@ const SideMenu = ({ navigation, onLogout }) => {
                 route: "Troubleshoot",
                 Icon: MetersIcon,
                 ActiveIcon: ActiveTickets
-              },
-              {
-                key: "Support",
-                label: "Support",
-                route: "Services",
-                Icon: TicketsIcon,
-                ActiveIcon: ActiveSettings
               },
             ]}
             activeItem={activeItem}
