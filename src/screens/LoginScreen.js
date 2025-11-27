@@ -238,7 +238,7 @@ const LoginScreen = ({ onLogin }) => {
     try {
       await validateOtp(mobileNumber, otpValue);
       const modems = await fetchModemsByOfficer(mobileNumber);
-      onLogin ? onLogin(modems) : null;
+      onLogin ? onLogin(modems, mobileNumber) : null;
     } catch (error) {
       console.error('Login error:', error);
       setErrors(prev => ({ ...prev, otp: error.message || 'Unable to verify OTP' }));

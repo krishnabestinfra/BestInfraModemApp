@@ -51,7 +51,7 @@ Text.defaultProps.style = [
 const { width } = Dimensions.get('window');
 
 const API_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
-const USE_MOCK_ALERTS = true; // set false when backend is ready
+const USE_MOCK_ALERTS = false; // hitting live endpoint now that creds exist
 
 const STATUS_FILTERS = [
   { label: 'Communicating', value: 'success' },
@@ -100,7 +100,7 @@ const getSignalBand = (signalStrength = 0) => {
   return 'strong';
 };
 
-const DashboardScreen = ({ navigation }) => {
+const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [userName] = useState('Field Officer');
   const [apiData, setApiData] = useState(null);
@@ -160,9 +160,17 @@ const DashboardScreen = ({ navigation }) => {
     setDraftFilters(cleared);
   };
 
+  const assignedModems = Array.isArray(modems) ? modems : [];
+  const hasAssignedModems = assignedModems.length > 0;
+
   useEffect(() => {
+    if (hasAssignedModems) {
+      setLoading(false);
+      setApiData(null);
+      return;
+    }
     fetchApiData();
-  }, []);
+  }, [hasAssignedModems]);
 
   const fetchApiData = async () => {
     if (USE_MOCK_ALERTS) {
@@ -206,28 +214,87 @@ const DashboardScreen = ({ navigation }) => {
   };
 
   // Transform API alerts to modem format
+  const normalizeModemRecord = (modem = {}, index = 0) => {
+    const derivedId =
+      modem.id ||
+      modem.modemId ||
+      modem.modemSlNo ||
+      modem.modem_sl_no ||
+      modem.serialNumber ||
+      `modem-${index}`;
+    return {
+      id: derivedId,
+      modemId:
+        modem.modemId ||
+        modem.modemSlNo ||
+        modem.modem_sl_no ||
+        modem.serialNumber ||
+        derivedId,
+      location:
+        modem.location ||
+        modem.address ||
+        modem.installationLocation ||
+        modem.section ||
+        modem.circle ||
+        modem.imei ||
+        'N/A',
+      error: modem.error || modem.errorDescription || modem.codeDesc || modem.status || 'N/A',
+      reason: modem.reason || modem.reasonDescription || modem.error || 'N/A',
+      date:
+        modem.date ||
+        modem.lastCommunication ||
+        modem.updatedAt ||
+        modem.updated_at ||
+        modem.modemDate ||
+        'N/A',
+      status: modem.status || getStatusFromCode(modem.code) || 'default',
+      signalStrength:
+        Number(
+          modem.signalStrength ??
+            modem.signal_strength ??
+            modem.signalStrength1 ??
+            modem.signalStrength2 ??
+            modem.signal ??
+            0
+        ) || 0,
+      discom: modem.discom || modem.organisation || modem.organization || 'N/A',
+      meterSlNo: modem.meterSlNo || modem.meter_sl_no || modem.meterId || 'N/A',
+      code: modem.code || modem.errorCode || modem.error_code || 'N/A',
+      photos: modem.photos || [Meter],
+      originalAlert: modem.originalAlert || modem,
+    };
+  };
+
   const transformedAlerts = useMemo(() => {
-    if (!apiData?.alerts || !Array.isArray(apiData.alerts) || apiData.alerts.length === 0) {
-      return modemErrors;
+    if (hasAssignedModems) {
+      return assignedModems.map((modem, index) => normalizeModemRecord(modem, index));
     }
 
-    return apiData.alerts.map((alert, index) => ({
-      id: alert.sno?.toString() || alert.modemSlNo || `alert-${index}`,
-      modemId: alert.modemSlNo || 'N/A',
-      location: alert.imei || 'N/A',
-      error: alert.codeDesc || 'N/A',
-      reason: alert.codeDesc || 'N/A',
-      date: alert.modemDate ? `${alert.modemDate} ${alert.modemTime || ''}` : 'N/A',
-      status: getStatusFromCode(alert.code),
-      signalStrength: alert.signalStrength1 || 0,
-      discom: alert.discom || 'N/A',
-      meterSlNo: alert.meterSlNo || 'N/A',
-      code: alert.code,
-      photos: [Meter],
-      // Keep original alert data for details screen
-      originalAlert: alert,
-    }));
-  }, [apiData]);
+    if (!apiData?.alerts || !Array.isArray(apiData.alerts) || apiData.alerts.length === 0) {
+      return modemErrors.map((modem, index) => normalizeModemRecord(modem, index));
+    }
+
+    return apiData.alerts.map((alert, index) =>
+      normalizeModemRecord(
+        {
+          id: alert.sno?.toString(),
+          modemId: alert.modemSlNo,
+          location: alert.imei,
+          error: alert.codeDesc,
+          reason: alert.codeDesc,
+          date: alert.modemDate ? `${alert.modemDate} ${alert.modemTime || ''}` : 'N/A',
+          status: getStatusFromCode(alert.code),
+          signalStrength: alert.signalStrength1 || 0,
+          discom: alert.discom,
+          meterSlNo: alert.meterSlNo,
+          code: alert.code,
+          photos: [Meter],
+          originalAlert: alert,
+        },
+        index,
+      )
+    );
+  }, [apiData, assignedModems, hasAssignedModems]);
 
   // Calculate metrics from API data
   const dashboardMetrics = useMemo(() => {
