@@ -65,6 +65,33 @@ const SIGNAL_FILTERS = [
   { label: 'Weak (<15 dBm)', value: 'weak' },
 ];
 
+const ERROR_FILTER_OPTIONS = [
+  { label: 'All', value: 'all' },
+  { label: 'Meter COM Failed', value: 'meterComFailed', codes: [212] },
+  { label: 'Modem/DCU Auto Restart', value: 'modemAutoRestart', codes: [202] },
+  { label: 'DCU/Modem Power Failed', value: 'modemPowerFailed', codes: [214] },
+  { label: 'Network Issue', value: 'networkIssue' },
+];
+
+const matchesErrorFilter = (item, filterValue) => {
+  if (filterValue === 'all') return true;
+
+  const byCode = ERROR_FILTER_OPTIONS.find(
+    (option) => option.value === filterValue && option.codes
+  );
+  if (byCode && byCode.codes?.length) {
+    return byCode.codes.includes(item.code);
+  }
+
+  if (filterValue === 'networkIssue') {
+    const alert = item.originalAlert || {};
+    const combinedDesc = `${alert.codeDesc || ''} ${item.error || ''}`.toLowerCase();
+    return combinedDesc.includes('network');
+  }
+
+  return true;
+};
+
 const getSignalBand = (signalStrength = 0) => {
   const strength = Number(signalStrength) || 0;
   if (strength < 15) return 'weak';
@@ -92,7 +119,9 @@ const DashboardScreen = ({ navigation }) => {
     sortBy: 'newest'
   });
   const hasActiveFilters =
-    appliedFilters.statuses.length > 0 || appliedFilters.signal !== 'all';
+    appliedFilters.statuses.length > 0 ||
+    appliedFilters.signal !== 'all' ||
+    appliedFilters.errorType !== 'all';
 
   const openFilterModal = () => {
     setDraftFilters({
@@ -312,15 +341,7 @@ const DashboardScreen = ({ navigation }) => {
 
     // ERROR TYPE FILTER
     if (appliedFilters.errorType !== "all") {
-      list = list.filter(item => {
-        const err = (item.error || "").toLowerCase();
-        const t = appliedFilters.errorType;
-
-        if (t === "network") return err.includes("network");
-        if (t === "power") return err.includes("power");
-        if (t === "restart") return err.includes("restart");
-        return true;
-      });
+      list = list.filter((item) => matchesErrorFilter(item, appliedFilters.errorType));
     }
 
     // SORTING
@@ -502,12 +523,7 @@ const DashboardScreen = ({ navigation }) => {
             <View style={styles.modalSection}>
               <Text style={styles.modalSectionLabel}>Error Type</Text>
               <View style={styles.chipGroup}>
-                {[
-                  { label: "All", value: "all" },
-                  { label: "Network Failure", value: "network" },
-                  { label: "Power Failure", value: "power" },
-                  { label: "Modem Restart", value: "restart" },
-                ].map((option) => {
+                {ERROR_FILTER_OPTIONS.map((option) => {
                   const isActive = draftFilters.errorType === option.value;
                   return (
                     <TouchableOpacity
