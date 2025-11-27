@@ -51,7 +51,7 @@ const statusMetaMap = {
 };
 
 const API_BASE_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
-const USE_MOCK_ALERTS = true; // flip to false to hit live endpoint
+const USE_MOCK_ALERTS = false; // flip to false to hit live endpoint
 
 const formatDisplayDateTime = (dateString) => {
   if (!dateString || dateString === 'N/A') return 'N/A';
@@ -98,14 +98,30 @@ const formatDisplayDateTime = (dateString) => {
   return dateString.length > 20 ? dateString.substring(0, 20) : dateString;
 };
 
-const ModemDetailsScreen = ({ route, navigation }) => {
+const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeMenuItem, setActiveMenuItem] = useState('Transactions');
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  const modemSlNo = route?.params?.modemSlNo || route?.params?.modem?.modemId;
-  const fallbackModem = route?.params?.modem ?? {
+
+  const assignedModems = Array.isArray(modems) ? modems : [];
+  const routeModem = route?.params?.modem;
+  const routeModemId = route?.params?.modemSlNo || routeModem?.modemId;
+
+  const matchedAssignedModem = useMemo(() => {
+    if (!routeModemId || assignedModems.length === 0) {
+      return null;
+    }
+    return assignedModems.find((item) => {
+      const candidateId =
+        item?.modemId || item?.modemSlNo || item?.modem_sl_no || item?.id;
+      return candidateId === routeModemId;
+    });
+  }, [assignedModems, routeModemId]);
+
+  const resolvedModem = routeModem || matchedAssignedModem;
+  const modemSlNo = route?.params?.modemSlNo || resolvedModem?.modemId;
+  const fallbackModem = resolvedModem ?? {
     modemId: 'MDM000',
     status: 'warning',
     error: 'Unknown',
@@ -835,6 +851,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-Medium',
     color: '#89A1F3',
     marginTop: 10,
+    marginLeft: 38,
   },
   menuPreviewWrapper: {
     flex: 1,

@@ -22,6 +22,8 @@ const AppNavigator = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const [userModems, setUserModems] = useState([]);
+  const [userPhone, setUserPhone] = useState(null);
 
   const handleSplashFinish = useCallback((userAuthenticated) => {
     setIsAuthenticated(Boolean(userAuthenticated));
@@ -33,11 +35,15 @@ const AppNavigator = () => {
     setShowOnboarding(false);
   }, []);
 
-  const handleLogin = useCallback(() => {
+  const handleLogin = useCallback((modems = [], phoneNumber) => {
+    setUserModems(Array.isArray(modems) ? modems : []);
+    setUserPhone(phoneNumber || null);
     setIsAuthenticated(true);
   }, []);
 
   const handleLogout = useCallback(() => {
+    setUserModems([]);
+    setUserPhone(null);
     setIsAuthenticated(false);
   }, []);
 
@@ -85,7 +91,12 @@ const AppNavigator = () => {
             {/* Dashboard is the initial screen after login */}
             <Stack.Screen name="Dashboard">
               {(props) => (
-                <DashboardScreen {...props} onLogout={handleLogout} />
+                <DashboardScreen
+                  {...props}
+                  modems={userModems}
+                  userPhone={userPhone}
+                  onLogout={handleLogout}
+                />
               )}
             </Stack.Screen>
 
@@ -107,7 +118,14 @@ const AppNavigator = () => {
             {/* Other screens */}
             <Stack.Screen name="ErrorDetails" component={ErrorDetailsScreen} />
             <Stack.Screen name="Alerts" component={AlertsScreen} />
-            <Stack.Screen name="ModemDetails" component={ModemDetailsScreen} />
+            <Stack.Screen name="ModemDetails">
+              {(props) => (
+                <ModemDetailsScreen
+                  {...props}
+                  modems={userModems}
+                />
+              )}
+            </Stack.Screen>
             <Stack.Screen name="Troubleshoot" component={TroubleshootScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="ScanScreen" component={ScanScreen} />

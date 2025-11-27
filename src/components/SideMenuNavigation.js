@@ -62,7 +62,6 @@ const SideMenuNavigation = ({ items, activeItem, onSelect, onLogout, onScan }) =
             Logout
           </Text>
         </Pressable>
-
         <Text style={styles.versionText}>Version 1.0.26</Text>
       </View>
     </View>
@@ -93,7 +92,7 @@ const styles = StyleSheet.create({
     color: COLORS.secondaryFontColor,
   },
   logoutWrapper: {
-    paddingBottom: 30,
+    paddingBottom: 70,
   },
 
   scanText: {
@@ -106,6 +105,5 @@ const styles = StyleSheet.create({
     color: '#89A1F3',
     marginTop: 10,
     fontFamily: 'Manrope',
-    
   },
 });

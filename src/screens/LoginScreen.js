@@ -24,38 +24,23 @@ const screenHeight = Dimensions.get("window").height;
 
 const API_BASE_URL = "https://nexusenergy.tech/api/v1";
 const API_KEY = "eyaM-5N8mDzLykpA3n3igUgGgNnEcehUY9NJ9ui4Ic5LuZW1sqbZylAg1q_C1";
-const USE_MOCK_AUTH = true; // temporary dev flag; set false to hit real APIs
-const MOCK_MODEMS = [
-  {
-    id: "M-1001",
-    site: "Sector 21, Gurgaon",
-    status: "online",
-  },
-  {
-    id: "M-1002",
-    site: "Phase 9, Mohali",
-    status: "offline",
-  },
-];
 const PHONE_LENGTH = 10;
 const OTP_LENGTH = 6;
 
 const LoginScreen = ({ onLogin }) => {
-  const [mobileNumber, setMobileNumber] = useState(USE_MOCK_AUTH ? "9876543210" : "");
-  const [otpDigits, setOtpDigits] = useState(
-    USE_MOCK_AUTH ? ["1", "2", "3", "4", "5", "6"] : Array(OTP_LENGTH).fill("")
-  );
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [otpDigits, setOtpDigits] = useState(Array(OTP_LENGTH).fill(""));
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
-  const [otpEnabled, setOtpEnabled] = useState(USE_MOCK_AUTH);
+  const [otpEnabled, setOtpEnabled] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const otpRefs = useRef([]);
 
   const otpValue = otpDigits.join("");
   const hasCompletedOtp = otpEnabled && otpValue.length === OTP_LENGTH;
-  const isGenerateEnabled = USE_MOCK_AUTH || mobileNumber.length === PHONE_LENGTH;
+  const isGenerateEnabled = mobileNumber.length === PHONE_LENGTH;
   const formattedTimer = `${String(Math.floor(resendTimer / 60)).padStart(2, "0")}:${String(
     resendTimer % 60
   ).padStart(2, "0")}`;
@@ -85,10 +70,6 @@ const LoginScreen = ({ onLogin }) => {
   }, [otpEnabled]);
 
   const sendOtp = async (phone) => {
-    if (USE_MOCK_AUTH) {
-      await new Promise(resolve => setTimeout(resolve, 400));
-      return;
-    }
     const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
       method: "POST",
       headers: {
@@ -104,10 +85,6 @@ const LoginScreen = ({ onLogin }) => {
   };
 
   const validateOtp = async (phone, otp) => {
-    if (USE_MOCK_AUTH) {
-      await new Promise(resolve => setTimeout(resolve, 400));
-      return;
-    }
     const response = await fetch(`${API_BASE_URL}/auth/validate-otp`, {
       method: "POST",
       headers: {
@@ -123,10 +100,6 @@ const LoginScreen = ({ onLogin }) => {
   };
 
   const fetchModemsByOfficer = async (phone) => {
-    if (USE_MOCK_AUTH) {
-      await new Promise(resolve => setTimeout(resolve, 400));
-      return MOCK_MODEMS;
-    }
     const response = await fetch(`${API_BASE_URL}/modem/user/all`, {
       method: "GET",
       headers: {
@@ -221,7 +194,7 @@ const LoginScreen = ({ onLogin }) => {
 
     if (!otpEnabled) {
       setTouched(prev => ({ ...prev, mobile: true }));
-      if (!USE_MOCK_AUTH && (!mobileNumber || mobileNumber.length !== PHONE_LENGTH)) {
+      if (!mobileNumber || mobileNumber.length !== PHONE_LENGTH) {
         setErrors(prev => ({ ...prev, mobile: 'Enter a valid 10-digit mobile number' }));
         setIsLoading(false);
         return;
@@ -249,7 +222,7 @@ const LoginScreen = ({ onLogin }) => {
     setTouched({ mobile: true, otp: true });
 
     const newErrors = {};
-    if (!USE_MOCK_AUTH && (!mobileNumber || mobileNumber.length !== PHONE_LENGTH)) {
+    if (!mobileNumber || mobileNumber.length !== PHONE_LENGTH) {
       newErrors.mobile = 'Enter a valid 10-digit mobile number';
     }
     if (otpValue.length !== OTP_LENGTH) {
@@ -265,7 +238,7 @@ const LoginScreen = ({ onLogin }) => {
     try {
       await validateOtp(mobileNumber, otpValue);
       const modems = await fetchModemsByOfficer(mobileNumber);
-      onLogin ? onLogin(modems) : null;
+      onLogin ? onLogin(modems, mobileNumber) : null;
     } catch (error) {
       console.error('Login error:', error);
       setErrors(prev => ({ ...prev, otp: error.message || 'Unable to verify OTP' }));
