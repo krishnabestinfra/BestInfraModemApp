@@ -19,11 +19,11 @@ import Input from "../components/global/Input";
 import Logo from "../components/global/Logo";
 import Tick from "../../assets/icons/tick.svg";
 import User from '../../assets/icons/user.svg';
+import { storeApiKey, storeUserPhone } from "../utils/storage";
+import { API_BASE_URL, API_KEY, API_ENDPOINTS, getPublicHeaders, getProtectedHeaders } from "../config/apiConfig";
 
 const screenHeight = Dimensions.get("window").height;
 
-const API_BASE_URL = "https://nexusenergy.tech/api/v1";
-const API_KEY = "eyaM-5N8mDzLykpA3n3igUgGgNnEcehUY9NJ9ui4Ic5LuZW1sqbZylAg1q_C1";
 const PHONE_LENGTH = 10;
 const OTP_LENGTH = 6;
 
@@ -70,11 +70,9 @@ const LoginScreen = ({ onLogin }) => {
   }, [otpEnabled]);
 
   const sendOtp = async (phone) => {
-    const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SEND_OTP}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getPublicHeaders(),
       body: JSON.stringify({ phone }),
     });
 
@@ -85,11 +83,9 @@ const LoginScreen = ({ onLogin }) => {
   };
 
   const validateOtp = async (phone, otp) => {
-    const response = await fetch(`${API_BASE_URL}/auth/validate-otp`, {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.VALIDATE_OTP}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getPublicHeaders(),
       body: JSON.stringify({ phone, otp }),
     });
 
@@ -100,13 +96,9 @@ const LoginScreen = ({ onLogin }) => {
   };
 
   const fetchModemsByOfficer = async (phone) => {
-    const response = await fetch(`${API_BASE_URL}/modem/user/all`, {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.GET_MODEMS_BY_OFFICER}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY}`,
-        "X-CUSTOMER-ID": phone,
-      },
+      headers: getProtectedHeaders(API_KEY, phone),
     });
 
     if (!response.ok) {
@@ -238,6 +230,11 @@ const LoginScreen = ({ onLogin }) => {
     try {
       await validateOtp(mobileNumber, otpValue);
       const modems = await fetchModemsByOfficer(mobileNumber);
+      
+      // Store API Key and user phone in AsyncStorage after successful login
+      await storeApiKey(API_KEY);
+      await storeUserPhone(mobileNumber);
+      
       onLogin ? onLogin(modems, mobileNumber) : null;
     } catch (error) {
       console.error('Login error:', error);

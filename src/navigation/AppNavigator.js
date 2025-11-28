@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import SplashScreen from '../screens/SplashScreen';
 import OnBoarding from '../screens/OnBoarding';
 import LoginScreen from '../screens/LoginScreen';
+import { clearAuthData, getUserPhone, hasApiKey } from '../utils/storage';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -25,10 +26,51 @@ const AppNavigator = () => {
   const [userModems, setUserModems] = useState([]);
   const [userPhone, setUserPhone] = useState(null);
 
-  const handleSplashFinish = useCallback((userAuthenticated) => {
-    setIsAuthenticated(Boolean(userAuthenticated));
-    setShowOnboarding(!userAuthenticated);
-    setIsLoading(false);
+  // Single source of truth: Check for persistent login on app start
+  // Always ensures loading completes, even if effect runs multiple times
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkPersistentLogin = async () => {
+      // Minimum splash screen time (2 seconds) for better UX
+      await Promise.all([
+        (async () => {
+          const apiKeyExists = await hasApiKey();
+          if (apiKeyExists) {
+            if (isMounted) {
+              setIsAuthenticated(true);
+              setShowOnboarding(false);
+              const storedPhone = await getUserPhone();
+              if (storedPhone && isMounted) {
+                setUserPhone(storedPhone);
+              }
+            }
+          } else {
+            if (isMounted) {
+              setIsAuthenticated(false);
+            }
+          }
+        })(),
+        new Promise(resolve => setTimeout(resolve, 2000)) // Minimum 2 second delay
+      ]);
+
+      // Always set loading to false after check completes
+      if (isMounted) {
+        setIsLoading(false);
+      }
+    };
+
+    checkPersistentLogin();
+
+    // Cleanup to prevent state updates if component unmounts
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleSplashFinish = useCallback(() => {
+    // SplashScreen is now purely visual - loading is controlled by useEffect
+    // This callback is kept for backwards compatibility but doesn't control loading
   }, []);
 
   const handleOnboardingComplete = useCallback(() => {
@@ -41,14 +83,18 @@ const AppNavigator = () => {
     setIsAuthenticated(true);
   }, []);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    // Clear API Key and auth data from AsyncStorage
+    await clearAuthData();
+    
+    // Clear local state
     setUserModems([]);
     setUserPhone(null);
     setIsAuthenticated(false);
   }, []);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer key={isAuthenticated ? 'authenticated' : 'unauthenticated'}>
       <Stack.Navigator
         initialRouteName={
           isLoading 
