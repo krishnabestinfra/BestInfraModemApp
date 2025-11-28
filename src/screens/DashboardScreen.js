@@ -18,18 +18,21 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+
 import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
+
 import { modemStats, modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
+import { getApiKey, getUserPhone } from '../utils/storage';
+import { API_BASE_URL, API_KEY, API_ENDPOINTS, getProtectedHeaders } from '../config/apiConfig';
+
 import SearchIcon from '../../assets/icons/searchIcon.svg';
 import ScanIcon from '../../assets/icons/scan.svg';
 import FilterIcon from '../../assets/icons/filter.svg';
 import NotificationLight from '../../assets/icons/notification.svg';
 import Hand from '../../assets/icons/hand.svg';
-import MeterInstallIcon from '../../assets/icons/meterWhite.svg';
-import CalendarIcon from '../../assets/icons/CalendarNew.svg';
 import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
 import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
@@ -37,122 +40,93 @@ import TotalTasksIcon from '../../assets/icons/totaltasks.svg';
 import CompletedTasksIcon from '../../assets/icons/completedtasks.svg';
 import CommunicatingModemsIcon from '../../assets/icons/communicating.svg';
 import NonCommunicatingModemsIcon from '../../assets/icons/noncommicating.svg';
+
 import Meter from '../../assets/images/meter.png';
 
-// Ensure all text on this screen uses Manrope by default without altering sizes.
-if (!Text.defaultProps) {
-  Text.defaultProps = {};
-}
-Text.defaultProps.style = [
-  Text.defaultProps.style,
-  { fontFamily: 'Manrope-Regular' },
-];
+// Default Manrope font for all Text
+if (!Text.defaultProps) Text.defaultProps = {};
+Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
 
 const { width } = Dimensions.get('window');
+const USE_MOCK_ALERTS = false;
 
-const API_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
-const USE_MOCK_ALERTS = false; // hitting live endpoint now that creds exist
+// Filters - OLD ALERT-BASED (COMMENTED OUT)
+// const ERROR_FILTER_OPTIONS = [
+//   { label: 'All', value: 'all' },
+//   { label: 'Meter COM Failed', value: 'meterComFailed', codes: [212] },
+//   { label: 'Modem/DCU Auto Restart', value: 'modemAutoRestart', codes: [202] },
+//   { label: 'DCU/Modem Power Failed', value: 'modemPowerFailed', codes: [214] },
+//   { label: 'Network Issue', value: 'networkIssue' }
+// ];
 
-const STATUS_FILTERS = [
-  { label: 'Communicating', value: 'success' },
-  { label: 'Warning', value: 'warning' },
-  { label: 'Disconnected', value: 'disconnected' },
-];
-
-const SIGNAL_FILTERS = [
-  { label: 'All', value: 'all' },
-  { label: 'Strong (>20 dBm)', value: 'strong' },
-  { label: 'Average (15-20 dBm)', value: 'average' },
-  { label: 'Weak (<15 dBm)', value: 'weak' },
-];
-
+// Simple filter options for modems
 const ERROR_FILTER_OPTIONS = [
   { label: 'All', value: 'all' },
-  { label: 'Meter COM Failed', value: 'meterComFailed', codes: [212] },
-  { label: 'Modem/DCU Auto Restart', value: 'modemAutoRestart', codes: [202] },
-  { label: 'DCU/Modem Power Failed', value: 'modemPowerFailed', codes: [214] },
-  { label: 'Network Issue', value: 'networkIssue' },
+  { label: 'Pending Commission', value: 'pending' },
+  { label: 'Non-Communicating', value: 'nonCommunicating' },
+  { label: 'Commissioned', value: 'commissioned' },
 ];
 
 const matchesErrorFilter = (item, filterValue) => {
   if (filterValue === 'all') return true;
+  
+  // OLD ALERT-BASED LOGIC (COMMENTED OUT)
+  // const byCode = ERROR_FILTER_OPTIONS.find(i => i.value === filterValue && i.codes);
+  // if (byCode) return byCode.codes.includes(item.code);
+  // if (filterValue === 'networkIssue') {
+  //   const raw = item.originalAlert || {};
+  //   const combined = `${raw.codeDesc || ''} ${item.error || ''}`.toLowerCase();
+  //   return combined.includes('network');
+  // }
 
-  const byCode = ERROR_FILTER_OPTIONS.find(
-    (option) => option.value === filterValue && option.codes
-  );
-  if (byCode && byCode.codes?.length) {
-    return byCode.codes.includes(item.code);
+  // NEW MODEM-BASED FILTER LOGIC
+  const modem = item.originalAlert || item;
+  if (filterValue === 'pending') {
+    return modem.commissionStatus === 'PENDING';
   }
-
-  if (filterValue === 'networkIssue') {
-    const alert = item.originalAlert || {};
-    const combinedDesc = `${alert.codeDesc || ''} ${item.error || ''}`.toLowerCase();
-    return combinedDesc.includes('network');
+  if (filterValue === 'nonCommunicating') {
+    return !modem.communicationStatus || modem.communicationStatus === 'NON_COMMUNICATING';
+  }
+  if (filterValue === 'commissioned') {
+    return modem.commissionStatus === 'COMMISSIONED';
   }
 
   return true;
 };
 
-const getSignalBand = (signalStrength = 0) => {
-  const strength = Number(signalStrength) || 0;
-  if (strength < 15) return 'weak';
-  if (strength <= 20) return 'average';
+const getSignalBand = (val = 0) => {
+  const n = Number(val) || 0;
+  if (n < 15) return 'weak';
+  if (n <= 20) return 'average';
   return 'strong';
 };
 
+// MAIN SCREEN
 const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [userName] = useState('Field Officer');
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
+
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState({
     statuses: [],
     signal: 'all',
     errorType: 'all',
-    sortBy: 'newest'
+    sortBy: 'newest',
   });
 
   const [draftFilters, setDraftFilters] = useState({
     statuses: [],
     signal: 'all',
     errorType: 'all',
-    sortBy: 'newest'
+    sortBy: 'newest',
   });
+
   const hasActiveFilters =
     appliedFilters.statuses.length > 0 ||
     appliedFilters.signal !== 'all' ||
     appliedFilters.errorType !== 'all';
-
-  const openFilterModal = () => {
-    setDraftFilters({
-      statuses: [...appliedFilters.statuses],
-      signal: appliedFilters.signal,
-      errorType: appliedFilters.errorType,
-      sortBy: appliedFilters.sortBy,
-    });
-    setFilterModalVisible(true);
-  };
-
-  const closeFilterModal = () => setFilterModalVisible(false);
-
-  const toggleDraftStatus = (value) => {
-    setDraftFilters((prev) => {
-      const statuses = prev.statuses.includes(value)
-        ? prev.statuses.filter((item) => item !== value)
-        : [...prev.statuses, value];
-      return { ...prev, statuses };
-    });
-  };
-
-  const setDraftSignal = (value) => {
-    setDraftFilters((prev) => ({ ...prev, signal: value }));
-  };
-
-  const handleApplyFilters = () => {
-    setAppliedFilters(draftFilters);
-    setFilterModalVisible(false);
-  };
 
   const handleResetFilters = () => {
     const cleared = { statuses: [], signal: 'all', errorType: 'all', sortBy: 'newest' };
@@ -175,130 +149,127 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
   const fetchApiData = async () => {
     if (USE_MOCK_ALERTS) {
       setLoading(false);
-      setApiData(null); // stay on dummy dataset
+      setApiData(null);
       return;
     }
 
     try {
       setLoading(true);
-      const response = await fetch(API_URL);
+
+      // Get API key and user phone for authentication
+      const apiKey = await getApiKey() || API_KEY;
+      const phone = userPhone || await getUserPhone();
+
+      if (!phone) {
+        throw new Error('User phone number not found');
+      }
+
+      // Use protected headers following your documentation
+      const headers = getProtectedHeaders(apiKey, phone);
+
+      // Fetch modems assigned to this field officer (which filters by user)
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.GET_MODEMS_BY_OFFICER}`, {
+        method: 'GET',
+        headers,
+      });
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
       const json = await response.json();
-      if (json.success && json.alerts && Array.isArray(json.alerts)) {
-        setApiData(json);
+
+      // API returns direct array of modems for this user
+      const modems = Array.isArray(json) ? json : json.modems || json.data || [];
+
+      if (modems.length > 0) {
+        setApiData({
+          success: true,
+          alerts: modems,
+          // ❌ OLD ALERT API FIELDS (COMMENTED OUT - not in modem API)
+          // stats: json.stats || {},
+          // timelineData: json.timelineData || [],
+        });
       } else {
-        console.warn('API response missing expected data structure');
         setApiData(null);
       }
     } catch (error) {
-      console.error('Error fetching API data:', error);
-      // Fallback to dummy data on error
+      console.error('Error fetching modems:', error);
       setApiData(null);
     } finally {
       setLoading(false);
     }
   };
 
-  // Map API code to status
-  const getStatusFromCode = (code) => {
-    const codeMap = {
-      202: 'warning', // Modem / DCU Auto Restart
-      213: 'success', // Meter COM Restored
-      214: 'disconnected', // DCU / Modem Power Failed
-      215: 'success', // DCU / Modem Power Restored
-      212: 'disconnected', // Meter COM Failed
-    };
-    return codeMap[code] || 'default';
-  };
+  // ❌ OLD ALERT-BASED STATUS MAPPING (COMMENTED OUT - modem API doesn't use error codes)
+  // const getStatusFromCode = (code) => {
+  //   const map = {
+  //     202: 'warning',
+  //     213: 'success',
+  //     214: 'disconnected',
+  //     215: 'success',
+  //     212: 'disconnected',
+  //   };
+  //   return map[code] || 'default';
+  // };
 
-  // Transform API alerts to modem format
   const normalizeModemRecord = (modem = {}, index = 0) => {
-    const derivedId =
-      modem.id ||
-      modem.modemId ||
-      modem.modemSlNo ||
-      modem.modem_sl_no ||
-      modem.serialNumber ||
-      `modem-${index}`;
+    // Handle actual API response structure from /modem/user/all
+    const id = modem.id?.toString() || modem.modemno || `m-${index}`;
+    const modemId = modem.modemno || modem.modemId || id;
+
+    // Determine status from API fields
+    let status = 'default';
+    if (modem.commissionStatus === 'COMMISSIONED' || modem.communicationStatus === 'COMMUNICATING') {
+      status = 'success';
+    } else if (modem.commissionStatus === 'PENDING' || !modem.communicationStatus || modem.communicationStatus === 'NON_COMMUNICATING') {
+      status = 'disconnected';
+    }
+
+    // Map photos from API
+    const photos = [];
+    if (modem.photo1) photos.push({ uri: modem.photo1 });
+    if (modem.photo2) photos.push({ uri: modem.photo2 });
+    if (photos.length === 0) photos.push(Meter);
+
     return {
-      id: derivedId,
-      modemId:
-        modem.modemId ||
-        modem.modemSlNo ||
-        modem.modem_sl_no ||
-        modem.serialNumber ||
-        derivedId,
-      location:
-        modem.location ||
-        modem.address ||
-        modem.installationLocation ||
-        modem.section ||
-        modem.circle ||
-        modem.imei ||
-        'N/A',
-      error: modem.error || modem.errorDescription || modem.codeDesc || modem.status || 'N/A',
-      reason: modem.reason || modem.reasonDescription || modem.error || 'N/A',
-      date:
-        modem.date ||
-        modem.lastCommunication ||
-        modem.updatedAt ||
-        modem.updated_at ||
-        modem.modemDate ||
-        'N/A',
-      status: modem.status || getStatusFromCode(modem.code) || 'default',
-      signalStrength:
-        Number(
-          modem.signalStrength ??
-            modem.signal_strength ??
-            modem.signalStrength1 ??
-            modem.signalStrength2 ??
-            modem.signal ??
-            0
-        ) || 0,
-      discom: modem.discom || modem.organisation || modem.organization || 'N/A',
-      meterSlNo: modem.meterSlNo || modem.meter_sl_no || modem.meterId || 'N/A',
-      code: modem.code || modem.errorCode || modem.error_code || 'N/A',
-      photos: modem.photos || [Meter],
-      originalAlert: modem.originalAlert || modem,
+      id,
+      modemId,
+      location: modem.meterLocation || modem.section || modem.subdivision || modem.division || modem.circle || 'N/A',
+      error: modem.commissionStatus === 'PENDING' 
+        ? 'Pending Commission' 
+        : (!modem.communicationStatus || modem.communicationStatus === 'NON_COMMUNICATING' 
+          ? 'Non-Communicating' 
+          : 'Operational'),
+      reason: modem.comments || modem.techSupportStatus || 'N/A',
+      date: modem.lastCommunicatedAt || modem.installedOn || modem.updatedAt || 'N/A',
+      status: modem.status || status, // Status determined from commissionStatus/communicationStatus
+      signalStrength: 0, // API doesn't provide signal strength
+      discom: modem.circle || modem.division || 'N/A',
+      meterSlNo: modem.ctmtrno?.trim() || 'N/A',
+      code: 'N/A', // API doesn't provide error codes for modems
+      photos,
+      originalAlert: modem,
     };
   };
-
   const transformedAlerts = useMemo(() => {
     if (hasAssignedModems) {
-      return assignedModems.map((modem, index) => normalizeModemRecord(modem, index));
+      return assignedModems.map((m, i) => normalizeModemRecord(m, i));
     }
 
-    if (!apiData?.alerts || !Array.isArray(apiData.alerts) || apiData.alerts.length === 0) {
-      return modemErrors.map((modem, index) => normalizeModemRecord(modem, index));
+    if (!apiData?.alerts || apiData.alerts.length === 0) {
+      return modemErrors.map((m, i) => normalizeModemRecord(m, i));
     }
 
-    return apiData.alerts.map((alert, index) =>
-      normalizeModemRecord(
-        {
-          id: alert.sno?.toString(),
-          modemId: alert.modemSlNo,
-          location: alert.imei,
-          error: alert.codeDesc,
-          reason: alert.codeDesc,
-          date: alert.modemDate ? `${alert.modemDate} ${alert.modemTime || ''}` : 'N/A',
-          status: getStatusFromCode(alert.code),
-          signalStrength: alert.signalStrength1 || 0,
-          discom: alert.discom,
-          meterSlNo: alert.meterSlNo,
-          code: alert.code,
-          photos: [Meter],
-          originalAlert: alert,
-        },
-        index,
-      )
-    );
+    // API returns modems directly - normalize them
+    return apiData.alerts.map((modem, index) => normalizeModemRecord(modem, index));
   }, [apiData, assignedModems, hasAssignedModems]);
 
-  // Calculate metrics from API data
+  // ================================
+  // 📊 DASHBOARD METRICS
+  // ================================
   const dashboardMetrics = useMemo(() => {
-    if (!apiData) {
+    if (!apiData || !apiData.alerts || apiData.alerts.length === 0) {
       return {
         communicatingModems: 0,
         nonCommunicatingModems: 0,
@@ -307,144 +278,124 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
       };
     }
 
+    // OLD ALERT-BASED METRICS (COMMENTED OUT)
+    // const communicatingSet = new Set();
+    // const nonCommunicatingSet = new Set();
+    // apiData.alerts?.forEach(alert => {
+    //   if ([202, 213, 215].includes(alert.code)) {
+    //     communicatingSet.add(alert.modemSlNo);
+    //   }
+    //   if ([214, 212].includes(alert.code)) {
+    //     nonCommunicatingSet.add(alert.modemSlNo);
+    //   }
+    // });
 
-    const communicatingModems = new Set();
-    const nonCommunicatingModems = new Set();
-
-    if (apiData.alerts && Array.isArray(apiData.alerts)) {
-      apiData.alerts.forEach((alert) => {
-        if (!alert.modemSlNo) return;
-        
- 
-        if ([202, 213, 215].includes(alert.code)) {
-          communicatingModems.add(alert.modemSlNo);
-        }
-        // Codes 214 (Power Failed), 212 (COM Failed) = non-communicating
-        if ([214, 212].includes(alert.code)) {
-          nonCommunicatingModems.add(alert.modemSlNo);
-        }
-      });
-    }
-
-    const communicatingCount = communicatingModems.size;
-    const nonCommunicatingCount = nonCommunicatingModems.size;
-
-    // Calculate today's tasks from timelineData
+    // NEW MODEM-BASED METRICS (using actual modem data structure)
+    let communicatingCount = 0;
+    let nonCommunicatingCount = 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    let completedToday = 0;
 
-    let totalTasksToday = 0;
-    let completedTasksToday = 0;
-
-    // Find today's data from timelineData
-    if (apiData.timelineData && Array.isArray(apiData.timelineData)) {
-      const todayData = apiData.timelineData.find((item) => {
-        if (!item.date) return false;
-        const itemDate = new Date(item.date);
-        itemDate.setHours(0, 0, 0, 0);
-        return itemDate.getTime() === today.getTime();
-      });
-
-      if (todayData) {
-        totalTasksToday = todayData.count || 0;
+    apiData.alerts.forEach(modem => {
+      // Count communicating modems
+      if (modem.communicationStatus === 'COMMUNICATING' || 
+          (modem.commissionStatus === 'COMMISSIONED' && modem.communicationStatus !== 'NON_COMMUNICATING')) {
+        communicatingCount++;
       }
-    }
+      
+      // Count non-communicating modems
+      if (!modem.communicationStatus || 
+          modem.communicationStatus === 'NON_COMMUNICATING' ||
+          modem.commissionStatus === 'PENDING') {
+        nonCommunicatingCount++;
+      }
 
-    // Calculate completed tasks (success codes 213, 215) from today's alerts
-    if (apiData.alerts && Array.isArray(apiData.alerts)) {
-      const todayAlerts = apiData.alerts.filter((alert) => {
-        if (!alert.logTimestamp) return false;
-        const alertDate = new Date(alert.logTimestamp);
-        alertDate.setHours(0, 0, 0, 0);
-        return alertDate.getTime() === today.getTime();
-      });
+      // Count completed tasks today (commissioned today)
+      if (modem.commissionStatus === 'COMMISSIONED' && modem.installedOn) {
+        const installedDate = new Date(modem.installedOn);
+        installedDate.setHours(0, 0, 0, 0);
+        if (installedDate.getTime() === today.getTime()) {
+          completedToday++;
+        }
+      }
+    });
 
-      completedTasksToday = todayAlerts.filter(
-        (alert) => [213, 215].includes(alert.code)
-      ).length;
-    }
+    const totalToday = apiData.alerts.filter(modem => {
+      if (!modem.installedOn && !modem.updatedAt) return false;
+      const date = new Date(modem.installedOn || modem.updatedAt);
+      date.setHours(0, 0, 0, 0);
+      return date.getTime() === today.getTime();
+    }).length;
 
     return {
-      communicatingModems: communicatingCount || 0,
-      nonCommunicatingModems: nonCommunicatingCount || 0,
-      totalTasksToday: totalTasksToday || 0,
-      completedTasksToday: completedTasksToday || 0,
+      communicatingModems: communicatingCount,
+      nonCommunicatingModems: nonCommunicatingCount,
+      totalTasksToday: totalToday,
+      completedTasksToday: completedToday,
     };
   }, [apiData]);
 
   const wipData = useMemo(
     () => ({
-      metersInstalled: apiData?.stats?.uniqueModems || modemStats.connected,
-      metersCommissioned: apiData?.stats?.totalAlerts || modemStats.disconnected,
-      totalAlerts: apiData?.stats?.totalAlerts || '0',
-      uniqueMeters: apiData?.stats?.uniqueMeters || '0',
-      uniqueDiscoms: apiData?.stats?.uniqueDiscoms || '0',
-      avgSignalStrength: apiData?.stats?.avgSignalStrength1 || '0',
-      // Add dashboard metrics
       ...dashboardMetrics,
+      // ❌ OLD ALERT API STATS (COMMENTED OUT - not in modem API)
+      // metersInstalled: apiData?.stats?.uniqueModems || modemStats.connected,
+      // metersCommissioned: apiData?.stats?.totalAlerts || modemStats.disconnected,
+      // totalAlerts: apiData?.stats?.totalAlerts || '0',
+      // uniqueMeters: apiData?.stats?.uniqueMeters || '0',
+      // uniqueDiscoms: apiData?.stats?.uniqueDiscoms || '0',
+      // avgSignalStrength: apiData?.stats?.avgSignalStrength1 || '0',
+      
+      // ✅ NEW MODEM-BASED STATS
+      totalModems: apiData?.alerts?.length || 0,
+      commissionedModems: apiData?.alerts?.filter(m => m.commissionStatus === 'COMMISSIONED').length || 0,
+      pendingModems: apiData?.alerts?.filter(m => m.commissionStatus === 'PENDING').length || 0,
     }),
     [apiData, dashboardMetrics]
   );
-  // Helper to get status label for search
-  const getStatusLabel = (status) => {
-    const statusMap = {
-      warning: 'warning',
-      disconnected: 'disconnected',
-      success: 'communicating',
-      default: 'info',
-    };
-    return statusMap[status] || '';
-  };
 
+  // ================================
+  // 🔍 FILTERED LIST + SEARCH
+  // ================================
   const filteredModems = useMemo(() => {
     let list = [...transformedAlerts];
 
-    // STATUS FILTER
-    if (appliedFilters.statuses.length > 0) {
-      list = list.filter(item =>
-        appliedFilters.statuses.includes(item.status)
-      );
+    if (appliedFilters.signal !== 'all') {
+      list = list.filter(m => getSignalBand(m.signalStrength) === appliedFilters.signal);
     }
 
-    // SIGNAL FILTER
-    if (appliedFilters.signal !== "all") {
-      list = list.filter(
-        (item) => getSignalBand(item.signalStrength) === appliedFilters.signal
-      );
+    if (appliedFilters.errorType !== 'all') {
+      list = list.filter(m => matchesErrorFilter(m, appliedFilters.errorType));
     }
 
-    // ERROR TYPE FILTER
-    if (appliedFilters.errorType !== "all") {
-      list = list.filter((item) => matchesErrorFilter(item, appliedFilters.errorType));
-    }
-
-    // SORTING
-    if (appliedFilters.sortBy === "newest") {
+    if (appliedFilters.sortBy === 'newest') {
       list.sort((a, b) => new Date(b.date) - new Date(a.date));
     } else {
       list.sort((a, b) => new Date(a.date) - new Date(b.date));
     }
 
-    // SEARCH
-    const query = searchQuery.trim().toLowerCase();
-    if (query.length > 0) {
-      list = list.filter(item =>
-        `${item.modemId} ${item.error} ${item.location} ${item.date}`
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(m =>
+        `${m.modemId} ${m.error} ${m.location}`
           .toLowerCase()
-          .includes(query)
+          .includes(q)
       );
     }
 
     return list;
-  }, [searchQuery, transformedAlerts, appliedFilters]);
+  }, [transformedAlerts, appliedFilters, searchQuery]);
 
+  // ================================
+  // 📌 JSX UI
+  // ================================
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+
+        {/* ================= HEADER ================= */}
         <View style={styles.bluecontainer}>
           <AppHeader
             containerStyle={styles.TopMenu}
@@ -456,43 +407,40 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
             onPressCenter={() => navigation.navigate('Dashboard')}
             onPressRight={() => navigation.navigate('Profile')}
           />
+
+          {/* GREETING */}
           <View style={styles.ProfileBox}>
             <View style={styles.profileGreetingContainer}>
               <View style={styles.profileGreetingRow}>
-                <Text style={styles.hiText}>Hi, {userName} </Text>
-                <Hand width={30} height={30} fill="#55B56C" />
+                <Text style={styles.hiText}>Hi, {userName}</Text>
+                <Hand width={30} height={30} />
               </View>
               <Text style={styles.stayingText}>Monitoring modems today?</Text>
             </View>
           </View>
 
-
+          {/* ================= CARDS ROW 1 ================= */}
           <View style={styles.metricsRow}>
-            <TouchableOpacity
-              style={styles.metricCard}
-              onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'ALL' })}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.metricCard} onPress={() => navigation.navigate("FindMeters")}>
               <View style={styles.textContainer}>
                 <Text style={styles.metricTitle}>Total Field Activities</Text>
                 <Text style={styles.metricValue}>
-                  {loading ? '...' : (wipData?.totalTasksToday ?? 0)}
+                  {loading ? '...' : wipData.totalTasksToday}
                 </Text>
               </View>
               <View style={styles.metricIconContainer}>
                 <TotalTasksIcon width={21} height={21} />
               </View>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.metricCard}
-              // onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'COMMISSIONED' })}
               onPress={() => navigation.navigate("CompletedActivities")}
-              activeOpacity={0.7}
             >
               <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Completed Field Activities</Text>
+                <Text style={styles.metricTitle}>Completed Activities</Text>
                 <Text style={styles.metricValue}>
-                  {loading ? '...' : (wipData?.completedTasksToday ?? 0)}
+                  {loading ? '...' : wipData.completedTasksToday}
                 </Text>
               </View>
               <View style={[styles.metricIconContainer, styles.metricIconContainerSuccess]}>
@@ -500,31 +448,26 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
               </View>
             </TouchableOpacity>
           </View>
+
+          {/* ================= CARDS ROW 2 ================= */}
           <View style={styles.metricsRow}>
-            <TouchableOpacity
-              style={styles.metricCard}
-              onPress={() => navigation.navigate("ModemDetails")}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.metricCard} onPress={() => navigation.navigate("ModemDetails")}>
               <View style={styles.textContainer}>
                 <Text style={styles.metricTitle}>Communicating Modems</Text>
                 <Text style={styles.metricValue}>
-                  {loading ? '...' : (wipData?.communicatingModems ?? 0)}
+                  {loading ? '...' : wipData.communicatingModems}
                 </Text>
               </View>
               <View style={styles.metricIconContainer}>
                 <CommunicatingModemsIcon width={21} height={21} />
               </View>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.metricCard}
-              onPress={() => navigation.navigate("ModemDetails")}
-              activeOpacity={0.7}
-            >
+
+            <TouchableOpacity style={styles.metricCard} onPress={() => navigation.navigate("ModemDetails")}>
               <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Non-Communicating Modems</Text>
+                <Text style={styles.metricTitle}>Non-Communicating</Text>
                 <Text style={styles.metricValue}>
-                  {loading ? '...' : (wipData?.nonCommunicatingModems ?? 0)}
+                  {loading ? '...' : wipData.nonCommunicatingModems}
                 </Text>
               </View>
               <View style={styles.metricIconContainer}>
@@ -534,6 +477,7 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
           </View>
         </View>
 
+        {/* ================= SEARCH & FILTER ================= */}
         <View style={styles.searchCardWrapper}>
           <View style={styles.searchCard}>
             <TextInput
@@ -545,27 +489,24 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
             />
             <SearchIcon width={16} height={16} />
           </View>
-          <TouchableOpacity
-            style={styles.scanButton}
-            onPress={() => navigation.navigate('ScanScreen')}
-          >
+
+          <TouchableOpacity style={styles.scanButton} onPress={() => navigation.navigate("ScanScreen")}>
             <Text style={styles.scanText}>Scan</Text>
             <ScanIcon width={16} height={16} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={openFilterModal}
-          >
-            <FilterIcon width={18} height={18} />
+
+          <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
+            <FilterIcon width={20} height={20} />
             {hasActiveFilters && <View style={styles.filterActiveDot} />}
           </TouchableOpacity>
         </View>
 
+        {/* ================= MODEM CARDS LIST ================= */}
         <View style={styles.cardsWrapper}>
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Loading alerts...</Text>
+              <Text style={styles.loadingText}>Loading alerts…</Text>
             </View>
           ) : filteredModems.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -579,47 +520,33 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
         </View>
       </ScrollView>
 
-      <Modal
-        transparent
-        visible={filterModalVisible}
-        animationType="fade"
-        onRequestClose={closeFilterModal}
-      >
+      {/* ================= FILTER MODAL ================= */}
+      <Modal transparent visible={filterModalVisible} animationType="fade">
         <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={closeFilterModal} />
+          <Pressable style={styles.modalBackdrop} onPress={() => setFilterModalVisible(false)} />
+
           <View style={styles.filterModalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filter Alerts</Text>
-              <Pressable onPress={closeFilterModal}>
-                <Ionicons name="close" size={20} color="#1b1f3b" />
+              <Pressable onPress={() => setFilterModalVisible(false)}>
+                <Ionicons name="close" size={22} />
               </Pressable>
             </View>
+
+            {/* ERROR TYPE */}
             <View style={styles.modalSection}>
               <Text style={styles.modalSectionLabel}>Error Type</Text>
               <View style={styles.chipGroup}>
-                {ERROR_FILTER_OPTIONS.map((option) => {
-                  const isActive = draftFilters.errorType === option.value;
+                {ERROR_FILTER_OPTIONS.map((opt) => {
+                  const active = draftFilters.errorType === opt.value;
                   return (
                     <TouchableOpacity
-                      key={option.value}
-                      style={[
-                        styles.filterChip,
-                        isActive && styles.filterChipActive,
-                      ]}
-                      onPress={() =>
-                        setDraftFilters((prev) => ({
-                          ...prev,
-                          errorType: option.value,
-                        }))
-                      }
+                      key={opt.value}
+                      onPress={() => setDraftFilters((p) => ({ ...p, errorType: opt.value }))}
+                      style={[styles.filterChip, active && styles.filterChipActive]}
                     >
-                      <Text
-                        style={[
-                          styles.filterChipText,
-                          isActive && styles.filterChipTextActive,
-                        ]}
-                      >
-                        {option.label}
+                      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                        {opt.label}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -627,263 +554,120 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
               </View>
             </View>
 
+            {/* SORT */}
             <View style={styles.modalSection}>
               <Text style={styles.modalSectionLabel}>Sort By</Text>
-
               <View style={styles.chipGroup}>
                 {[
-                  { label: "Newest First", value: "newest" },
-                  { label: "Oldest First", value: "oldest" },
-                ].map((option) => {
-                  const isActive = draftFilters.sortBy === option.value;
-
+                  { label: 'Newest First', value: 'newest' },
+                  { label: 'Oldest First', value: 'oldest' },
+                ].map((opt) => {
+                  const active = draftFilters.sortBy === opt.value;
                   return (
                     <TouchableOpacity
-                      key={option.value}
-                      style={[
-                        styles.filterChip,
-                        isActive && styles.filterChipActive,
-                      ]}
-                      onPress={() =>
-                        setDraftFilters((prev) => ({
-                          ...prev,
-                          sortBy: option.value,
-                        }))
-                      }
+                      key={opt.value}
+                      onPress={() => setDraftFilters((p) => ({ ...p, sortBy: opt.value }))}
+                      style={[styles.filterChip, active && styles.filterChipActive]}
                     >
-                      <Text
-                        style={[
-                          styles.filterChipText,
-                          isActive && styles.filterChipTextActive,
-                        ]}
-                      >
-                        {option.label}
+                      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                        {opt.label}
                       </Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
             </View>
+
+            {/* ACTIONS */}
             <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonGhost]}
-                onPress={handleResetFilters}
-              >
-                <Text style={[styles.modalButtonText, styles.modalButtonGhostText]}>
-                  Reset
-                </Text>
+              <TouchableOpacity onPress={handleResetFilters} style={[styles.modalButton, styles.modalButtonGhost]}>
+                <Text style={[styles.modalButtonText, styles.modalButtonGhostText]}>Reset</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
+                onPress={() => {
+                  setAppliedFilters(draftFilters);
+                  setFilterModalVisible(false);
+                }}
                 style={[styles.modalButton, styles.modalButtonPrimary]}
-                onPress={handleApplyFilters}
               >
-                <Text style={styles.modalButtonText}>Apply Filters</Text>
+                <Text style={styles.modalButtonText}>Apply</Text>
               </TouchableOpacity>
             </View>
-
           </View>
         </View>
       </Modal>
-
-
     </SafeAreaView>
   );
 };
 
-const statusConfig = {
-  warning: {
-    label: 'Warning',
-    color: '#FFB74D25',
-    icon: 'warning-outline',
-    text: '#AD5A00',
-  },
-  disconnected: {
-    label: 'Disconnected',
-    color: '#FFCDD225',
-    icon: 'alert-circle-outline',
-    text: '#C62828',
-  },
-  default: {
-    label: 'Info',
-    color: '#E3F2FD55',
-    icon: 'information-circle-outline',
-    text: colors.primary,
-  },
-};
-
+// =============================
+// 📌 MODEM CARD COMPONENT
+// =============================
 const ModemCard = ({ modem, navigation }) => {
-  const meta = statusConfig[modem.status] ?? statusConfig.default;
-
-  const formatDate = (dateString) => {
-    if (!dateString || dateString === 'N/A') return 'N/A';
-
-    const normalizeInput = (value) => value.replace(/\s+/g, ' ').trim();
-    const formatParts = (date) => {
-      const month = date.toLocaleString('en-US', { month: 'short' });
-      const day = date.getDate().toString().padStart(2, '0');
-      const year = date.getFullYear();
-      const hours = date.getHours();
-      const minutes = date.getMinutes();
-      const period = hours >= 12 ? 'PM' : 'AM';
-      const formattedHour = ((hours % 12) || 12).toString().padStart(2, '0');
-      const formattedMinute = minutes.toString().padStart(2, '0');
-      return `${month} ${day}, ${year} ${formattedHour}:${formattedMinute} ${period}`;
-    };
-
-    try {
-      const normalized = normalizeInput(dateString);
-      const parts = normalized.split(' ');
-      const candidate = parts.length >= 5 ? parts.slice(0, 5).join(' ') : normalized;
-      const parsed = new Date(candidate);
-      if (!Number.isNaN(parsed.getTime())) {
-        return formatParts(parsed);
-      }
-    } catch {
-      // fall through to regex fallback
-    }
-
-    const regex =
-      /(\d{1,2})\s([A-Za-z]{3})\s(\d{4})\s(\d{1,2}):(\d{2})(?::\d{2})?\s?(AM|PM)?/i;
-    const match = dateString.match(regex);
-    if (match) {
-      const [, day, monthStr, year, hourStr, minuteStr, suffix] = match;
-      const month = monthStr.charAt(0).toUpperCase() + monthStr.slice(1).toLowerCase();
-      const hourNum = Number(hourStr);
-      const period = suffix?.toUpperCase() ?? 'AM';
-      const formattedHour = ((hourNum % 12) || 12).toString().padStart(2, '0');
-      const formattedMinute = minuteStr.padStart(2, '0');
-      return `${month} ${day.padStart(2, '0')}, ${year} ${formattedHour}:${formattedMinute} ${period}`;
-    }
-
-    return dateString.length > 20 ? dateString.substring(0, 20) : dateString;
-  };
-
-  // Get signal strength icon based on signal strength value
   const getSignalIcon = () => {
-    const signalStrength = modem.signalStrength || 0;
-    // Signal strength ranges: Weak (< 15), Average (15-20), Strong (> 20)
-    if (signalStrength < 15) {
-      return <SignalWeaknessIcon width={20} height={20} />;
-    } else if (signalStrength >= 15 && signalStrength <= 20) {
-      return <SignalAverageIcon width={20} height={20} />;
-    } else {
-      return <SignalStrongIcon width={20} height={20} />;
-    }
+    if (modem.signalStrength < 15) return <SignalWeaknessIcon width={20} height={20} />;
+    if (modem.signalStrength <= 20) return <SignalAverageIcon width={20} height={20} />;
+    return <SignalStrongIcon width={20} height={20} />;
   };
 
   const handleCardPress = () => {
-    // Pass modemSlNo for API fetch, and keep modem data for fallback
-    const modemSlNo = modem.modemId || modem.originalAlert?.modemSlNo || modem.modemId;
-
-    if (!modemSlNo || modemSlNo === 'N/A') {
-      console.warn('No valid modemSlNo found for navigation');
-      // Still navigate but with available data
-      navigation?.navigate?.('ModemDetails', {
-        modem,
-        modemSlNo: modem.modemId
-      });
-      return;
-    }
-
-    navigation?.navigate?.('ModemDetails', {
+    navigation.navigate("ModemDetails", {
       modem,
-      modemSlNo: modemSlNo
+      modemSlNo: modem.modemId
     });
   };
 
-  const handleGetDirection = async () => {
-    const latitude = 17.3850;  
-    const longitude = 78.4867;
-    
-    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
-    const appleMapsUrl = `http://maps.apple.com/?daddr=${latitude},${longitude}`;
-    
-    try {
-      const url = Platform.OS === 'ios' ? appleMapsUrl : googleMapsUrl;
-      
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert(
-          'Maps Not Available',
-          'Unable to open maps application. Please install Google Maps or Apple Maps.',
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error) {
-      console.error('Error opening maps:', error);
-      Alert.alert(
-        'Error',
-        'Unable to open maps. Please try again later.',
-        [{ text: 'OK' }]
-      );
-    }
+  const handleDirection = () => {
+    const lat = 17.3850;
+    const lon = 78.4867;
+
+    const url =
+      Platform.OS === 'ios'
+        ? `http://maps.apple.com/?daddr=${lat},${lon}`
+        : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+
+    Linking.openURL(url).catch(() => {
+      Alert.alert("Cannot open maps", "Install Google Maps or Apple Maps to use directions.");
+    });
   };
 
   return (
     <Pressable onPress={handleCardPress} style={styles.modemCard}>
-      {/* Header row */}
       <View style={styles.itemHeader}>
         <View style={styles.itemIdContainer}>
           <Text style={styles.itemId}>{modem.modemId}</Text>
-          <Text style={styles.itemImei}>Error Code - {modem.code || 'N/A'}</Text>
+          <Text style={styles.itemImei}>Error Code – {modem.code}</Text>
         </View>
 
-        <TouchableOpacity style={styles.directionButton} onPress={handleGetDirection}>
+        <TouchableOpacity style={styles.directionButton} onPress={handleDirection}>
           <Text style={styles.directionButtonText}>Get Direction</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Body row: left photo block + right details */}
       <View style={styles.itemDetails}>
-        {/* Photo Section - 25% */}
-        {/* <View style={styles.photoSection}>
-          <View style={styles.photoSectionContent}>
-            <Ionicons name="image-outline" size={22} color="#B0B0B0" />
-            <Text style={styles.detailLabel}>Photos</Text>
-          </View>
-        </View> */}
-
+        {/* PHOTO */}
         <View style={styles.photoSection}>
-          {modem?.photos && modem.photos.length > 0 ? (
-            <Image
-              source={modem.photos[0]}
-              style={styles.photoImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.photoSectionContent}>
-              <Ionicons name="image-outline" size={22} color="#B0B0B0" />
-              <Text style={styles.detailLabel}>Photos</Text>
-            </View>
-          )}
+          <Image source={modem.photos[0]} style={styles.photoImage} resizeMode="cover" />
         </View>
 
-        {/* Right details - 75% */}
+        {/* DETAILS */}
         <View style={styles.subDataSection}>
-          {/* Row 1: Error + Meter Type */}
           <View style={styles.subDataRow}>
             <View style={styles.subDataItem}>
               <Text style={styles.detailLabel}>Error Type</Text>
-              <Text style={styles.detailValueGreen} numberOfLines={2}>
-                {modem.error || 'N/A'}
-              </Text>
+              <Text style={styles.detailValueGreen}>{modem.error}</Text>
             </View>
 
             <View style={styles.subDataItem}>
-              <Text style={styles.detailLabel}>Signal Strength</Text>
+              <Text style={styles.detailLabel}>Signal</Text>
               <View style={styles.signalStrengthContainer}>
                 {getSignalIcon()}
-                <Text style={styles.signalStrengthText}>
-                  {modem.signalStrength || 0} dBm
-                </Text>
+                <Text style={styles.signalStrengthText}>{modem.signalStrength} dBm</Text>
               </View>
             </View>
           </View>
 
-          {/* Row 2: HES Status + Issue Occurrence */}
           <View style={styles.subDataRow}>
             <View style={styles.subDataItem}>
               <Text style={styles.detailLabel}>HES Status</Text>
@@ -894,9 +678,7 @@ const ModemCard = ({ modem, navigation }) => {
 
             <View style={styles.subDataItem}>
               <Text style={styles.detailLabel}>Issue Occurred On</Text>
-              <Text style={[styles.datedetails]}>
-                {formatDate(modem.date)}
-              </Text>
+              <Text style={styles.datedetails}>{modem.date}</Text>
             </View>
           </View>
         </View>
@@ -907,6 +689,10 @@ const ModemCard = ({ modem, navigation }) => {
 
 export default DashboardScreen;
 
+/* ============================================
+   ✅ STYLES
+   ============================================ */
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -915,346 +701,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: spacing.xl,
   },
-  iconChip: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.lg,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 2,
-  },
-  notificationChip: {
-    borderWidth: 1,
-    borderColor: '#d7e2d9',
-  },
-  logoWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  metricCard: {
-    backgroundColor: '#fff',
-    borderRadius: 5,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    width: (width - 40) / 2,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    height: 100,
-    // shadowColor: '#6E6E6E',
-    // shadowOffset: { width: 0, height: 2 },
-    // shadowOpacity: 0.1,
-    // shadowRadius: 4,
-    // elevation: 3,
-  },
-  metricIconContainer: {
-    width: 34,
-    height: 34,
-    borderRadius: 19,
-    backgroundColor: colors.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  textContainer: {
-    width: 120,
-    alignItems: 'flex-start',
-    height: "100%",
-    justifyContent: "space-between",
-  },
-  metricValue: {
-    fontSize: 20,
-    color: colors.secondary,
-    fontFamily: 'Manrope-Bold',
-    // marginTop: 4,
-  },
-  metricTitle: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: 'Manrope-Regular',
-  },
-  metricSubtext: {
-    fontSize: 10,
-    color: '#999',
-    fontFamily: 'Manrope-Regular',
-    marginTop: 2,
-  },
-  metricIconContainerWarning: {
-    backgroundColor: '#FF9800',
-  },
-  metricIconContainerSuccess: {
-    backgroundColor: '#4CAF50',
-  },
-  searchCardWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    elevation: 0.5,
-    paddingVertical: 7,
-    paddingBottom: 14,
-    // justifyContent: 'space-between',
-  },
-  searchCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: "#F8F8F8",
-    marginHorizontal: 20,
-    height: 45,
-    paddingHorizontal: 10,
-    // paddingVertical: spacing.sm,
-    borderRadius: 5,
-    // elevation: 2,
-    marginTop: 10,
-    width: '55%',
-  },
-  searchInput: {
-    flex: 1,
-    paddingHorizontal: spacing.sm,
-    color: "#6E6E6E",
-    fontFamily: 'Manrope-Regular',
-    fontSize: 14,
-  },
-  scanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    backgroundColor: colors.secondary,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 5,
-    marginRight: spacing.sm,
-    height: 45,
-    width: '23%',
-    marginTop: 9,
-  },
-  scanText: {
-    color: '#fff',
-    fontFamily: 'Manrope-Regular',
-    fontSize: 16,
-  },
-  filterButton: {
-    // width: 50,
-    // height: 50,
-    // borderRadius: 12,
-    // borderWidth: 1,
-    // borderColor: '#d7e2d9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    // marginTop: 9,
-    marginLeft: 5,
-    backgroundColor: '#fff',
-    position: 'relative',
-    marginTop: 8,
-  },
-  filterButtonActive: {
-    borderColor: colors.secondary,
-    backgroundColor: '#e9f5ef',
-  },
-  filterActiveDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.secondary,
-    position: 'absolute',
-    top: 8,
-    right: 8,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: spacing.md,
-    marginTop: spacing.lg,
-  },
-  sectionTitle: {
-    ...typography.h3,
-    color: colors.textPrimary,
-  },
-  sectionCount: {
-    ...typography.small,
-    color: colors.textSecondary,
-  },
-  cardsWrapper: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.md,
-    gap: spacing.md,
-  },
-  notificationSection: {
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  notificationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  viewAllText: {
-    ...typography.small,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  dashboardNotificationCard: {
-    backgroundColor: '#fff',
-  },
-  modemCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#F8F8F8',
-    marginBottom: spacing.md,
-  },
-  modemCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  modemId: {
-    ...typography.h3,
-    color: colors.textPrimary,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.round,
-    marginTop: spacing.xs,
-    gap: 4,
-  },
-  statusText: {
-    ...typography.small,
-    fontWeight: '600',
-  },
-  directionButton: {
-    backgroundColor: colors.secondary,
-    borderRadius: 5,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  directionButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 13,
-    fontFamily: 'Manrope-Bold',
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  itemIdContainer: {
-    flex: 1,
-  },
-  itemId: {
-    fontSize: 16,
-    color: '#333',
-    fontFamily: 'Manrope-Bold',
-  },
-  itemImei: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-    fontFamily: 'Manrope-Regular',
-  },
-  itemDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  photoSection: {
-    width: '25%',
-    backgroundColor: '#F8F8F8',
-    borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    height: 115
-  },
-  photoImage: {
-    width: "100%",
-    height: "140%",
-    borderRadius: 5,
-  },
-  photoSectionContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  subDataSection: {
-    width: '75%',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-  },
-  subDataRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  subDataItem: {
-    flex: 1,
-    marginHorizontal: 5,
-  },
-  detailLabel: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 3,
-    fontFamily: 'Manrope-Regular',
-  },
-  detailValue: {
-    fontSize: 12,
-    color: '#333',
-    fontFamily: 'Manrope-SemiBold',
-  },
-  detailValueGreen: {
-    fontSize: 13,
-    color: '#55b56c',
-    fontFamily: 'Manrope-Medium',
-  },
-  signalStrengthContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  signalStrengthText: {
-    fontSize: 12,
-    color: '#55b56c',
-    fontFamily: 'Manrope-Medium',
-  },
-  datedetails: {
-    backgroundColor: '#F8F8F8',
-    paddingVertical: 3,
-    paddingHorizontal: 4,
-    textAlign: 'center',
-    borderRadius: 5,
-    fontSize: 9,
-    fontFamily: 'Manrope-Regular',
-  },
-  statusPillPending: {
-    backgroundColor: '#FF8A00',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 5,
-    alignSelf: 'flex-start',
-  },
-  statusPillText: {
-    color: '#fff',
-    fontSize: 10,
-    fontFamily: 'Manrope-ExtraBold',
-  },
+
+  /* ---------- HEADER + GREETING ---------- */
   bluecontainer: {
     backgroundColor: '#eef8f0',
     padding: 15,
@@ -1284,6 +732,7 @@ const styles = StyleSheet.create({
     elevation: 1,
     zIndex: 2,
   },
+
   ProfileBox: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1307,26 +756,122 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Manrope-Regular',
   },
-  balanceText: {
-    color: COLORS.primaryFontColor,
-    marginLeft: 20,
-    fontSize: 14,
-    fontFamily: 'Manrope-Regular',
-  },
-  statusRow: {
+
+  /* ---------- METRIC CARDS ---------- */
+  metricsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 5,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  amountText: {
-    color: COLORS.primaryColor,
+  metricCard: {
+    backgroundColor: '#fff',
+    borderRadius: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    width: (width - 40) / 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    height: 100,
+  },
+  textContainer: {
+    width: 120,
+    alignItems: 'flex-start',
+    height: "100%",
+    justifyContent: "space-between",
+  },
+  metricValue: {
     fontSize: 20,
+    color: colors.secondary,
     fontFamily: 'Manrope-Bold',
   },
-  plusBox: {
-    marginLeft: 7,
+  metricTitle: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: 'Manrope-Regular',
   },
+  metricIconContainer: {
+    width: 34,
+    height: 34,
+    borderRadius: 19,
+    backgroundColor: colors.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  metricIconContainerSuccess: {
+    backgroundColor: '#4CAF50',
+  },
+
+  /* ---------- SEARCH + FILTER ---------- */
+  searchCardWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    elevation: 0.5,
+    paddingVertical: 7,
+    paddingBottom: 14,
+  },
+  searchCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: "#F8F8F8",
+    marginHorizontal: 20,
+    height: 45,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+    marginTop: 10,
+    width: '55%',
+  },
+  searchInput: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+    color: "#6E6E6E",
+    fontFamily: 'Manrope-Regular',
+    fontSize: 14,
+  },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: colors.secondary,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 5,
+    marginRight: spacing.sm,
+    height: 45,
+    width: '23%',
+    marginTop: 9,
+  },
+  scanText: {
+    color: '#fff',
+    fontFamily: 'Manrope-Regular',
+    fontSize: 16,
+  },
+  filterButton: {
+    marginLeft: 5,
+    backgroundColor: '#fff',
+    position: 'relative',
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 5
+  },
+  filterActiveDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.secondary,
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+
+  /* ---------- MODEM LIST ---------- */
+  cardsWrapper: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
+  },
+
   loadingContainer: {
     padding: spacing.xl,
     alignItems: 'center',
@@ -1346,6 +891,118 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
   },
+
+  /* ---------- MODEM CARD ---------- */
+  modemCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#F8F8F8',
+    marginBottom: spacing.md,
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  itemIdContainer: {
+    flex: 1,
+  },
+  itemId: {
+    fontSize: 16,
+    color: '#333',
+    fontFamily: 'Manrope-Bold',
+  },
+  itemImei: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+    fontFamily: 'Manrope-Regular',
+  },
+
+  itemDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  photoSection: {
+    width: '25%',
+    backgroundColor: '#F8F8F8',
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    height: 115,
+  },
+  photoImage: {
+    width: '100%',
+    height: '140%',
+    borderRadius: 5,
+  },
+
+  subDataSection: {
+    width: '75%',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+  },
+  subDataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  subDataItem: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
+
+  detailLabel: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 3,
+    fontFamily: 'Manrope-Regular',
+  },
+  detailValueGreen: {
+    fontSize: 13,
+    color: '#55b56c',
+    fontFamily: 'Manrope-Medium',
+  },
+  signalStrengthContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  signalStrengthText: {
+    fontSize: 12,
+    color: '#55b56c',
+    fontFamily: 'Manrope-Medium',
+  },
+
+  datedetails: {
+    backgroundColor: '#F8F8F8',
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+    textAlign: 'center',
+    borderRadius: 5,
+    fontSize: 9,
+    fontFamily: 'Manrope-Regular',
+  },
+
+  statusPillPending: {
+    backgroundColor: '#FF8A00',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
+    alignSelf: 'flex-start',
+  },
+  statusPillText: {
+    color: '#fff',
+    fontSize: 10,
+    fontFamily: 'Manrope-ExtraBold',
+  },
+
+  /* ---------- FILTER MODAL ---------- */
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
@@ -1370,15 +1027,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   modalTitle: {
-    ...typography.h3,
-    color: colors.textPrimary,
     fontSize: 18,
+    fontFamily: 'Manrope-SemiBold',
   },
   modalSection: {
     marginBottom: spacing.lg,
   },
   modalSectionLabel: {
-    ...typography.caption,
+    fontSize: 14,
     color: colors.textSecondary,
     marginBottom: spacing.sm,
     fontFamily: 'Manrope-SemiBold',
@@ -1435,5 +1091,18 @@ const styles = StyleSheet.create({
   },
   modalButtonGhostText: {
     color: colors.textPrimary,
+  },
+
+  /* ---------- DIRECTION BUTTON ---------- */
+  directionButton: {
+    backgroundColor: colors.secondary,
+    borderRadius: 5,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  directionButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: 'Manrope-Bold',
   },
 });
