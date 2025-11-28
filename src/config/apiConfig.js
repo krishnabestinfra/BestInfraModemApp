@@ -2,6 +2,8 @@
 // Base URL
 export const API_BASE_URL = 'https://nexusenergy.tech/api/v1';
 
+// Old Alerts API Base URL
+export const OLD_ALERTS_API_BASE_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
 
 export const API_KEY = 'eyaM-5N8mDzLykpA3n3igUgGgNnEcehUY9NJ9ui4Ic5LuZW1sqbZylAg1q_C1';
 export const API_ENDPOINTS = {

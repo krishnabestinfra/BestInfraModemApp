@@ -25,8 +25,6 @@ import AppHeader from '../components/global/AppHeader';
 import { modemStats, modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
-import { getApiKey, getUserPhone } from '../utils/storage';
-import { API_BASE_URL, API_KEY, API_ENDPOINTS, getProtectedHeaders } from '../config/apiConfig';
 
 import SearchIcon from '../../assets/icons/searchIcon.svg';
 import ScanIcon from '../../assets/icons/scan.svg';
@@ -36,8 +34,6 @@ import Hand from '../../assets/icons/hand.svg';
 import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
 import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
-import TotalTasksIcon from '../../assets/icons/totaltasks.svg';
-import CompletedTasksIcon from '../../assets/icons/completedtasks.svg';
 import CommunicatingModemsIcon from '../../assets/icons/communicating.svg';
 import NonCommunicatingModemsIcon from '../../assets/icons/noncommicating.svg';
 
@@ -50,47 +46,25 @@ Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
 const { width } = Dimensions.get('window');
 const USE_MOCK_ALERTS = false;
 
-// Filters - OLD ALERT-BASED (COMMENTED OUT)
-// const ERROR_FILTER_OPTIONS = [
-//   { label: 'All', value: 'all' },
-//   { label: 'Meter COM Failed', value: 'meterComFailed', codes: [212] },
-//   { label: 'Modem/DCU Auto Restart', value: 'modemAutoRestart', codes: [202] },
-//   { label: 'DCU/Modem Power Failed', value: 'modemPowerFailed', codes: [214] },
-//   { label: 'Network Issue', value: 'networkIssue' }
-// ];
-
-// Simple filter options for modems
 const ERROR_FILTER_OPTIONS = [
   { label: 'All', value: 'all' },
-  { label: 'Pending Commission', value: 'pending' },
-  { label: 'Non-Communicating', value: 'nonCommunicating' },
-  { label: 'Commissioned', value: 'commissioned' },
+  { label: 'Meter COM Failed', value: 'meterComFailed', codes: [112] },
+  { label: 'Modem/DCU Auto Restart', value: 'modemAutoRestart', codes: [202] },
+  { label: 'DCU/Modem Power Failed', value: 'modemPowerFailed', codes: [214] },
+  { label: 'Network Issue', value: 'networkIssue' }
 ];
 
 const matchesErrorFilter = (item, filterValue) => {
   if (filterValue === 'all') return true;
   
-  // OLD ALERT-BASED LOGIC (COMMENTED OUT)
-  // const byCode = ERROR_FILTER_OPTIONS.find(i => i.value === filterValue && i.codes);
-  // if (byCode) return byCode.codes.includes(item.code);
-  // if (filterValue === 'networkIssue') {
-  //   const raw = item.originalAlert || {};
-  //   const combined = `${raw.codeDesc || ''} ${item.error || ''}`.toLowerCase();
-  //   return combined.includes('network');
-  // }
-
-  // NEW MODEM-BASED FILTER LOGIC
-  const modem = item.originalAlert || item;
-  if (filterValue === 'pending') {
-    return modem.commissionStatus === 'PENDING';
+  const byCode = ERROR_FILTER_OPTIONS.find(i => i.value === filterValue && i.codes);
+  if (byCode) return byCode.codes.includes(item.code);
+  if (filterValue === 'networkIssue') {
+    const raw = item.originalAlert || {};
+    const combined = `${raw.codeDesc || ''} ${item.error || ''}`.toLowerCase();
+    return combined.includes('network');
   }
-  if (filterValue === 'nonCommunicating') {
-    return !modem.communicationStatus || modem.communicationStatus === 'NON_COMMUNICATING';
-  }
-  if (filterValue === 'commissioned') {
-    return modem.commissionStatus === 'COMMISSIONED';
-  }
-
+  
   return true;
 };
 
@@ -134,17 +108,9 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
     setDraftFilters(cleared);
   };
 
-  const assignedModems = Array.isArray(modems) ? modems : [];
-  const hasAssignedModems = assignedModems.length > 0;
-
   useEffect(() => {
-    if (hasAssignedModems) {
-      setLoading(false);
-      setApiData(null);
-      return;
-    }
     fetchApiData();
-  }, [hasAssignedModems]);
+  }, []);
 
   const fetchApiData = async () => {
     if (USE_MOCK_ALERTS) {
@@ -155,22 +121,12 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
 
     try {
       setLoading(true);
-
-      // Get API key and user phone for authentication
-      const apiKey = await getApiKey() || API_KEY;
-      const phone = userPhone || await getUserPhone();
-
-      if (!phone) {
-        throw new Error('User phone number not found');
-      }
-
-      // Use protected headers following your documentation
-      const headers = getProtectedHeaders(apiKey, phone);
-
-      // Fetch modems assigned to this field officer (which filters by user)
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.GET_MODEMS_BY_OFFICER}`, {
+      const response = await fetch('https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts', {
         method: 'GET',
-        headers,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
       });
 
       if (!response.ok) {
@@ -179,91 +135,73 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
 
       const json = await response.json();
 
-      // API returns direct array of modems for this user
-      const modems = Array.isArray(json) ? json : json.modems || json.data || [];
-
-      if (modems.length > 0) {
+      if (json.success !== undefined) {
+        if (json.success && json.alerts) {
+          setApiData({
+            success: true,
+            alerts: Array.isArray(json.alerts) ? json.alerts : [json.alerts],
+            stats: json.stats || {},
+            timelineData: json.timelineData || [],
+          });
+        } else {
+          setApiData(null);
+        }
+      } else if (Array.isArray(json)) {
         setApiData({
           success: true,
-          alerts: modems,
-          // ❌ OLD ALERT API FIELDS (COMMENTED OUT - not in modem API)
-          // stats: json.stats || {},
-          // timelineData: json.timelineData || [],
+          alerts: json,
         });
       } else {
         setApiData(null);
       }
     } catch (error) {
-      console.error('Error fetching modems:', error);
+      console.error('Error fetching API data:', error);
       setApiData(null);
     } finally {
       setLoading(false);
     }
   };
 
-  // ❌ OLD ALERT-BASED STATUS MAPPING (COMMENTED OUT - modem API doesn't use error codes)
-  // const getStatusFromCode = (code) => {
-  //   const map = {
-  //     202: 'warning',
-  //     213: 'success',
-  //     214: 'disconnected',
-  //     215: 'success',
-  //     212: 'disconnected',
-  //   };
-  //   return map[code] || 'default';
-  // };
+  const getStatusFromCode = (code) => {
+    const map = {
+      202: 'warning',
+      213: 'success',
+      214: 'disconnected',
+      215: 'success',
+      112: 'disconnected',
+      212: 'disconnected',
+    };
+    return map[code] || 'default';
+  };
 
-  const normalizeModemRecord = (modem = {}, index = 0) => {
-    // Handle actual API response structure from /modem/user/all
-    const id = modem.id?.toString() || modem.modemno || `m-${index}`;
-    const modemId = modem.modemno || modem.modemId || id;
-
-    // Determine status from API fields
-    let status = 'default';
-    if (modem.commissionStatus === 'COMMISSIONED' || modem.communicationStatus === 'COMMUNICATING') {
-      status = 'success';
-    } else if (modem.commissionStatus === 'PENDING' || !modem.communicationStatus || modem.communicationStatus === 'NON_COMMUNICATING') {
-      status = 'disconnected';
-    }
-
-    // Map photos from API
-    const photos = [];
-    if (modem.photo1) photos.push({ uri: modem.photo1 });
-    if (modem.photo2) photos.push({ uri: modem.photo2 });
-    if (photos.length === 0) photos.push(Meter);
+  const normalizeModemRecord = (alert = {}, index = 0) => {
+    const id = alert.id?.toString() || alert.modemSlNo || alert.modemno || alert.sno || `alert-${index}`;
+    const modemId = alert.modemSlNo || alert.modemno || alert.sno || alert.modemId || id;
+    const code = alert.code || alert.errorCode || 'N/A';
 
     return {
       id,
       modemId,
-      location: modem.meterLocation || modem.section || modem.subdivision || modem.division || modem.circle || 'N/A',
-      error: modem.commissionStatus === 'PENDING' 
-        ? 'Pending Commission' 
-        : (!modem.communicationStatus || modem.communicationStatus === 'NON_COMMUNICATING' 
-          ? 'Non-Communicating' 
-          : 'Operational'),
-      reason: modem.comments || modem.techSupportStatus || 'N/A',
-      date: modem.lastCommunicatedAt || modem.installedOn || modem.updatedAt || 'N/A',
-      status: modem.status || status, // Status determined from commissionStatus/communicationStatus
-      signalStrength: 0, // API doesn't provide signal strength
-      discom: modem.circle || modem.division || 'N/A',
-      meterSlNo: modem.ctmtrno?.trim() || 'N/A',
-      code: 'N/A', // API doesn't provide error codes for modems
-      photos,
-      originalAlert: modem,
+      location: alert.discom || alert.location || alert.meterLocation || alert.section || alert.subdivision || alert.division || alert.circle || 'N/A',
+      error: alert.codeDesc || alert.error || alert.commissionStatus || alert.communicationStatus || 'N/A',
+      reason: alert.reason || alert.codeDesc || alert.comments || alert.techSupportStatus || 'N/A',
+      date: alert.modemDate ? `${alert.modemDate} ${alert.modemTime || ''}` : alert.date || alert.lastCommunicatedAt || alert.installedOn || alert.updatedAt || 'N/A',
+      status: getStatusFromCode(code),
+      signalStrength: alert.signalStrength1 || alert.signalStrength2 || alert.signalStrength || 0,
+      discom: alert.discom || alert.circle || alert.division || 'N/A',
+      meterSlNo: alert.meterSlNo || alert.ctmtrno || alert.modemSlNo || alert.modemno || 'N/A',
+      code: code,
+      photos: [Meter],
+      originalAlert: alert,
     };
   };
   const transformedAlerts = useMemo(() => {
-    if (hasAssignedModems) {
-      return assignedModems.map((m, i) => normalizeModemRecord(m, i));
-    }
-
     if (!apiData?.alerts || apiData.alerts.length === 0) {
       return modemErrors.map((m, i) => normalizeModemRecord(m, i));
     }
 
-    // API returns modems directly - normalize them
-    return apiData.alerts.map((modem, index) => normalizeModemRecord(modem, index));
-  }, [apiData, assignedModems, hasAssignedModems]);
+    return apiData.alerts.map((alert, index) => normalizeModemRecord(alert, index));
+  }, [apiData]);
 
   // ================================
   // 📊 DASHBOARD METRICS
@@ -278,79 +216,35 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
       };
     }
 
-    // OLD ALERT-BASED METRICS (COMMENTED OUT)
-    // const communicatingSet = new Set();
-    // const nonCommunicatingSet = new Set();
-    // apiData.alerts?.forEach(alert => {
-    //   if ([202, 213, 215].includes(alert.code)) {
-    //     communicatingSet.add(alert.modemSlNo);
-    //   }
-    //   if ([214, 212].includes(alert.code)) {
-    //     nonCommunicatingSet.add(alert.modemSlNo);
-    //   }
-    // });
-
-    // NEW MODEM-BASED METRICS (using actual modem data structure)
-    let communicatingCount = 0;
-    let nonCommunicatingCount = 0;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    let completedToday = 0;
-
-    apiData.alerts.forEach(modem => {
-      // Count communicating modems
-      if (modem.communicationStatus === 'COMMUNICATING' || 
-          (modem.commissionStatus === 'COMMISSIONED' && modem.communicationStatus !== 'NON_COMMUNICATING')) {
-        communicatingCount++;
+    const communicatingSet = new Set();
+    const nonCommunicatingSet = new Set();
+    
+    apiData.alerts?.forEach(alert => {
+      if ([202, 213, 215].includes(alert.code)) {
+        communicatingSet.add(alert.modemSlNo || alert.sno);
       }
-      
-      // Count non-communicating modems
-      if (!modem.communicationStatus || 
-          modem.communicationStatus === 'NON_COMMUNICATING' ||
-          modem.commissionStatus === 'PENDING') {
-        nonCommunicatingCount++;
-      }
-
-      // Count completed tasks today (commissioned today)
-      if (modem.commissionStatus === 'COMMISSIONED' && modem.installedOn) {
-        const installedDate = new Date(modem.installedOn);
-        installedDate.setHours(0, 0, 0, 0);
-        if (installedDate.getTime() === today.getTime()) {
-          completedToday++;
-        }
+      if ([214, 112].includes(alert.code)) {
+        nonCommunicatingSet.add(alert.modemSlNo || alert.sno);
       }
     });
 
-    const totalToday = apiData.alerts.filter(modem => {
-      if (!modem.installedOn && !modem.updatedAt) return false;
-      const date = new Date(modem.installedOn || modem.updatedAt);
-      date.setHours(0, 0, 0, 0);
-      return date.getTime() === today.getTime();
-    }).length;
-
     return {
-      communicatingModems: communicatingCount,
-      nonCommunicatingModems: nonCommunicatingCount,
-      totalTasksToday: totalToday,
-      completedTasksToday: completedToday,
+      communicatingModems: communicatingSet.size,
+      nonCommunicatingModems: nonCommunicatingSet.size,
+      totalTasksToday: apiData.alerts.length,
+      completedTasksToday: 0,
     };
   }, [apiData]);
 
   const wipData = useMemo(
     () => ({
       ...dashboardMetrics,
-      // ❌ OLD ALERT API STATS (COMMENTED OUT - not in modem API)
-      // metersInstalled: apiData?.stats?.uniqueModems || modemStats.connected,
-      // metersCommissioned: apiData?.stats?.totalAlerts || modemStats.disconnected,
-      // totalAlerts: apiData?.stats?.totalAlerts || '0',
-      // uniqueMeters: apiData?.stats?.uniqueMeters || '0',
-      // uniqueDiscoms: apiData?.stats?.uniqueDiscoms || '0',
-      // avgSignalStrength: apiData?.stats?.avgSignalStrength1 || '0',
-      
-      // ✅ NEW MODEM-BASED STATS
-      totalModems: apiData?.alerts?.length || 0,
-      commissionedModems: apiData?.alerts?.filter(m => m.commissionStatus === 'COMMISSIONED').length || 0,
-      pendingModems: apiData?.alerts?.filter(m => m.commissionStatus === 'PENDING').length || 0,
+      metersInstalled: apiData?.stats?.uniqueModems || modemStats.connected,
+      metersCommissioned: apiData?.stats?.totalAlerts || modemStats.disconnected,
+      totalAlerts: apiData?.stats?.totalAlerts || '0',
+      uniqueMeters: apiData?.stats?.uniqueMeters || '0',
+      uniqueDiscoms: apiData?.stats?.uniqueDiscoms || '0',
+      avgSignalStrength: apiData?.stats?.avgSignalStrength1 || '0',
     }),
     [apiData, dashboardMetrics]
   );
@@ -419,37 +313,7 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
             </View>
           </View>
 
-          {/* ================= CARDS ROW 1 ================= */}
-          <View style={styles.metricsRow}>
-            <TouchableOpacity style={styles.metricCard} onPress={() => navigation.navigate("FindMeters")}>
-              <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Total Field Activities</Text>
-                <Text style={styles.metricValue}>
-                  {loading ? '...' : wipData.totalTasksToday}
-                </Text>
-              </View>
-              <View style={styles.metricIconContainer}>
-                <TotalTasksIcon width={21} height={21} />
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.metricCard}
-              onPress={() => navigation.navigate("CompletedActivities")}
-            >
-              <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Completed Activities</Text>
-                <Text style={styles.metricValue}>
-                  {loading ? '...' : wipData.completedTasksToday}
-                </Text>
-              </View>
-              <View style={[styles.metricIconContainer, styles.metricIconContainerSuccess]}>
-                <CompletedTasksIcon width={21} height={21} />
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* ================= CARDS ROW 2 ================= */}
+          {/* ================= CARDS ROW ================= */}
           <View style={styles.metricsRow}>
             <TouchableOpacity style={styles.metricCard} onPress={() => navigation.navigate("ModemDetails")}>
               <View style={styles.textContainer}>
