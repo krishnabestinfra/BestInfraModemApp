@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
+import { getTroubleshootSteps, hasTroubleshootSteps } from '../data/troubleshootData';
 
 import checkConnectionGif from '../../assets/images/Check_connection.gif';
 import voltageCheckGif from '../../assets/images/voltageCheck.gif';
@@ -33,7 +34,8 @@ import CheckCircleIcon from '../../assets/icons/successIcon.svg';
 if (!Text.defaultProps) Text.defaultProps = {};
 Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
 
-const troubleshootSteps = [
+// Default generic troubleshooting steps (fallback)
+const defaultTroubleshootSteps = [
   {
     id: 1,
     title: 'Check Cable Connection',
@@ -83,10 +85,28 @@ const troubleshootSteps = [
 
 const TroubleshootScreen = ({ navigation, route }) => {
   const modem = route?.params?.modem;
+  
+  // Get error code from modem (could be from modem.code or modem.originalAlert?.code)
+  const errorCode = modem?.code || modem?.originalAlert?.code;
+
+  // Get troubleshooting steps based on error code, fallback to default steps
+  const troubleshootSteps = useMemo(() => {
+    if (errorCode && hasTroubleshootSteps(errorCode)) {
+      return getTroubleshootSteps(errorCode);
+    }
+    // Fallback to default generic steps
+    return defaultTroubleshootSteps;
+  }, [errorCode]);
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [showRetry, setShowRetry] = useState(false);
+
+  useEffect(() => {
+    setCurrentStepIndex(0);
+    setFeedback(null);
+    setShowRetry(false);
+  }, [errorCode]);
 
   const currentStep = troubleshootSteps[currentStepIndex];
   const isComplete = currentStepIndex >= troubleshootSteps.length;
