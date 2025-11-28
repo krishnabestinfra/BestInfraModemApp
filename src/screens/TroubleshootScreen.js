@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import RippleLogo from '../components/global/RippleLogo';
+import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
@@ -25,7 +26,6 @@ import voltageCheck2Gif from '../../assets/icons/voltageCheck2.gif';
 import checkSignal2Gif from '../../assets/icons/Check_singal2.gif';
 
 
-import Menu from '../../assets/icons/bars.svg';
 import NotificationLight from '../../assets/icons/notification.svg';
 import CheckCircleIcon from '../../assets/icons/successIcon.svg';
 
@@ -45,8 +45,8 @@ const troubleshootSteps = [
     noImage: checkConnection2Gif,
     noSteps: [
       'Disconnect all cables and inspect for any visible damage',
-      'Reconnect all cables firmly until you hear a click',
-      'Wait 30 seconds for reconnection detection',
+      'Firmly reconnect all cables ensuring you hear/feel a click when properly seated',
+      'Wait 30 seconds for the modem to recognize the connections',
     ]
   },
   {
@@ -55,13 +55,13 @@ const troubleshootSteps = [
     description: 'Use the multimeter to confirm the supply voltage.',
     image: voltageCheckGif,
 
-    noTitle: 'Voltage Not Detected',
+    noTitle: 'Voltage Not Detected at Input Line',
     noImage: voltageCheck2Gif,
-    noSubtitle: 'Follow these corrective steps.',
+    noSubtitle: 'No voltage has been detected. Follow these corrective steps carefully.',
     noSteps: [
-      'Test the power outlet with another device',
-      'Inspect the power adapter for damage',
-      'Check if the circuit breaker has tripped',
+      'Check if the power outlet is working by testing with another device',
+      'Inspect the power adapter for any damage or burnt smell',
+      'Verify the circuit breaker has not tripped for this line',
     ]
   },
   {
@@ -71,12 +71,12 @@ const troubleshootSteps = [
     image: checkSignalGif,
 
     noTitle: 'Communication Not Established',
-    noSubtitle: 'Follow these steps.',
+    noSubtitle: 'The modem is unable to communicate with the network. Follow these steps.',
     noImage: checkSignal2Gif,
     noSteps: [
-      'Power cycle the modem (30 seconds)',
-      'Check network cables',
-      'Verify network settings',
+      'Power cycle the modem by unplugging it for 30 seconds',
+      'Check that network cables are securely connected',
+      'Verify network settings and configuration are correct',
     ]
   },
 ];
@@ -132,17 +132,16 @@ const TroubleshootScreen = ({ navigation, route }) => {
           colors={['#f4fbf7', '#e6f4ed']}
           style={styles.heroCard}
         >
-          <View style={styles.heroTopRow}>
-            <Pressable style={styles.barsIcon} onPress={() => navigation.navigate('SideMenu')}>
-              <Menu width={18} height={18} fill="#202d59" />
-            </Pressable>
-
-            <RippleLogo size={68} />
-
-            <Pressable style={styles.bellIcon} onPress={() => navigation.navigate('Profile')}>
-              <NotificationLight width={18} height={18} fill="#202d59" />
-            </Pressable>
-          </View>
+          <AppHeader
+            containerStyle={styles.heroTopRow}
+            leftButtonStyle={styles.barsIcon}
+            rightButtonStyle={styles.bellIcon}
+            rightIcon={NotificationLight}
+            logo={<RippleLogo size={68} />}
+            onPressLeft={() => navigation.navigate('SideMenu')}
+            onPressCenter={() => navigation.navigate('Dashboard')}
+            onPressRight={() => navigation.navigate('Profile')}
+          />
 
           {!isComplete && (
             <ModemStatusCard
@@ -156,47 +155,56 @@ const TroubleshootScreen = ({ navigation, route }) => {
 
         {/* MAIN CONTENT */}
         <View style={styles.stepArea}>
-          {!isComplete ? (
-            <StepContent
-              step={currentStep}
-              feedback={feedback}
-              showRetry={showRetry}
-            />
-          ) : (
-            <SuccessCard image={successImg} onComplete={handleComplete} />
+          {!isComplete && (
+            <View style={styles.progressContainer}>
+              <ProgressBars currentStep={currentStepIndex + 1} totalSteps={troubleshootSteps.length} />
+            </View>
           )}
+          <View style={styles.contentWrapper}>
+            {!isComplete ? (
+              <StepContent
+                step={currentStep}
+                feedback={feedback}
+                showRetry={showRetry}
+              />
+            ) : (
+              <SuccessCard image={successImg} onComplete={handleComplete} />
+            )}
+          </View>
         </View>
 
         {/* BOTTOM BUTTONS */}
         {!isComplete && (
           <View style={styles.bottomResponseBar}>
-            {showRetry ? (
-              <TouchableOpacity
-                style={[styles.responseButton, styles.responseButtonRetry]}
-                onPress={() => {
-                  setShowRetry(false);
-                  setFeedback(null);
-                }}
-              >
-                <Text style={styles.responseTextYes}>Retry Check</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.responseRow}>
+            <View style={styles.responseRow}>
+              {showRetry ? (
                 <TouchableOpacity
-                  style={[styles.responseButton, styles.responseButtonYes]}
-                  onPress={() => handleResponse(true)}
+                  style={[styles.responseButton, styles.responseButtonRetry]}
+                  onPress={() => {
+                    setShowRetry(false);
+                    setFeedback(null);
+                  }}
                 >
-                  <Text style={styles.responseTextYes}>Yes</Text>
+                  <Text style={styles.responseTextYes}>Retry Check</Text>
                 </TouchableOpacity>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={[styles.responseButton, styles.responseButtonYes]}
+                    onPress={() => handleResponse(true)}
+                  >
+                    <Text style={styles.responseTextYes}>Yes</Text>
+                  </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.responseButton, styles.responseButtonNo]}
-                  onPress={() => handleResponse(false)}
-                >
-                  <Text style={styles.responseTextNo}>No</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+                  <TouchableOpacity
+                    style={[styles.responseButton, styles.responseButtonNo]}
+                    onPress={() => handleResponse(false)}
+                  >
+                    <Text style={styles.responseTextNo}>No</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
           </View>
         )}
 
@@ -205,9 +213,28 @@ const TroubleshootScreen = ({ navigation, route }) => {
   );
 };
 
+/* PROGRESS BARS COMPONENT */
+const ProgressBars = ({ currentStep = 1, totalSteps = 3 }) => {
+  const steps = useMemo(() => Array.from({ length: totalSteps }, (_, idx) => idx + 1), [totalSteps]);
+
+  return (
+    <View style={styles.progressBarsWrapper}>
+      {steps.map((step) => (
+        <View
+          key={step}
+          style={[
+            styles.progressBar,
+            step <= currentStep ? styles.progressBarActive : styles.progressBarInactive,
+          ]}
+        />
+      ))}
+    </View>
+  );
+};
+
 /* STEP CONTENT */
 const StepContent = ({ step, feedback, showRetry }) => (
-  <View style={styles.stepCard}>
+  <View style={[styles.stepCard, styles.cardShadow]}>
 
     <ExpoImage
       source={showRetry ? step.noImage : step.image}
@@ -242,21 +269,23 @@ const StepContent = ({ step, feedback, showRetry }) => (
 /* SUCCESS COMPONENT */
 const SuccessCard = ({ image, onComplete }) => (
   <View style={styles.successWrapper}>
-    <ExpoImage
-      source={image}
-      style={styles.successImage}
-      contentFit="contain"
-    />
+    <View style={styles.successCard}>
+      <ExpoImage
+        source={image}
+        style={styles.successImage}
+        contentFit="contain"
+      />
 
-    <View style={styles.successImageContainer}>
-      <CheckCircleIcon width={18} height={18} />
-      <Text style={styles.successTitle}>Success</Text>
+      <View style={styles.successImageContainer}>
+        <CheckCircleIcon width={18} height={18} />
+        <Text style={styles.successTitle}>Success</Text>
+      </View>
+
+      <Text style={styles.successSubtitle}>Issue successfully resolved</Text>
+      <Text style={styles.successBody}>The meter is now communicating properly.</Text>
+
+      <Button title="Issue Fixed" onPress={onComplete} style={styles.completeButton} />
     </View>
-
-    <Text style={styles.successSubtitle}>Issue successfully resolved</Text>
-    <Text style={styles.successBody}>The meter is now communicating properly.</Text>
-
-    <Button title="Resolve Completed" onPress={onComplete} style={styles.completeButton} />
   </View>
 );
 
@@ -266,12 +295,16 @@ const styles = StyleSheet.create({
 
   container: { flex: 1 },
 
-  heroCard: { paddingHorizontal: 18, paddingBottom: 15 },
+  heroCard: {
+    paddingHorizontal: 18,
+    paddingBottom: 15,
+    overflow: 'hidden',
+  },
 
   heroTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
   },
   barsIcon: {
     backgroundColor: COLORS.secondaryFontColor,
@@ -291,20 +324,60 @@ const styles = StyleSheet.create({
   /* MAIN AREA */
   stepArea: {
     flex: 1,
-    justifyContent: 'center',
     paddingHorizontal: spacing.md,
+  },
+
+  progressContainer: {
+    backgroundColor: colors.cardBackground,
+    marginHorizontal: 0,
+    marginTop: spacing.md,
+    borderRadius: 5,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+
+  progressBarsWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+
+  progressBar: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+  },
+
+  progressBarActive: {
+    backgroundColor: colors.secondary, // Green color for active/completed steps
+  },
+
+  progressBarInactive: {
+    backgroundColor: '#E0E0E0', // Light gray for inactive steps
+  },
+
+  contentWrapper: {
+    flex: 1,
   },
 
   /* STEP CARD */
   stepCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBackground,
     borderRadius: borderRadius.xl,
     padding: spacing.md,
-    elevation: 1,
+    marginBottom: spacing.md,
+  },
+  cardShadow: {
+    shadowColor: 'rgba(22, 59, 124, 0.18)',
+    shadowOffset: { width: 6, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   stepImage: {
     width: '100%',
-    height: 200,
+    height: 240,
     borderRadius: borderRadius.lg
   },
   stepTitle: {
@@ -319,13 +392,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 
-  /* BOTTOM BUTTONS */
   bottomResponseBar: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
     backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
   },
   responseRow: {
     flexDirection: 'row',
@@ -347,20 +418,22 @@ const styles = StyleSheet.create({
   /* FAILURE CONTENT */
   feedbackCardInside: {
     backgroundColor: '#F7F7F7',
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
-    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.xsm,
+    marginTop: spacing.ms,
   },
   stepRowInside: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: spacing.sm,
+    width: '100%',
   },
   bulletDotInside: {
     width: 5,
     height: 5,
-    borderRadius: 5,
-    backgroundColor: colors.textSecondary,
+    borderRadius: '50%',
+    backgroundColor: colors.secondary,
     marginRight: spacing.sm,
     marginTop: 6,
   },
@@ -368,6 +441,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 10,
     color: colors.textSecondary,
+    fontFamily: 'Manrope',
   },
 
   /* SUCCESS */
@@ -376,6 +450,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
+  },
+  successCard: {
+    width: '100%',
+    borderRadius: borderRadius.xl,
+    backgroundColor: '#fff',
+    padding: spacing.md,
+    alignItems: 'center',
   },
   successImage: {
     width: '100%',
@@ -405,6 +486,12 @@ const styles = StyleSheet.create({
   completeButton: {
     width: '100%',
     marginTop: spacing.md,
+  },
+  CompleteButtonText: {
+    fontSize: 14,
+    color: COLORS.secondaryFontColor,
+    fontFamily: 'Manrope',
+    fontWeight: '700',
   },
 });
 

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import React, { useState } from "react";
 import { COLORS } from "../constants/colors";
 import GlobeShield from "../../assets/icons/globe-shield.svg";
@@ -7,6 +7,7 @@ import Plus from "../../assets/icons/plus.svg";
 import Menu from "../../assets/icons/bars.svg";
 import Notification from "../../assets/icons/notification.svg";
 import RippleLogo from "./global/RippleLogo";
+import AppHeader from "./global/AppHeader";
 
 const DashboardHeaderSection = ({ navigation, onLogout }) => {
   const [userName, setUserName] = useState("Field Engineer");
@@ -14,23 +15,17 @@ const DashboardHeaderSection = ({ navigation, onLogout }) => {
   return (
     <>
       <View style={styles.bluecontainer}>
-        <View style={styles.TopMenu}>
-          <Pressable
-            style={styles.barsIcon}
-            onPress={() => navigation?.navigate?.('SideMenu')}
-          >
-            <Menu width={18} height={18} fill="#202d59" />
-          </Pressable>
-          <View style={styles.logoWrapper}>
-            <RippleLogo size={68} />
-          </View>
-          <Pressable
-            style={styles.bellIcon}
-            onPress={() => navigation?.navigate?.('Profile')}
-          >
-            <Notification width={18} height={18} fill="#202d59" />
-          </Pressable>
-        </View>
+        <AppHeader
+          containerStyle={styles.TopMenu}
+          leftButtonStyle={styles.barsIcon}
+          rightButtonStyle={styles.bellIcon}
+          leftIcon={Menu}
+          rightIcon={Notification}
+          logo={<RippleLogo size={68} />}
+          onPressLeft={() => navigation?.navigate?.('SideMenu')}
+          onPressCenter={() => navigation?.navigate?.('Dashboard')}
+          onPressRight={() => navigation?.navigate?.('Profile')}
+        />
         <View style={styles.ProfileBox}>
           <View>
             <View
@@ -115,10 +110,6 @@ const styles = StyleSheet.create({
     
   },
   TopMenu: {
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     paddingTop: 30,
     paddingBottom: 30,
     paddingHorizontal: 15,

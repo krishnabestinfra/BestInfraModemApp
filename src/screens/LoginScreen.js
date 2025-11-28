@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   SafeAreaView,
+  TextInput,
   Pressable,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,27 +18,104 @@ import Button from "../components/global/Button";
 import Input from "../components/global/Input";
 import Logo from "../components/global/Logo";
 import Tick from "../../assets/icons/tick.svg";
-import Icon from 'react-native-vector-icons/AntDesign';
 import User from '../../assets/icons/user.svg';
 
 const screenHeight = Dimensions.get("window").height;
 
+const API_BASE_URL = "https://nexusenergy.tech/api/v1";
+const API_KEY = "eyaM-5N8mDzLykpA3n3igUgGgNnEcehUY9NJ9ui4Ic5LuZW1sqbZylAg1q_C1";
+const PHONE_LENGTH = 10;
+const OTP_LENGTH = 6;
+
 const LoginScreen = ({ onLogin }) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [checked, setChecked] = useState(false);
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [otpDigits, setOtpDigits] = useState(Array(OTP_LENGTH).fill(""));
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [hasAnyInput, setHasAnyInput] = useState(false);
+  const [otpEnabled, setOtpEnabled] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const otpRefs = useRef([]);
 
-  // Check if any input is entered
+  const otpValue = otpDigits.join("");
+  const hasCompletedOtp = otpEnabled && otpValue.length === OTP_LENGTH;
+  const isGenerateEnabled = mobileNumber.length === PHONE_LENGTH;
+  const formattedTimer = `${String(Math.floor(resendTimer / 60)).padStart(2, "0")}:${String(
+    resendTimer % 60
+  ).padStart(2, "0")}`;
+
   useEffect(() => {
-    const hasUid = email && email.trim().length > 0;
-    const hasPassword = password && password.trim().length > 0;
-    setHasAnyInput(hasUid || hasPassword);
-  }, [email, password]);
+    let timerId;
+    if (otpEnabled) {
+      setResendTimer(30);
+      timerId = setInterval(() => {
+        setResendTimer(prev => {
+          if (prev <= 1) {
+            clearInterval(timerId);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      setResendTimer(0);
+    }
+
+    return () => {
+      if (timerId) {
+        clearInterval(timerId);
+      }
+    };
+  }, [otpEnabled]);
+
+  const sendOtp = async (phone) => {
+    const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ phone }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Failed to send OTP");
+    }
+  };
+
+  const validateOtp = async (phone, otp) => {
+    const response = await fetch(`${API_BASE_URL}/auth/validate-otp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ phone, otp }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "OTP verification failed");
+    }
+  };
+
+  const fetchModemsByOfficer = async (phone) => {
+    const response = await fetch(`${API_BASE_URL}/modem/user/all`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${API_KEY}`,
+        "X-CUSTOMER-ID": phone,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Unable to load assigned modems");
+    }
+
+    return response.json();
+  };
 
   const handleInputChange = (field, value) => {
     // Clear error when user starts typing
@@ -46,53 +124,109 @@ const LoginScreen = ({ onLogin }) => {
     }
 
     switch (field) {
-      case 'uid':
-        setEmail(value);
-        break;
-      case 'password':
-        setPassword(value);
-        break;
-    }
-  };
+      case 'mobile': {
+        const sanitized = value.replace(/\D/g, "").slice(0, PHONE_LENGTH);
+        setMobileNumber(sanitized);
+        if (otpEnabled) {
+          setOtpEnabled(false);
+          setOtpDigits(Array(OTP_LENGTH).fill(""));
+        }
+          break;
+        }
+      }
+    };
 
-  const handleBlur = (field) => {
-    setTouched(prev => ({ ...prev, [field]: true }));
+    const handleBlur = (field) => {
+      setTouched(prev => ({ ...prev, [field]: true }));
 
-    let value;
-    switch (field) {
-      case 'uid':
-        value = email;
-        break;
-      case 'password':
-        value = password;
-        break;
-      default:
-        return;
-    }
+      let value;
+      switch (field) {
+        case 'mobile':
+          value = mobileNumber;
+          break;
+        case 'otp':
+          value = otpValue;
+          break;
+        default:
+          return;
+      }
 
-    // Simple validation
-    if (field === 'uid' && value && value.length < 3) {
-      setErrors(prev => ({ ...prev, [field]: 'UID must be at least 3 characters' }));
-    } else if (field === 'password' && value && value.length < 6) {
-      setErrors(prev => ({ ...prev, [field]: 'Password must be at least 6 characters' }));
+      // Simple validation
+      if (field === 'mobile' && value && value.length !== PHONE_LENGTH) {
+      setErrors(prev => ({ ...prev, [field]: 'Enter a valid 10-digit mobile number' }));
+    } else if (field === 'otp' && value && value.length !== OTP_LENGTH) {
+      setErrors(prev => ({ ...prev, [field]: 'Enter the OTP code' }));
     } else {
       setErrors(prev => ({ ...prev, [field]: null }));
     }
   };
 
+  const handleOtpChange = (index, digit) => {
+    if (errors.otp) {
+      setErrors(prev => ({ ...prev, otp: null }));
+    }
+
+    const sanitized = digit.replace(/\D/g, "").slice(-1);
+    setOtpDigits(prev => {
+      const updated = [...prev];
+      updated[index] = sanitized;
+      return updated;
+    });
+
+    if (sanitized && index < OTP_LENGTH - 1) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyPress = (index, key) => {
+    if (key === "Backspace" && !otpDigits[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpFocus = (index) => {
+    setTouched(prev => ({ ...prev, otp: true }));
+    otpRefs.current[index]?.setNativeProps({ selection: { start: 0, end: 1 } });
+  };
+
   const handleLogin = async () => {
     setIsLoading(true);
 
-    // Mark all fields as touched
-    setTouched({ uid: true, password: true });
+    if (!otpEnabled) {
+      setTouched(prev => ({ ...prev, mobile: true }));
+      if (!mobileNumber || mobileNumber.length !== PHONE_LENGTH) {
+        setErrors(prev => ({ ...prev, mobile: 'Enter a valid 10-digit mobile number' }));
+        setIsLoading(false);
+        return;
+      }
 
-    // Simple validation
-    const newErrors = {};
-    if (!email || email.length < 3) {
-      newErrors.uid = 'UID must be at least 3 characters';
+      try {
+        await sendOtp(mobileNumber);
+        setOtpDigits(Array(OTP_LENGTH).fill(""));
+        setOtpEnabled(true);
+        setErrors(prev => ({ ...prev, otp: null }));
+        setTouched(prev => ({ ...prev, otp: false }));
+        setTimeout(() => {
+          otpRefs.current[0]?.focus();
+        }, 100);
+      } catch (error) {
+        console.error('OTP request error:', error);
+        setErrors(prev => ({ ...prev, mobile: error.message || 'Unable to send OTP' }));
+      } finally {
+        setIsLoading(false);
+      }
+      return;
     }
-    if (!password || password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+
+    // Verify OTP stage
+    setTouched({ mobile: true, otp: true });
+
+    const newErrors = {};
+    if (!mobileNumber || mobileNumber.length !== PHONE_LENGTH) {
+      newErrors.mobile = 'Enter a valid 10-digit mobile number';
+    }
+    if (otpValue.length !== OTP_LENGTH) {
+      newErrors.otp = 'Enter the OTP code';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -102,34 +236,15 @@ const LoginScreen = ({ onLogin }) => {
     }
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // For demo purposes, accept any valid credentials
-      if (email && password) {
-        onLogin();
-      }
+      await validateOtp(mobileNumber, otpValue);
+      const modems = await fetchModemsByOfficer(mobileNumber);
+      onLogin ? onLogin(modems, mobileNumber) : null;
     } catch (error) {
       console.error('Login error:', error);
+      setErrors(prev => ({ ...prev, otp: error.message || 'Unable to verify OTP' }));
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fillDummyCredentials = () => {
-    setEmail("user123");
-    setPassword("pass123");
-    setErrors({});
-    setTouched({});
-  };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const handleForgotPassword = () => {
-    // Simple alert for forgot password
-    alert('Please contact your system administrator to reset your password.');
   };
 
   return (
@@ -171,33 +286,47 @@ const LoginScreen = ({ onLogin }) => {
               </View>
 
               <View style={styles.TextContainer}>
-                <Text style={styles.welcomeText}>Welcome</Text>
-                <Text style={styles.bestinfraText}>to Best Infra</Text>
+                <Text style={styles.welcomeText}>
+                  {hasCompletedOtp ? "Welcome" : "Verify Your Mobile"}
+                </Text>
+                <Text style={styles.bestinfraText}>
+                  {hasCompletedOtp ? "to Bestinfra" : "Number"}
+                </Text>
               </View>
               <View style={styles.TextContainer}>
-                <Text style={styles.LoginText}>
-                  Log in to access modem diagnostics, analytics dashboards, and
-                  real-time infrastructure updates
-                </Text>
-                <Text style={styles.allText}>--all in one place</Text>
+                {hasCompletedOtp ? (
+                  <>
+                    <Text style={styles.LoginText}>Log in to manage installations, view</Text>
+                    <Text style={styles.LoginText}>real-time project updates, and access smart</Text>
+                    <Text style={styles.LoginText}>metering insights — all in one platform.</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.LoginText}>
+                      We will send you an OTP to verify your
+                    </Text>
+                    <Text style={styles.allText}>mobile number</Text>
+                  </>
+                )}
               </View>
 
               <View style={styles.inputBoxes}>
                 <Input
-                  placeholder="Enter your UID"
-                  value={email}
-                  onChangeText={(value) => handleInputChange('uid', value)}
-                  onBlur={() => handleBlur('uid')}
+                  placeholder="Enter mobile number"
+                  value={mobileNumber}
+                  onChangeText={(value) => handleInputChange('mobile', value)}
+                  onBlur={() => handleBlur('mobile')}
                   autoCapitalize="none"
-                  keyboardType="email-address"
+                  keyboardType="phone-pad"
+                  maxLength={10}
                   variant="default"
                   size="medium"
                   style={styles.inputContainer}
-                  error={touched.uid ? errors.uid : null}
+                  error={touched.mobile ? errors.mobile : null}
                   leftIcon={
                     <Tick
                       size={16}
-                      fill={errors.uid ? COLORS.color_danger : COLORS.color_positive}
+                      fill={errors.mobile ? COLORS.color_danger : COLORS.color_positive}
                     />
                   }
                   rightIcon={
@@ -210,81 +339,64 @@ const LoginScreen = ({ onLogin }) => {
                   }
                   disabled={isLoading}
                 />
-
-                <Input
-                  placeholder="Password"
-                  value={password}
-                  onChangeText={(value) => handleInputChange('password', value)}
-                  onBlur={() => handleBlur('password')}
-                  secureTextEntry={!showPassword}
-                  variant="default"
-                  size="medium"
-                  style={styles.inputContainer}
-                  error={touched.password ? errors.password : null}
-                  leftIcon={
-                    <Tick
-                      size={16}
-                      fill={errors.password ? COLORS.color_danger : COLORS.color_positive}
-                    />
-                  }
-                  rightIcon={
-                    <Pressable onPress={togglePasswordVisibility} disabled={isLoading}>
-                      <View style={styles.eyeIconContainer}>
-                        <Icon
-                          name={showPassword ? "eye" : "eyeo"}
-                          size={20}
-                          color={COLORS.color_text_secondary}
+                <View style={styles.otpContainer}>
+                  <View style={styles.otpInputsRow}>
+                    {otpDigits.map((digit, index) => (
+                      <View key={`otp-${index}`} style={styles.otpInputWrapper}>
+                        <TextInput
+                          ref={(ref) => (otpRefs.current[index] = ref)}
+                          style={[
+                            styles.otpInput,
+                            errors.otp && touched.otp ? styles.otpInputError : null,
+                          ]}
+                          value={digit}
+                          onChangeText={(value) => handleOtpChange(index, value)}
+                          onKeyPress={({ nativeEvent }) =>
+                            handleOtpKeyPress(index, nativeEvent.key)
+                          }
+                          onFocus={() => handleOtpFocus(index)}
+                          onBlur={() => handleBlur('otp')}
+                          keyboardType="number-pad"
+                          maxLength={1}
+                          editable={otpEnabled && !isLoading}
                         />
                       </View>
-                    </Pressable>
-                  }
-                  disabled={isLoading}
-                />
-              </View>
+                    ))}
+                  </View>
+                </View>
 
-              <View style={styles.forgetboxContainer}>
+              {otpEnabled && (
                 <Pressable
-                  style={styles.checkboxContainer}
-                  onPress={() => !isLoading && setChecked(!checked)}
+                  style={styles.rememberContainer}
+                  onPress={() => !isLoading && setRememberMe(prev => !prev)}
                   disabled={isLoading}
                 >
-                  <View style={[styles.checkbox, checked && styles.checked]}>
-                    {checked && (
-                      <Tick
-                        size={14}
-                        fill={COLORS.surfaceColor}
-                      />
+                  <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                    {rememberMe && (
+                      <Tick size={12} fill={COLORS.surfaceColor} />
                     )}
                   </View>
-                  <Text style={styles.rememberText}>Remember</Text>
+                  <Text style={styles.rememberLabel}>Remember this device</Text>
                 </Pressable>
-                <Button
-                  title="Forgot Password?"
-                  variant="ghost"
-                  size="small"
-                  onPress={handleForgotPassword}
-                  textStyle={styles.forgotText}
-                  disabled={isLoading}
-                />
+              )}
               </View>
 
               <Button
-                title={isLoading ? "Logging in..." : "Login Now"}
-                variant={hasAnyInput ? "primary" : "outline"}
+                title={
+                  otpEnabled
+                    ? isLoading
+                      ? "Logging in..."
+                      : "Login"
+                    : isLoading
+                      ? "Generating..."
+                      : "Generate OTP"
+                }
+                variant={isGenerateEnabled ? "primary" : "outline"}
                 size="medium"
                 style={styles.loginButton}
                 onPress={handleLogin}
                 loading={isLoading}
-                disabled={isLoading || !hasAnyInput}
-              />
-
-              <Button
-                title="Fill Dummy Credentials"
-                variant="outline"
-                size="small"
-                style={styles.dummyButton}
-                onPress={fillDummyCredentials}
-                disabled={isLoading}
+                disabled={isLoading || !isGenerateEnabled}
               />
 
               <View style={{ backgroundColor: "#fff" }}>
@@ -292,6 +404,11 @@ const LoginScreen = ({ onLogin }) => {
                 <View style={styles.orContainer}>
                   <Text style={styles.orText}>OR</Text>
                 </View>
+                {otpEnabled && !hasCompletedOtp && (
+                  <Text style={styles.resendText}>
+                    Did not receive the code? ({formattedTimer})
+                  </Text>
+                )}
               </View>
             </View>
           </View>
@@ -373,37 +490,12 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginBottom: 15,
   },
-  forgetboxContainer: {
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 10,
-    fontFamily: "Manrope-Medium",
-  },
-  rememberText: {
-    color: COLORS.secondaryColor,
-    fontSize: 14,
-    textAlign: "center",
-    fontFamily: "Manrope-Medium",
-    marginLeft: 10,
-  },
-  forgotText: {
-    color: COLORS.secondaryColor,
-    fontSize: 14,
-    textAlign: "center",
-    fontFamily: "Manrope-Medium",
-  },
   loginButton: {
-    marginTop: 20,
+    marginTop: 40,
   },
-  dummyButton: {
-    marginTop: 10,
-  },
-  checkboxContainer: {
+  rememberContainer: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 5,
   },
   checkbox: {
     width: 22,
@@ -411,17 +503,46 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 4,
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.surfaceColor,
   },
-  checked: {
+  checkboxChecked: {
     backgroundColor: COLORS.secondaryColor,
     borderColor: COLORS.secondaryColor,
   },
-  eyeIconContainer: {
-    padding: 8,
-    justifyContent: "center",
-    alignItems: "center",
+  rememberLabel: {
+    marginLeft: 10,
+    color: COLORS.secondaryColor,
+    fontSize: 14,
+    fontFamily: "Manrope-Medium",
+  },
+  otpContainer: {
+    marginBottom: 15,
+  },
+  otpInputsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  otpInputWrapper: {
+    position: "relative",
+    width: 48,
+    height: 52,
+  },
+  otpInput: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e9eaee",
+    backgroundColor: "#e9eaee",
+    textAlign: "center",
+    fontSize: 18,
+    color: COLORS.primaryFontColor,
+    fontFamily: "Manrope-SemiBold",
+  },
+  otpInputError: {
+    borderColor: COLORS.color_danger,
   },
   orContainer: {
     backgroundColor: "#e9eaee",
@@ -436,9 +557,16 @@ const styles = StyleSheet.create({
   straightLine: {
     width: "40%",
     backgroundColor: "#e9eaee",
-    marginTop: 40,
+    marginTop: 100,
     height: 2,
     alignSelf: "center",
+  },
+  resendText: {
+    textAlign: "center",
+    marginTop: 16,
+    color: COLORS.color_text_secondary,
+    fontSize: 13,
+    fontFamily: "Manrope-Medium",
   },
   orText: {
     color: COLORS.primaryFontColor,

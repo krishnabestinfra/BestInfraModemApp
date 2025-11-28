@@ -18,7 +18,8 @@ import CheapDollar from '../../assets/icons/cheapDollar.svg';
 import Logo from '../components/global/Logo';
 import NotificationCard from '../components/global/NotificationCard';
 import { COLORS } from '../constants/colors';
-import { notifications as defaultNotifications } from '../data/dummyData';
+import EmptyNotification from '../../assets/icons/NoNotification.svg';
+// import { notifications as defaultNotifications } from '../data/dummyData';
 
 const iconMapper = {
   payment: HandBill,
@@ -40,7 +41,7 @@ const variantMapper = {
 };
 
 const ProfileScreen = ({ navigation }) => {
-  const [notificationList, setNotificationList] = useState(defaultNotifications);
+  const [notificationList, setNotificationList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -81,18 +82,18 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.topMenu}>
         <Pressable
           style={styles.barsIcon}
-          onPress={() => navigation?.navigate?.('Dashboard')}
+          onPress={() => navigation?.navigate?.('SideMenu')}
         >
           <Menu width={18} height={18} fill="#202d59" />
         </Pressable>
 
-        <Pressable onPress={() => navigation?.navigate?.('Dashboard')}>
+        <Pressable onPress={() => navigation?.navigate?.('SideMenu')}>
           <Logo variant="white" size="medium" />
         </Pressable>
 
         <Pressable
           style={styles.bellIcon}
-          onPress={() => navigation?.navigate?.('Dashboard')}
+          onPress={() => navigation?.navigate?.('')}
         >
           <Notification width={18} height={18} fill="#ffffff" />
         </Pressable>
@@ -126,9 +127,13 @@ const ProfileScreen = ({ navigation }) => {
             </Pressable>
           </View>
         ) : displayNotifications.length === 0 ? (
+
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No notifications available</Text>
-            <Text style={styles.emptySubText}>for {consumerUid}</Text>
+            <EmptyNotification width={60} height={60}/>
+
+            <Text style={styles.emptyText}>No Notification</Text>
+            <Text style={styles.emptySubText}>We’ll let you know when there will be</Text>
+            <Text style={styles.emptySubText}>something to update you.</Text>
           </View>
         ) : (
           displayNotifications.map((notification) => (
@@ -220,24 +225,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptyContainer: {
-    flex: 1,
+    flex: 0.8,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
   },
   emptyText: {
-    color: COLORS.secondaryFontColor,
-    fontSize: 14,
-    fontFamily: 'Manrope-Medium',
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontFamily: 'Manrope',
+    fontWeight: '700',
     textAlign: 'center',
+    marginBottom: 12,
+    marginTop: 24,
   },
   emptySubText: {
-    color: COLORS.secondaryFontColor,
-    fontSize: 12,
-    fontFamily: 'Manrope-Regular',
+    color: '#CDCDCD',
+    fontSize: 16,
+    fontFamily: 'Manrope',
     textAlign: 'center',
-    opacity: 0.7,
-    marginTop: 4,
   },
   retryButton: {
     backgroundColor: COLORS.primaryColor,
@@ -253,4 +258,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

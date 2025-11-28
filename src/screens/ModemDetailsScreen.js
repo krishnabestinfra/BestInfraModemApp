@@ -5,12 +5,12 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RippleLogo from '../components/global/RippleLogo';
+import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 import { modemErrors } from '../data/dummyData';
-import Menu from '../../assets/icons/bars.svg';
 import NotificationLight from '../../assets/icons/notification.svg';
 import NotificationIcon from '../../assets/icons/notificationDark.svg';
 import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
@@ -51,6 +51,7 @@ const statusMetaMap = {
 };
 
 const API_BASE_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
+const USE_MOCK_ALERTS = false; // flip to false to hit live endpoint
 
 const formatDisplayDateTime = (dateString) => {
   if (!dateString || dateString === 'N/A') return 'N/A';
@@ -97,14 +98,30 @@ const formatDisplayDateTime = (dateString) => {
   return dateString.length > 20 ? dateString.substring(0, 20) : dateString;
 };
 
-const ModemDetailsScreen = ({ route, navigation }) => {
+const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeMenuItem, setActiveMenuItem] = useState('Transactions');
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  const modemSlNo = route?.params?.modemSlNo || route?.params?.modem?.modemId;
-  const fallbackModem = route?.params?.modem ?? {
+
+  const assignedModems = Array.isArray(modems) ? modems : [];
+  const routeModem = route?.params?.modem;
+  const routeModemId = route?.params?.modemSlNo || routeModem?.modemId;
+
+  const matchedAssignedModem = useMemo(() => {
+    if (!routeModemId || assignedModems.length === 0) {
+      return null;
+    }
+    return assignedModems.find((item) => {
+      const candidateId =
+        item?.modemId || item?.modemSlNo || item?.modem_sl_no || item?.id;
+      return candidateId === routeModemId;
+    });
+  }, [assignedModems, routeModemId]);
+
+  const resolvedModem = routeModem || matchedAssignedModem;
+  const modemSlNo = route?.params?.modemSlNo || resolvedModem?.modemId;
+  const fallbackModem = resolvedModem ?? {
     modemId: 'MDM000',
     status: 'warning',
     error: 'Unknown',
@@ -126,6 +143,11 @@ const ModemDetailsScreen = ({ route, navigation }) => {
   };
 
   useEffect(() => {
+    if (USE_MOCK_ALERTS) {
+      setLoading(false);
+      return;
+    }
+
     if (modemSlNo && modemSlNo !== 'N/A') {
       fetchModemDetails();
     } else {
@@ -135,6 +157,10 @@ const ModemDetailsScreen = ({ route, navigation }) => {
   }, [modemSlNo]);
 
   const fetchModemDetails = async () => {
+    if (USE_MOCK_ALERTS) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const url = `${API_BASE_URL}/${encodeURIComponent(modemSlNo)}`;
@@ -313,33 +339,25 @@ const ModemDetailsScreen = ({ route, navigation }) => {
           end={{ x: 1, y: 1 }}
           style={styles.heroCard}
         >
-
-
-          <View style={styles.heroTopRow}>
-            <View style={styles.barsIcon}>
-              <Menu width={18} height={18} fill="#202d59" />
-            </View>
-
-            <View style={styles.logoWrapper}>
-              <RippleLogo size={68} />
-            </View>
-
-            <Pressable
-              style={styles.bellIcon}
-              onPress={() => navigation?.navigate?.('Profile')}
-            >
-              <NotificationLight width={18} height={18} fill="#202d59" />
-            </Pressable>
-          </View>
-        <View style={styles.cardBackground}>
-        <ModemStatusCard
-            modemId={modem.modemId}
-            statusLabel={statusMeta.label}
-            statusColor={statusMeta.color}
-            statusBackground={statusMeta.bg}
-            style={styles.heroStatusCard}
+          <AppHeader
+            containerStyle={styles.heroTopRow}
+            leftButtonStyle={styles.barsIcon}
+            rightButtonStyle={styles.bellIcon}
+            rightIcon={NotificationLight}
+            logo={<RippleLogo size={68} />}
+            onPressLeft={() => navigation?.navigate?.('SideMenu')}
+            onPressCenter={() => navigation?.navigate?.('Dashboard')}
+            onPressRight={() => navigation?.navigate?.('Profile')}
           />
-        </View>
+          <View style={styles.cardBackground}>
+            <ModemStatusCard
+              modemId={modem.modemId}
+              statusLabel={statusMeta.label}
+              statusColor={statusMeta.color}
+              statusBackground={statusMeta.bg}
+              style={styles.heroStatusCard}
+            />
+          </View>
           
         </LinearGradient>
 
@@ -503,17 +521,9 @@ const styles = StyleSheet.create({
     right: 20,
   },
   heroTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingTop: 10,
     paddingBottom: 5,
     paddingHorizontal: 27,
-  },
-  logoWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
   },
   iconChip: {
     width: 40,
@@ -841,6 +851,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-Medium',
     color: '#89A1F3',
     marginTop: 10,
+    marginLeft: 38,
   },
   menuPreviewWrapper: {
     flex: 1,

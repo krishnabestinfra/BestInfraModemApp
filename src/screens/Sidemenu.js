@@ -5,26 +5,24 @@ import { COLORS } from "../constants/colors";
 import MenuIcon from "../../assets/icons/barsWhite.svg";
 import NotificationIcon from "../../assets/icons/notification.svg";
 import Logo from "../components/global/Logo";
+import AppHeader from "../components/global/AppHeader";
 
 import DashboardScreen from "../screens/DashboardScreen";
 import Troubleshoot from "../screens/TroubleshootScreen";
+import CompletedActivities from "../screens/CompletedActivities";
 import Profile from "../screens/ProfileScreen";
-import ServicesScreen from "../screens/ServicesScreen";
 import { useSidebar } from "../context/SidebarContext";
 import SideMenuNavigation from "../components/SideMenuNavigation";
 import DashboardIcon from "../../assets/icons/dashboardMenu.svg";
 import ActiveDashboard from "../../assets/icons/activeDashboard.svg";
 import UsageIcon from "../../assets/icons/usageMenu.svg";
 import ActiveUsage from "../../assets/icons/activeUsage.svg";
-import TicketsIcon from "../../assets/icons/ticketsMenu.svg";
 import ActiveTickets from "../../assets/icons/activeTickets.svg";
-import SettingsIcon from "../../assets/icons/settingMenu.svg";
-import ActiveSettings from "../../assets/icons/activeSettings.svg";
 import MetersIcon from "../../assets/icons/meterWhite.svg";
 import ModemsIcon from "../../assets/icons/modem.svg";
 
 
-const SideMenu = ({ navigation }) => {
+const SideMenu = ({ navigation, onLogout }) => {
   const { activeItem, setActiveItem } = useSidebar();
 
 
@@ -37,11 +35,8 @@ const SideMenu = ({ navigation }) => {
         return <DashboardScreen navigation={navigation} />;
   
       case "Resolved":
-        return <Troubleshoot navigation={navigation} />;
+        return <CompletedActivities navigation={navigation} />;
       
-      case "Support":
-        return <ServicesScreen navigation={navigation} />;
-  
       default:
         return <DashboardScreen navigation={navigation} />;
     }
@@ -56,8 +51,11 @@ const SideMenu = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    setActiveItem("Logout");
-    navigation.replace("Login");
+    if (onLogout) {
+      onLogout();
+    } else {
+      navigation?.replace?.("Login");
+    }
   };
 
 
@@ -66,17 +64,19 @@ const SideMenu = ({ navigation }) => {
       <StatusBar style="light" />
 
 
-      <View style={styles.TopMenu}>
-        <Pressable style={styles.barsIcon} onPress={() => navigation.navigate("Dashboard")}>
-          <MenuIcon width={18} height={18} fill="#fff" />
-        </Pressable>
-
-        <Logo variant="white" size="medium" />
-
-        <Pressable style={styles.bellIcon} onPress={() => navigation.navigate("Profile")}>
-          <NotificationIcon width={18} height={18} fill="#000" />
-        </Pressable>
-      </View>
+      <AppHeader
+        containerStyle={styles.TopMenu}
+        leftButtonStyle={styles.barsIcon}
+        rightButtonStyle={styles.bellIcon}
+        leftIcon={MenuIcon}
+        rightIcon={NotificationIcon}
+        leftIconProps={{ width: 18, height: 18, fill: "#fff" }}
+        rightIconProps={{ width: 18, height: 18, fill: "#000" }}
+        logo={<Logo variant="white" size="medium" />}
+        onPressLeft={() => navigation.navigate("Dashboard")}
+        onPressCenter={() => navigation.navigate("Dashboard")}
+        onPressRight={() => navigation.navigate("Profile")}
+      />
 
       <View style={styles.MenuContainer}>
 
@@ -100,21 +100,15 @@ const SideMenu = ({ navigation }) => {
               {
                 key: "Resolved",
                 label: "Resolved",
-                route: "Troubleshoot",
+                route: "CompletedActivities",
                 Icon: MetersIcon,
                 ActiveIcon: ActiveTickets
-              },
-              {
-                key: "Support",
-                label: "Support",
-                route: "Services",
-                Icon: TicketsIcon,
-                ActiveIcon: ActiveSettings
               },
             ]}
             activeItem={activeItem}
             onSelect={handleMenuPress}
             onLogout={handleLogout}
+            onScan={() => navigation.navigate("ScanScreen")}
           />
         </View>
 
@@ -146,9 +140,6 @@ const styles = StyleSheet.create({
 
   },
   TopMenu: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     paddingTop: 75,
     paddingBottom: 35,
     paddingHorizontal: 30,

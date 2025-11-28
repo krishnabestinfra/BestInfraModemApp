@@ -2,8 +2,7 @@ import React, { useEffect } from "react";
 import { View, StyleSheet, Image, Dimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Logo from "../components/global/Logo";
-import AnimatedRings from "../components/global/AnimatedRings";
+import RippleLogo from "../components/global/RippleLogo";
 
 const { width, height } = Dimensions.get("window");
 
@@ -68,8 +67,7 @@ const SplashScreen = ({ onFinish }) => {
       <View style={styles.overlay} />
       
       <View style={styles.centerWrapper}>
-        <AnimatedRings count={3} loop={true} />
-        <Logo variant="white" size="large" />
+        <RippleLogo size={120} logoVariant="white" logoSize="large" />
       </View>
     </View>
   );

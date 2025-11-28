@@ -11,15 +11,18 @@ import {
   ActivityIndicator,
   Modal,
   Image,
+  Linking,
+  Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RippleLogo from '../components/global/RippleLogo';
+import AppHeader from '../components/global/AppHeader';
 import { modemStats, modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
-import Menu from '../../assets/icons/bars.svg';
 import SearchIcon from '../../assets/icons/searchIcon.svg';
 import ScanIcon from '../../assets/icons/scan.svg';
 import FilterIcon from '../../assets/icons/filter.svg';
@@ -48,6 +51,7 @@ Text.defaultProps.style = [
 const { width } = Dimensions.get('window');
 
 const API_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
+const USE_MOCK_ALERTS = false; // hitting live endpoint now that creds exist
 
 const STATUS_FILTERS = [
   { label: 'Communicating', value: 'success' },
@@ -62,6 +66,33 @@ const SIGNAL_FILTERS = [
   { label: 'Weak (<15 dBm)', value: 'weak' },
 ];
 
+const ERROR_FILTER_OPTIONS = [
+  { label: 'All', value: 'all' },
+  { label: 'Meter COM Failed', value: 'meterComFailed', codes: [212] },
+  { label: 'Modem/DCU Auto Restart', value: 'modemAutoRestart', codes: [202] },
+  { label: 'DCU/Modem Power Failed', value: 'modemPowerFailed', codes: [214] },
+  { label: 'Network Issue', value: 'networkIssue' },
+];
+
+const matchesErrorFilter = (item, filterValue) => {
+  if (filterValue === 'all') return true;
+
+  const byCode = ERROR_FILTER_OPTIONS.find(
+    (option) => option.value === filterValue && option.codes
+  );
+  if (byCode && byCode.codes?.length) {
+    return byCode.codes.includes(item.code);
+  }
+
+  if (filterValue === 'networkIssue') {
+    const alert = item.originalAlert || {};
+    const combinedDesc = `${alert.codeDesc || ''} ${item.error || ''}`.toLowerCase();
+    return combinedDesc.includes('network');
+  }
+
+  return true;
+};
+
 const getSignalBand = (signalStrength = 0) => {
   const strength = Number(signalStrength) || 0;
   if (strength < 15) return 'weak';
@@ -69,7 +100,7 @@ const getSignalBand = (signalStrength = 0) => {
   return 'strong';
 };
 
-const DashboardScreen = ({ navigation }) => {
+const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [userName] = useState('Field Officer');
   const [apiData, setApiData] = useState(null);
@@ -89,7 +120,9 @@ const DashboardScreen = ({ navigation }) => {
     sortBy: 'newest'
   });
   const hasActiveFilters =
-    appliedFilters.statuses.length > 0 || appliedFilters.signal !== 'all';
+    appliedFilters.statuses.length > 0 ||
+    appliedFilters.signal !== 'all' ||
+    appliedFilters.errorType !== 'all';
 
   const openFilterModal = () => {
     setDraftFilters({
@@ -127,11 +160,25 @@ const DashboardScreen = ({ navigation }) => {
     setDraftFilters(cleared);
   };
 
+  const assignedModems = Array.isArray(modems) ? modems : [];
+  const hasAssignedModems = assignedModems.length > 0;
+
   useEffect(() => {
+    if (hasAssignedModems) {
+      setLoading(false);
+      setApiData(null);
+      return;
+    }
     fetchApiData();
-  }, []);
+  }, [hasAssignedModems]);
 
   const fetchApiData = async () => {
+    if (USE_MOCK_ALERTS) {
+      setLoading(false);
+      setApiData(null); // stay on dummy dataset
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await fetch(API_URL);
@@ -167,28 +214,87 @@ const DashboardScreen = ({ navigation }) => {
   };
 
   // Transform API alerts to modem format
+  const normalizeModemRecord = (modem = {}, index = 0) => {
+    const derivedId =
+      modem.id ||
+      modem.modemId ||
+      modem.modemSlNo ||
+      modem.modem_sl_no ||
+      modem.serialNumber ||
+      `modem-${index}`;
+    return {
+      id: derivedId,
+      modemId:
+        modem.modemId ||
+        modem.modemSlNo ||
+        modem.modem_sl_no ||
+        modem.serialNumber ||
+        derivedId,
+      location:
+        modem.location ||
+        modem.address ||
+        modem.installationLocation ||
+        modem.section ||
+        modem.circle ||
+        modem.imei ||
+        'N/A',
+      error: modem.error || modem.errorDescription || modem.codeDesc || modem.status || 'N/A',
+      reason: modem.reason || modem.reasonDescription || modem.error || 'N/A',
+      date:
+        modem.date ||
+        modem.lastCommunication ||
+        modem.updatedAt ||
+        modem.updated_at ||
+        modem.modemDate ||
+        'N/A',
+      status: modem.status || getStatusFromCode(modem.code) || 'default',
+      signalStrength:
+        Number(
+          modem.signalStrength ??
+            modem.signal_strength ??
+            modem.signalStrength1 ??
+            modem.signalStrength2 ??
+            modem.signal ??
+            0
+        ) || 0,
+      discom: modem.discom || modem.organisation || modem.organization || 'N/A',
+      meterSlNo: modem.meterSlNo || modem.meter_sl_no || modem.meterId || 'N/A',
+      code: modem.code || modem.errorCode || modem.error_code || 'N/A',
+      photos: modem.photos || [Meter],
+      originalAlert: modem.originalAlert || modem,
+    };
+  };
+
   const transformedAlerts = useMemo(() => {
-    if (!apiData?.alerts || !Array.isArray(apiData.alerts) || apiData.alerts.length === 0) {
-      return modemErrors;
+    if (hasAssignedModems) {
+      return assignedModems.map((modem, index) => normalizeModemRecord(modem, index));
     }
 
-    return apiData.alerts.map((alert, index) => ({
-      id: alert.sno?.toString() || alert.modemSlNo || `alert-${index}`,
-      modemId: alert.modemSlNo || 'N/A',
-      location: alert.imei || 'N/A',
-      error: alert.codeDesc || 'N/A',
-      reason: alert.codeDesc || 'N/A',
-      date: alert.modemDate ? `${alert.modemDate} ${alert.modemTime || ''}` : 'N/A',
-      status: getStatusFromCode(alert.code),
-      signalStrength: alert.signalStrength1 || 0,
-      discom: alert.discom || 'N/A',
-      meterSlNo: alert.meterSlNo || 'N/A',
-      code: alert.code,
-      photos: [Meter],
-      // Keep original alert data for details screen
-      originalAlert: alert,
-    }));
-  }, [apiData]);
+    if (!apiData?.alerts || !Array.isArray(apiData.alerts) || apiData.alerts.length === 0) {
+      return modemErrors.map((modem, index) => normalizeModemRecord(modem, index));
+    }
+
+    return apiData.alerts.map((alert, index) =>
+      normalizeModemRecord(
+        {
+          id: alert.sno?.toString(),
+          modemId: alert.modemSlNo,
+          location: alert.imei,
+          error: alert.codeDesc,
+          reason: alert.codeDesc,
+          date: alert.modemDate ? `${alert.modemDate} ${alert.modemTime || ''}` : 'N/A',
+          status: getStatusFromCode(alert.code),
+          signalStrength: alert.signalStrength1 || 0,
+          discom: alert.discom,
+          meterSlNo: alert.meterSlNo,
+          code: alert.code,
+          photos: [Meter],
+          originalAlert: alert,
+        },
+        index,
+      )
+    );
+  }, [apiData, assignedModems, hasAssignedModems]);
 
   // Calculate metrics from API data
   const dashboardMetrics = useMemo(() => {
@@ -201,22 +307,27 @@ const DashboardScreen = ({ navigation }) => {
       };
     }
 
-    // Calculate communicating vs non-communicating modems from alertsByCode
-    let communicatingCount = 0;
-    let nonCommunicatingCount = 0;
 
-    if (apiData.alertsByCode && Array.isArray(apiData.alertsByCode)) {
-      apiData.alertsByCode.forEach((item) => {
-        // Codes 202 (Auto Restart), 213 (COM Restored), 215 (Power Restored) = communicating
-        if ([202, 213, 215].includes(item.code)) {
-          communicatingCount += item.uniqueModems || 0;
+    const communicatingModems = new Set();
+    const nonCommunicatingModems = new Set();
+
+    if (apiData.alerts && Array.isArray(apiData.alerts)) {
+      apiData.alerts.forEach((alert) => {
+        if (!alert.modemSlNo) return;
+        
+ 
+        if ([202, 213, 215].includes(alert.code)) {
+          communicatingModems.add(alert.modemSlNo);
         }
         // Codes 214 (Power Failed), 212 (COM Failed) = non-communicating
-        if ([214, 212].includes(item.code)) {
-          nonCommunicatingCount += item.uniqueModems || 0;
+        if ([214, 212].includes(alert.code)) {
+          nonCommunicatingModems.add(alert.modemSlNo);
         }
       });
     }
+
+    const communicatingCount = communicatingModems.size;
+    const nonCommunicatingCount = nonCommunicatingModems.size;
 
     // Calculate today's tasks from timelineData
     const today = new Date();
@@ -228,6 +339,7 @@ const DashboardScreen = ({ navigation }) => {
     // Find today's data from timelineData
     if (apiData.timelineData && Array.isArray(apiData.timelineData)) {
       const todayData = apiData.timelineData.find((item) => {
+        if (!item.date) return false;
         const itemDate = new Date(item.date);
         itemDate.setHours(0, 0, 0, 0);
         return itemDate.getTime() === today.getTime();
@@ -303,15 +415,7 @@ const DashboardScreen = ({ navigation }) => {
 
     // ERROR TYPE FILTER
     if (appliedFilters.errorType !== "all") {
-      list = list.filter(item => {
-        const err = (item.error || "").toLowerCase();
-        const t = appliedFilters.errorType;
-
-        if (t === "network") return err.includes("network");
-        if (t === "power") return err.includes("power");
-        if (t === "restart") return err.includes("restart");
-        return true;
-      });
+      list = list.filter((item) => matchesErrorFilter(item, appliedFilters.errorType));
     }
 
     // SORTING
@@ -342,20 +446,16 @@ const DashboardScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.bluecontainer}>
-          <View style={styles.TopMenu}>
-            <Pressable style={styles.barsIcon} onPress={() => navigation.navigate("SideMenu")}>
-              <Menu width={18} height={18} fill="#202d59" />
-            </Pressable>
-            <View style={styles.logoWrapper}>
-              <RippleLogo size={68} />
-            </View>
-            <Pressable
-              style={styles.bellIcon}
-              onPress={() => navigation?.navigate?.('Profile')}
-            >
-              <NotificationLight width={18} height={18} fill="#202d59" />
-            </Pressable>
-          </View>
+          <AppHeader
+            containerStyle={styles.TopMenu}
+            leftButtonStyle={styles.barsIcon}
+            rightButtonStyle={styles.bellIcon}
+            rightIcon={NotificationLight}
+            logo={<RippleLogo size={68} />}
+            onPressLeft={() => navigation.navigate('SideMenu')}
+            onPressCenter={() => navigation.navigate('Dashboard')}
+            onPressRight={() => navigation.navigate('Profile')}
+          />
           <View style={styles.ProfileBox}>
             <View style={styles.profileGreetingContainer}>
               <View style={styles.profileGreetingRow}>
@@ -497,12 +597,7 @@ const DashboardScreen = ({ navigation }) => {
             <View style={styles.modalSection}>
               <Text style={styles.modalSectionLabel}>Error Type</Text>
               <View style={styles.chipGroup}>
-                {[
-                  { label: "All", value: "all" },
-                  { label: "Network Failure", value: "network" },
-                  { label: "Power Failure", value: "power" },
-                  { label: "Modem Restart", value: "restart" },
-                ].map((option) => {
+                {ERROR_FILTER_OPTIONS.map((option) => {
                   const isActive = draftFilters.errorType === option.value;
                   return (
                     <TouchableOpacity
@@ -697,8 +792,34 @@ const ModemCard = ({ modem, navigation }) => {
     });
   };
 
-  const handleGetDirection = () => {
-    // TODO: integrate maps navigation here
+  const handleGetDirection = async () => {
+    const latitude = 17.3850;  
+    const longitude = 78.4867;
+    
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+    const appleMapsUrl = `http://maps.apple.com/?daddr=${latitude},${longitude}`;
+    
+    try {
+      const url = Platform.OS === 'ios' ? appleMapsUrl : googleMapsUrl;
+      
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          'Maps Not Available',
+          'Unable to open maps application. Please install Google Maps or Apple Maps.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error opening maps:', error);
+      Alert.alert(
+        'Error',
+        'Unable to open maps. Please try again later.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   return (
@@ -1139,9 +1260,6 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   TopMenu: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingTop: 10,
     paddingBottom: 5,
     paddingHorizontal: 15,
