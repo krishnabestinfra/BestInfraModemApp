@@ -15,50 +15,84 @@ import { exportCompletedPDF } from "../utils/exportCompletedPDF";
 import { Alert } from "react-native";
 
 const CompletedActivities = ({ navigation }) => {
-    const resolvedList = [
-        {
-            id: "1",
-            modemId: "MDM001",
-            status: "Network Failure",
-            resolvedAt: "Nov 21, 2025 02:45 PM",
-            location: "Building B-Floor 2",
-        },
-        {
-            id: "2",
-            modemId: "MDM002",
-            status: "Modem Auto Restart",
-            resolvedAt: "Nov 21, 2025 02:45 PM",
-            location: "Building B-Floor 2",
-        },
-        {
-            id: "3",
-            modemId: "MDM003",
-            status: "Modem Power Failed",
-            resolvedAt: "Nov 21, 2025 02:45 PM",
-            location: "Building B-Floor 2",
-        },
-        {
-            id: "4",
-            modemId: "MDM004",
-            status: "Network Failure",
-            resolvedAt: "Nov 21, 2025 02:45 PM",
-            location: "Building B-Floor 2",
-        },
-        {
-            id: "5",
-            modemId: "MDM005",
-            status: "Modem Auto Restart",
-            resolvedAt: "Nov 21, 2025 02:45 PM",
-            location: "Building B-Floor 2",
-        },
-        {
-            id: "6",
-            modemId: "MDM006",
-            status: "Modem Power Failed",
-            resolvedAt: "Nov 21, 2025 02:45 PM",
-            location: "Building B-Floor 2",
-        },
-    ];
+    const [resolvedList, setResolvedList] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    // const resolvedList = [
+    //     {
+    //         id: "1",
+    //         modemId: "MDM001",
+    //         status: "Network Failure",
+    //         resolvedAt: "Nov 21, 2025 02:45 PM",
+    //         location: "Building B-Floor 2",
+    //     },
+    //     {
+    //         id: "2",
+    //         modemId: "MDM002",
+    //         status: "Modem Auto Restart",
+    //         resolvedAt: "Nov 21, 2025 02:45 PM",
+    //         location: "Building B-Floor 2",
+    //     },
+    //     {
+    //         id: "3",
+    //         modemId: "MDM003",
+    //         status: "Modem Power Failed",
+    //         resolvedAt: "Nov 21, 2025 02:45 PM",
+    //         location: "Building B-Floor 2",
+    //     },
+    //     {
+    //         id: "4",
+    //         modemId: "MDM004",
+    //         status: "Network Failure",
+    //         resolvedAt: "Nov 21, 2025 02:45 PM",
+    //         location: "Building B-Floor 2",
+    //     },
+    //     {
+    //         id: "5",
+    //         modemId: "MDM005",
+    //         status: "Modem Auto Restart",
+    //         resolvedAt: "Nov 21, 2025 02:45 PM",
+    //         location: "Building B-Floor 2",
+    //     },
+    //     {
+    //         id: "6",
+    //         modemId: "MDM006",
+    //         status: "Modem Power Failed",
+    //         resolvedAt: "Nov 21, 2025 02:45 PM",
+    //         location: "Building B-Floor 2",
+    //     },
+    // ];
+    const fetchModems = async () => {
+        try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/modems/main`);
+            const json = await response.json();
+    
+            const allModems = json.modems || [];
+    
+            const resolved = allModems.filter(
+                m => m.resolved === true || m.status === "resolved"
+            );
+    
+            const formatted = resolved.map((item, index) => ({
+                id: item.id?.toString() || index.toString(),
+                modemId: item.modemSlNo || item.modemId || "Unknown",
+                status: item.status || "Resolved",
+                resolvedAt: item.resolvedAt || item.updatedAt || "N/A",
+                location: item.location || item.address || "Not Provided",
+            }));
+    
+            setResolvedList(formatted);
+        } catch (error) {
+            console.log("Error fetching modems:", error);
+            Alert.alert("Error", "Failed to load resolved modems");
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    useEffect(() => {
+        fetchModems();
+    }, []);
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -103,6 +137,12 @@ const CompletedActivities = ({ navigation }) => {
                             </Pressable>
                         </View>
                     </View>
+                    {loading && (
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="large" color={COLORS.secondaryFontColor} />
+                            <Text style={styles.loadingText}>Loading resolved modems...</Text>
+                        </View>
+                    )}
                     <ScrollView
                         style={{ flex: 1 }}
                         showsVerticalScrollIndicator={false}

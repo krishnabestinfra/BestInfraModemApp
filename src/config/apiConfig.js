@@ -1,41 +1,31 @@
 
-// Base URL
-export const API_BASE_URL = 'https://nexusenergy.tech/api/v1';
+export const API_BASE_URL = "https://nexusenergy.tech/api/v1";
 
-// Old Alerts API Base URL
-export const OLD_ALERTS_API_BASE_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
+export const ALERTS_BASE_URL = "https://api.bestinfra.app/v2tgnpdcl/api";
 
-export const API_KEY = 'eyaM-5N8mDzLykpA3n3igUgGgNnEcehUY9NJ9ui4Ic5LuZW1sqbZylAg1q_C1';
+export const API_KEY =
+  "eyaM-5N8mDzLykpA3n3igUgGgNnEcehUY9NJ9ui4Ic5LuZW1sqbZylAg1q_C1";
+
 export const API_ENDPOINTS = {
-  SEND_OTP: '/auth/send-otp',
-  VALIDATE_OTP: '/auth/validate-otp',
-    
-    // Protected endpoints
-  GET_MODEMS_BY_OFFICER: '/modem/user/all',
+  SEND_OTP: "/auth/send-otp",
+  VALIDATE_OTP: "/auth/validate-otp",
+
+
+  GET_MODEMS_BY_OFFICER: "/modem/user/all",
+
+
+  GET_MODEM_ALERTS: `${ALERTS_BASE_URL}/modems/main`,
 };
+
 
 export const getPublicHeaders = () => ({
-  'Content-Type': 'application/json',
+  "Content-Type": "application/json",
 });
 
-/**
- * Get headers for protected endpoints (authentication required)
- * @param {string} apiKey - API key for Bearer token
- * @param {string} customerId - Phone number used as X-CUSTOMER-ID
- */
 export const getProtectedHeaders = (apiKey, customerId) => {
-  const headers = {
-    'Content-Type': 'application/json',
+  return {
+    "Content-Type": "application/json",
+    ...(apiKey && { Authorization: `Bearer ${apiKey}` }),
+    ...(customerId && { "X-CUSTOMER-ID": customerId }),
   };
-
-  if (apiKey) {
-    headers['Authorization'] = `Bearer ${apiKey}`;
-  }
-
-  if (customerId) {
-    headers['X-CUSTOMER-ID'] = customerId;
-  }
-
-  return headers;
 };
-

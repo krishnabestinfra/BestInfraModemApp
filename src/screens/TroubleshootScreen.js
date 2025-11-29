@@ -86,15 +86,16 @@ const defaultTroubleshootSteps = [
 const TroubleshootScreen = ({ navigation, route }) => {
   const modem = route?.params?.modem;
   
-  // Get error code from modem (could be from modem.code or modem.originalAlert?.code)
-  const errorCode = modem?.code || modem?.originalAlert?.code;
+  // Get error code from modem
+  const errorCode = modem?.code || modem?.errorCode || modem?.originalAlert?.code || modem?.originalData?.code;
 
-  // Get troubleshooting steps based on error code, fallback to default steps
+  // Get troubleshooting steps based on error code
   const troubleshootSteps = useMemo(() => {
-    if (errorCode && hasTroubleshootSteps(errorCode)) {
-      return getTroubleshootSteps(errorCode);
+    const codeNum = typeof errorCode === 'number' ? errorCode : parseInt(errorCode);
+    
+    if (codeNum && !isNaN(codeNum) && hasTroubleshootSteps(codeNum)) {
+      return getTroubleshootSteps(codeNum);
     }
-    // Fallback to default generic steps
     return defaultTroubleshootSteps;
   }, [errorCode]);
 

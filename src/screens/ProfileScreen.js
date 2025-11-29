@@ -20,6 +20,8 @@ import NotificationCard from '../components/global/NotificationCard';
 import { COLORS } from '../constants/colors';
 import EmptyNotification from '../../assets/icons/NoNotification.svg';
 // import { notifications as defaultNotifications } from '../data/dummyData';
+import { useContext } from 'react';
+import { NotificationContext } from '../context/NotificationContext';
 
 const iconMapper = {
   payment: HandBill,
@@ -41,31 +43,28 @@ const variantMapper = {
 };
 
 const ProfileScreen = ({ navigation }) => {
-  const [notificationList, setNotificationList] = useState([]);
+  const { notifications, setNotifications } = useContext(NotificationContext);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   const consumerUid = 'BI25GMRA0001';
+  
+  const displayNotifications = notifications.slice(0, 10);
+  console.log("Display Notifications:", displayNotifications);
 
-  const displayNotifications = useMemo(
-    () => notificationList.slice(0, 10),
-    [notificationList]
-  );
-
-  const handleNotificationPress = useCallback((notification) => {
-    setNotificationList((prev) =>
-      prev.map((item) =>
-        item.id === notification.id ? { ...item, is_read: true } : item
-      )
+  const markAsRead = (id) => {
+    const updated = notifications.map(n =>
+      n.id === id ? { ...n, is_read: true } : n
     );
-  }, []);
+    setNotifications(updated);
+  };
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     setError(null);
     setTimeout(() => {
-      setNotificationList((prev) => [...prev]);
+      setNotifications((prev) => [...prev]);
       setRefreshing(false);
     }, 800);
   }, []);

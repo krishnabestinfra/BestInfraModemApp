@@ -27,7 +27,7 @@ const screenHeight = Dimensions.get("window").height;
 const PHONE_LENGTH = 10;
 const OTP_LENGTH = 6;
 
-const LoginScreen = ({ onLogin }) => {
+const LoginScreen = ({  navigation, onLogin }) => {
   const [mobileNumber, setMobileNumber] = useState("");
   const [otpDigits, setOtpDigits] = useState(Array(OTP_LENGTH).fill(""));
   const [rememberMe, setRememberMe] = useState(false);
@@ -229,13 +229,16 @@ const LoginScreen = ({ onLogin }) => {
 
     try {
       await validateOtp(mobileNumber, otpValue);
+      console.log("STEP 2: OTP VALIDATED");
+
+      console.log("STEP 3: CALLING fetchModemsByOfficer");
       const modems = await fetchModemsByOfficer(mobileNumber);
-      
-      // Store API Key and user phone in AsyncStorage after successful login
+      console.log("MODENS FROM LOGIN SCREEN:", modems);
       await storeApiKey(API_KEY);
       await storeUserPhone(mobileNumber);
       
-      onLogin ? onLogin(modems, mobileNumber) : null;
+      onLogin(modems, mobileNumber);   // Updates AppNavigator  global state
+
     } catch (error) {
       console.error('Login error:', error);
       setErrors(prev => ({ ...prev, otp: error.message || 'Unable to verify OTP' }));

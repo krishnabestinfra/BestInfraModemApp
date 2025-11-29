@@ -153,6 +153,7 @@ export const troubleshootStepsByCode = {
  * Get troubleshooting steps for a specific error code
  * @param {number} errorCode 
  * @returns {Array} Troubleshooting steps for the given error code
+ */
 export const getTroubleshootSteps = (errorCode) => {
   return troubleshootStepsByCode[errorCode] || [];
 };
