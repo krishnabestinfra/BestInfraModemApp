@@ -31,6 +31,8 @@ import ActiveSettings from '../../assets/icons/activeSettings.svg';
 import LogoutIcon from '../../assets/icons/logoutMenu.svg';
 import ActiveLogout from '../../assets/icons/activeLogout.svg';
 
+
+
 const fallbackDetails = {
   drtSlNo: '2345',
   feederNo: '123456783',
@@ -106,7 +108,11 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
 
   const assignedModems = Array.isArray(modems) ? modems : [];
   const routeModem = route?.params?.modem;
-  const routeModemId = route?.params?.modemSlNo || routeModem?.modemId;
+  const routeModemId =
+  route?.params?.modemSlNo ||
+  routeModem?.modemSlNo ||
+  routeModem?.modemno; // API 3 value
+
 
   const matchedAssignedModem = useMemo(() => {
     if (!routeModemId || assignedModems.length === 0) {
@@ -120,7 +126,11 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   }, [assignedModems, routeModemId]);
 
   const resolvedModem = routeModem || matchedAssignedModem;
-  const modemSlNo = route?.params?.modemSlNo || resolvedModem?.modemId;
+  const modemSlNo =
+  route?.params?.modemSlNo ||
+  resolvedModem?.modemSlNo ||
+  resolvedModem?.modemno;
+
   const fallbackModem = resolvedModem ?? {
     modemId: 'MDM000',
     status: 'warning',

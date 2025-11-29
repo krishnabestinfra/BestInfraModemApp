@@ -16,6 +16,7 @@ import TroubleshootScreen from '../screens/TroubleshootScreen';
 import SideMenu from '../screens/Sidemenu';  
 import ScanScreen from '../components/ScanScreen';
 import CompletedActivities from '../screens/CompletedActivities';
+import { API_BASE_URL, API_KEY, API_ENDPOINTS, getProtectedHeaders } from '../config/apiConfig';
 
 const Stack = createNativeStackNavigator();
 
@@ -26,47 +27,73 @@ const AppNavigator = () => {
   const [userModems, setUserModems] = useState([]);
   const [userPhone, setUserPhone] = useState(null);
 
-  // Single source of truth: Check for persistent login on app start
-  // Always ensures loading completes, even if effect runs multiple times
+  async function fetchModemsByOfficer(phone) {
+  const url = `${API_BASE_URL}${API_ENDPOINTS.GET_MODEMS_BY_OFFICER}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: getProtectedHeaders(API_KEY, phone),
+    });
+
+    const json = await response.json();
+
+    console.log("API3 Response:", json);
+
+    return Array.isArray(json) ? json : [];  // FIXED
+  } catch (err) {
+    console.log("fetchModemsByOfficer ERROR:", err);
+    return [];
+  }
+}
+
+  
+  
   useEffect(() => {
     let isMounted = true;
-
+  
     const checkPersistentLogin = async () => {
-      // Minimum splash screen time (2 seconds) for better UX
-      await Promise.all([
-        (async () => {
-          const apiKeyExists = await hasApiKey();
-          if (apiKeyExists) {
-            if (isMounted) {
-              setIsAuthenticated(true);
-              setShowOnboarding(false);
-              const storedPhone = await getUserPhone();
-              if (storedPhone && isMounted) {
-                setUserPhone(storedPhone);
-              }
-            }
-          } else {
-            if (isMounted) {
-              setIsAuthenticated(false);
-            }
-          }
-        })(),
-        new Promise(resolve => setTimeout(resolve, 2000)) // Minimum 2 second delay
-      ]);
-
-      // Always set loading to false after check completes
-      if (isMounted) {
-        setIsLoading(false);
+      await new Promise(resolve => setTimeout(resolve, 1500)); // splash delay
+  
+      const apiKeyExists = await hasApiKey();
+      if (!apiKeyExists) {
+        if (isMounted) {
+          setIsAuthenticated(false);
+          setIsLoading(false);
+        }
+        return;
       }
+  
+      const storedPhone = await getUserPhone();
+  
+      // Auto-login
+      if (isMounted) {
+        setIsAuthenticated(true);
+        setShowOnboarding(false);
+        setUserPhone(storedPhone);
+      }
+  
+      if (storedPhone && isMounted) {
+        try {
+          console.log("Persistent Login → Fetching modems for:", storedPhone);
+      
+          const modems = await fetchModemsByOfficer(storedPhone);
+          console.log("Persistent Modems Loaded:", modems);
+      
+          if (isMounted) setUserModems(modems);
+        } catch (err) {
+          console.log("Persistent fetch error:", err);
+        }
+      }
+      
+  
+      if (isMounted) setIsLoading(false);
     };
-
+  
     checkPersistentLogin();
-
-    // Cleanup to prevent state updates if component unmounts
-    return () => {
-      isMounted = false;
-    };
+    return () => (isMounted = false);
   }, []);
+  
 
   const handleSplashFinish = useCallback(() => {
     // SplashScreen is now purely visual - loading is controlled by useEffect
@@ -78,6 +105,10 @@ const AppNavigator = () => {
   }, []);
 
   const handleLogin = useCallback((modems = [], phoneNumber) => {
+    console.log("APP NAVIGATOR handleLogin CALLED");
+    console.log("MODENS RECEIVED:", modems);
+    console.log("PHONE RECEIVED:", phoneNumber);
+  
     setUserModems(Array.isArray(modems) ? modems : []);
     setUserPhone(phoneNumber || null);
     setIsAuthenticated(true);
@@ -140,6 +171,7 @@ const AppNavigator = () => {
                 <DashboardScreen
                   {...props}
                   modems={userModems}
+                  modemIds={userModems.map(m => m.modemno)}
                   userPhone={userPhone}
                   onLogout={handleLogout}
                 />

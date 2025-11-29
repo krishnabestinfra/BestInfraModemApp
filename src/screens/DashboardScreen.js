@@ -21,6 +21,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
+import { API_BASE_URL, API_KEY, API_ENDPOINTS, getProtectedHeaders } from "../config/apiConfig";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+
 
 import { modemStats, modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
@@ -36,6 +40,8 @@ import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
 import CommunicatingModemsIcon from '../../assets/icons/communicating.svg';
 import NonCommunicatingModemsIcon from '../../assets/icons/noncommicating.svg';
+import { NotificationContext } from '../context/NotificationContext';
+import { useContext } from 'react';
 
 import Meter from '../../assets/images/meter.png';
 
@@ -75,8 +81,8 @@ const getSignalBand = (val = 0) => {
   return 'strong';
 };
 
-// MAIN SCREEN
-const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
+const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) => {
+    
   const [searchQuery, setSearchQuery] = useState('');
   const [userName] = useState('Field Officer');
   const [apiData, setApiData] = useState(null);
@@ -109,58 +115,66 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
   };
 
   useEffect(() => {
-    fetchApiData();
-  }, []);
+    if (modemIds.length > 0 && userPhone) {
+      fetchApiData();
+    }
+  }, [modemIds, userPhone]);
+  
+  
 
   const fetchApiData = async () => {
-    if (USE_MOCK_ALERTS) {
-      setLoading(false);
-      setApiData(null);
-      return;
-    }
-
     try {
       setLoading(true);
-      const response = await fetch('https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts', {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
+  
+      const modemQuery = modemIds.join(",");
+      const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}`;
+      
+      console.log("Fetching alerts from:", url);
+      console.log("Filtering for modemIds:", modemIds);
+  
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getProtectedHeaders(API_KEY, userPhone),
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
+  
       const json = await response.json();
+  
+      console.log("RAW /modems/main RESPONSE:", json);
+      console.log("Officer modemIds:", modemIds);
+      console.log("Total alerts received:", json.alerts?.length);
+      console.log("Sample alert item:", json.alerts?.[0]);
 
-      if (json.success !== undefined) {
-        if (json.success && json.alerts) {
-          setApiData({
-            success: true,
-            alerts: Array.isArray(json.alerts) ? json.alerts : [json.alerts],
-            stats: json.stats || {},
-            timelineData: json.timelineData || [],
-          });
-        } else {
-          setApiData(null);
-        }
-      } else if (Array.isArray(json)) {
-        setApiData({
-          success: true,
-          alerts: json,
-        });
-      } else {
-        setApiData(null);
-      }
+  
+      // FILTER ALERTS FOR THIS FIELD OFFICER ONLY
+      const filteredAlerts = Array.isArray(json.alerts)
+      ? json.alerts.filter(item => {
+          const keysToCheck = [
+            item.modemSlNo,
+            item.modemno,
+            item.sno?.toString(),
+            item.modemId
+          ];
+    
+          return keysToCheck.some(key => key && modemIds.includes(key));
+        })
+      : [];
+      console.log("Filtered alerts:", filteredAlerts.length);
+      setApiData({
+        alerts: filteredAlerts,
+        stats: json.stats || {}
+      });
+  
     } catch (error) {
-      console.error('Error fetching API data:', error);
+      console.error("Error fetching alerts:", error);
       setApiData(null);
     } finally {
       setLoading(false);
     }
   };
+  
+  
+  
+  
 
   const getStatusFromCode = (code) => {
     const map = {
@@ -469,6 +483,7 @@ const DashboardScreen = ({ navigation, modems = [], userPhone }) => {
 // 📌 MODEM CARD COMPONENT
 // =============================
 const ModemCard = ({ modem, navigation }) => {
+  const { startTracking } = useContext(NotificationContext);
   const getSignalIcon = () => {
     if (modem.signalStrength < 15) return <SignalWeaknessIcon width={20} height={20} />;
     if (modem.signalStrength <= 20) return <SignalAverageIcon width={20} height={20} />;
@@ -482,7 +497,11 @@ const ModemCard = ({ modem, navigation }) => {
     });
   };
 
-  const handleDirection = () => {
+  const handleDirection = async () => {
+    await startTracking(modem.modemId);
+
+    console.log("Now tracking:", modem.modemId);
+
     const lat = 17.3850;
     const lon = 78.4867;
 
@@ -541,7 +560,7 @@ const ModemCard = ({ modem, navigation }) => {
             </View>
 
             <View style={styles.subDataItem}>
-              <Text style={styles.detailLabel}>Issue Occurred On</Text>
+              <Text style={styles.detailLabel}>Occurred On</Text>
               <Text style={styles.datedetails}>{modem.date}</Text>
             </View>
           </View>
