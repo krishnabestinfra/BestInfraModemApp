@@ -1,23 +1,44 @@
-import React, { createContext, useEffect, useState } from "react";
+import React, { createContext, useEffect, useState, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_KEY, API_ENDPOINTS, getProtectedHeaders } from "../config/apiConfig";
 
 export const NotificationContext = createContext();
 
 export const NotificationProvider = ({ children }) => {
   const [trackingModemId, setTrackingModemId] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupNotification, setPopupNotification] = useState(null);
+  
+  // Alert polling state
+  const [alertPollingActive, setAlertPollingActive] = useState(false);
+  const previousAlertIdsRef = useRef(new Set());
+  const isInitialLoadRef = useRef(true);
+  const alertPollingIntervalRef = useRef(null);
 
   // Load saved data
   useEffect(() => {
     (async () => {
-      const savedModem = await AsyncStorage.getItem("trackingModemId");
-      const savedNoti = await AsyncStorage.getItem("notifications");
-      if (savedModem) setTrackingModemId(savedModem);
-      if (savedNoti) setNotifications(JSON.parse(savedNoti));
+      try {
+        const savedModem = await AsyncStorage.getItem("trackingModemId");
+        const savedNoti = await AsyncStorage.getItem("notifications");
+        if (savedModem) {
+          setTrackingModemId(savedModem);
+          console.log("📱 Loaded tracking modem ID:", savedModem);
+        }
+        if (savedNoti) {
+          const parsed = JSON.parse(savedNoti);
+          setNotifications(parsed);
+          console.log("📱 Loaded notifications from storage on mount:", parsed.length, parsed);
+        } else {
+          console.log("📱 No notifications found in storage on mount");
+        }
+      } catch (e) {
+        console.log("❌ Error loading data from storage:", e);
+      }
     })();
   }, []);
 
-  // Save selected modem when user taps "Get Direction"
   const startTracking = async (modemId) => {
     setTrackingModemId(modemId);
     await AsyncStorage.setItem("trackingModemId", modemId);
@@ -29,7 +50,7 @@ export const NotificationProvider = ({ children }) => {
     await AsyncStorage.removeItem("trackingModemId");
   };
 
-  // Add notification
+  // Add notification (with popup)
   const pushNotification = async (title, message) => {
     const newItem = {
       id: Date.now().toString(),
@@ -43,9 +64,143 @@ export const NotificationProvider = ({ children }) => {
     const updated = [newItem, ...notifications];
     setNotifications(updated);
     await AsyncStorage.setItem("notifications", JSON.stringify(updated));
+    
+    // Show popup notification
+    setPopupNotification(newItem);
+    setShowPopup(true);
+    
+    // Auto-hide popup after 5 seconds
+    setTimeout(() => {
+      setShowPopup(false);
+      setPopupNotification(null);
+    }, 5000);
   };
 
-  // 5 min checker
+  // Start alert polling for new alerts
+  const startAlertPolling = async (modemIds, userPhone) => {
+    if (!modemIds || modemIds.length === 0 || !userPhone) {
+      console.log("Cannot start alert polling: missing modemIds or userPhone");
+      return;
+    }
+
+    // Stop any existing polling
+    if (alertPollingIntervalRef.current) {
+      clearInterval(alertPollingIntervalRef.current);
+    }
+
+    setAlertPollingActive(true);
+    isInitialLoadRef.current = true;
+    
+    // Initial fetch
+    await checkForNewAlerts(modemIds, userPhone);
+    
+    // Poll every 5 minutes
+    alertPollingIntervalRef.current = setInterval(async () => {
+      await checkForNewAlerts(modemIds, userPhone);
+    }, 5 * 60 * 1000);
+  };
+
+  // Stop alert polling
+  const stopAlertPolling = () => {
+    if (alertPollingIntervalRef.current) {
+      clearInterval(alertPollingIntervalRef.current);
+      alertPollingIntervalRef.current = null;
+    }
+    setAlertPollingActive(false);
+    isInitialLoadRef.current = true;
+    previousAlertIdsRef.current.clear();
+  };
+
+  // Check for new alerts
+  const checkForNewAlerts = async (modemIds, userPhone) => {
+    try {
+      if (!modemIds || modemIds.length === 0 || !userPhone) return;
+
+      const modemQuery = modemIds.join(",");
+      const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}`;
+      
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getProtectedHeaders(API_KEY, userPhone),
+      });
+      
+      const json = await response.json();
+
+      // Check if API returned an error
+      if (!response.ok || (json.success === false) || json.error) {
+        return;
+      }
+
+      // FILTER ALERTS FOR THIS FIELD OFFICER ONLY
+      const filteredAlerts = Array.isArray(json.alerts)
+        ? json.alerts.filter(item => {
+            const keysToCheck = [
+              item.modemSlNo,
+              item.modemno,
+              item.sno?.toString(),
+              item.modemId
+            ];
+      
+            return keysToCheck.some(key => key && modemIds.includes(key));
+          })
+        : [];
+      
+      // Detect new alerts and show notifications
+      if (!isInitialLoadRef.current && filteredAlerts.length > 0) {
+        const currentAlertIds = new Set(
+          filteredAlerts.map(alert => 
+            alert.id?.toString() || 
+            alert.modemSlNo || 
+            alert.modemno || 
+            alert.sno?.toString() || 
+            `alert-${Date.now()}`
+          )
+        );
+        
+        // Find new alerts (alerts that weren't in previous set)
+        const newAlerts = filteredAlerts.filter(alert => {
+          const alertId = alert.id?.toString() || 
+                         alert.modemSlNo || 
+                         alert.modemno || 
+                         alert.sno?.toString() || 
+                         `alert-${Date.now()}`;
+          return !previousAlertIdsRef.current.has(alertId);
+        });
+        
+        // Show notification for the first new alert
+        if (newAlerts.length > 0) {
+          const firstNewAlert = newAlerts[0];
+          const modemId = firstNewAlert.modemSlNo || firstNewAlert.modemno || firstNewAlert.sno || 'Unknown';
+          const errorType = firstNewAlert.codeDesc || firstNewAlert.error || 'Alert';
+          
+          await pushNotification(
+            "New Alert",
+            `Modem ${modemId}: ${errorType}`
+          );
+        }
+        
+        // Update previous alert IDs
+        previousAlertIdsRef.current = currentAlertIds;
+      } else if (isInitialLoadRef.current) {
+        // On first load, just store the alert IDs without showing notifications
+        const currentAlertIds = new Set(
+          filteredAlerts.map(alert => 
+            alert.id?.toString() || 
+            alert.modemSlNo || 
+            alert.modemno || 
+            alert.sno?.toString() || 
+            `alert-${Date.now()}`
+          )
+        );
+        previousAlertIdsRef.current = currentAlertIds;
+        isInitialLoadRef.current = false;
+      }
+    } catch (error) {
+      console.log("Error checking for new alerts:", error);
+    }
+  };
+
+  // 5 min checker for modem status
   useEffect(() => {
     if (!trackingModemId) return;
 
@@ -54,17 +209,44 @@ export const NotificationProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [trackingModemId]);
 
-  // API CALL
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (alertPollingIntervalRef.current) {
+        clearInterval(alertPollingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // API CALL - Check modem status via /modems/modem/{modemId}/status
   async function checkStatus() {
     try {
-      const url = `https://api.bestinfra.app/v2tgnpdcl/api/modems/modem/${trackingModemId}/status`;
-      const res = await fetch(url);
-      const json = await res.json();
+      if (!trackingModemId) return;
 
-      if (json.success && json.data.status === "resolved") {
+      // Use the status API endpoint
+      const url = `https://api.bestinfra.app/v2tgnpdcl/api/modems/modem/${trackingModemId}/status`;
+      
+      console.log("Checking modem status from:", url);
+      
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const json = await response.json();
+      console.log("Modem status check response:", json);
+
+      // Check if modem status is "resolved"
+      if (json.success && json.data && json.data.status === "resolved") {
         await pushNotification(
           "Modem Resolved",
-          `Modem ${trackingModemId} issue has been resolved`
+          `Modem ${trackingModemId} issue has been automatically resolved`
         );
         await stopTracking();
       }
@@ -81,6 +263,13 @@ export const NotificationProvider = ({ children }) => {
         startTracking,
         stopTracking,
         setNotifications,
+        showPopup,
+        popupNotification,
+        setShowPopup,
+        pushNotification,
+        startAlertPolling,
+        stopAlertPolling,
+        alertPollingActive,
       }}
     >
       {children}

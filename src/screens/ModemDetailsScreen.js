@@ -153,80 +153,20 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   };
 
   useEffect(() => {
-    if (USE_MOCK_ALERTS) {
-      setLoading(false);
-      return;
+    // Modem data is already passed via route params when navigating from Dashboard/AllModems
+    // No API call needed - use the data from route
+    if (resolvedModem) {
+      // Use originalAlert if available (from normalized modem record), otherwise use resolvedModem
+      const modemData = resolvedModem.originalAlert || resolvedModem;
+      setApiData(modemData);
+      console.log('Using modem data from route params:', resolvedModem.modemId || resolvedModem.modemSlNo || resolvedModem.modemno);
     }
+    setLoading(false);
+  }, [resolvedModem]);
 
-    if (modemSlNo && modemSlNo !== 'N/A') {
-      fetchModemDetails();
-    } else {
-      console.warn('No modemSlNo provided, using fallback data');
-      setLoading(false);
-    }
-  }, [modemSlNo]);
+ 
 
-  const fetchModemDetails = async () => {
-    if (USE_MOCK_ALERTS) {
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      const url = `${API_BASE_URL}/${encodeURIComponent(modemSlNo)}`;
-      console.log('Fetching modem details from:', url);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error Response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const json = await response.json();
-      console.log('API Response:', JSON.stringify(json, null, 2));
-      
-      // Handle different response structures
-      let alertData = null;
-      
-      if (json.success !== undefined) {
-        // Response has success field
-        if (json.success) {
-          // Try different possible structures
-          alertData = json.alert || json.data || json.result || (json.alerts && json.alerts[0]) || null;
-        }
-      } else if (json.modemSlNo || json.sno) {
-        // Direct alert object without success wrapper
-        alertData = json;
-      } else if (Array.isArray(json) && json.length > 0) {
-        // Array response, take first item
-        alertData = json[0];
-      }
-      
-      if (alertData && (alertData.modemSlNo || alertData.sno)) {
-        setApiData(alertData);
-        console.log('Successfully set API data:', alertData.modemSlNo);
-      } else {
-        console.warn('API response missing valid alert data, using fallback');
-        setApiData(null);
-      }
-    } catch (error) {
-      console.error('Error fetching modem details:', error.message);
-      setApiData(null);
-      // Continue with fallback data
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  // Use API data if available, otherwise use fallback
   const modem = useMemo(() => {
     if (apiData && (apiData.modemSlNo || apiData.sno)) {
       return {

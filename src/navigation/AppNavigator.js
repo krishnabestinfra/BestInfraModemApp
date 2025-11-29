@@ -16,6 +16,7 @@ import TroubleshootScreen from '../screens/TroubleshootScreen';
 import SideMenu from '../screens/Sidemenu';  
 import ScanScreen from '../components/ScanScreen';
 import CompletedActivities from '../screens/CompletedActivities';
+  import AllModemsScreen from '../screens/AllModemsScreen';
 import { API_BASE_URL, API_KEY, API_ENDPOINTS, getProtectedHeaders } from '../config/apiConfig';
 
 const Stack = createNativeStackNavigator();
@@ -207,7 +208,26 @@ const AppNavigator = () => {
             <Stack.Screen name="Troubleshoot" component={TroubleshootScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="ScanScreen" component={ScanScreen} />
-            <Stack.Screen name="CompletedActivities" component={CompletedActivities} />
+            <Stack.Screen name="CompletedActivities">
+              {(props) => (
+                <CompletedActivities
+                  {...props}
+                  modems={userModems}
+                  modemIds={userModems.map(m => m.modemno)}
+                  userPhone={userPhone}
+                />
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="AllModems">
+              {(props) => (
+                <AllModemsScreen
+                  {...props}
+                  modems={userModems}
+                  modemIds={userModems.map(m => m.modemno)}
+                  userPhone={userPhone}
+                />
+              )}
+            </Stack.Screen>
           </>
         )
         }

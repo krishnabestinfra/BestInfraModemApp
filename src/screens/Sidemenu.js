@@ -11,6 +11,7 @@ import DashboardScreen from "../screens/DashboardScreen";
 import Troubleshoot from "../screens/TroubleshootScreen";
 import CompletedActivities from "../screens/CompletedActivities";
 import Profile from "../screens/ProfileScreen";
+import AllModemsScreen from "../screens/AllModemsScreen";
 import { useSidebar } from "../context/SidebarContext";
 import SideMenuNavigation from "../components/SideMenuNavigation";
 import DashboardIcon from "../../assets/icons/dashboardMenu.svg";
@@ -32,7 +33,7 @@ const SideMenu = ({ navigation, onLogout }) => {
         return <DashboardScreen navigation={navigation} />;
   
       case "Modems":
-        return <DashboardScreen navigation={navigation} />;
+        return <AllModemsScreen navigation={navigation} />;
   
       case "Resolved":
         return <CompletedActivities navigation={navigation} />;
@@ -93,7 +94,7 @@ const SideMenu = ({ navigation, onLogout }) => {
               {
                 key: "Modems",
                 label: "Modems",
-                route: "Dashboard",
+                route: "AllModems",
                 Icon: ModemsIcon,
                 ActiveIcon: ActiveUsage
               },
