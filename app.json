@@ -52,11 +52,35 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2196F3"
       },
-      "package": "com.krishnajayanth.modemdiagnostics"
+      "package": "com.krishnajayanth.modemdiagnostics",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "POST_NOTIFICATIONS",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
+            "minSdkVersion": 24
+          }
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "b0c5cdd6-32a9-40d4-91a0-dc3d53ebf42d"
