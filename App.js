@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import AppNavigator from './src/navigation/AppNavigator';
 import { SidebarProvider } from './src/context/SidebarContext';
+import { NotificationProvider } from './src/context/NotificationContext';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -31,7 +32,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <SidebarProvider>
+        <NotificationProvider>
         <AppNavigator />
+        </NotificationProvider>
       </SidebarProvider>
     </SafeAreaProvider>
   );

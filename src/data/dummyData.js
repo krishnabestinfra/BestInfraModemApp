@@ -184,3 +184,59 @@ export const notifications = [
     created_at: '2025-08-06T16:15:00Z'
   }
 ];
+
+// Test alerts with error codes for testing purposes
+export const testAlerts = [
+  {
+    id: "TEST001",
+    code: 112,
+    modemSlNo: "MDM112001",
+    codeDesc: "Meter COM Failed",
+    error: "Meter COM Failed",
+    status: "disconnected",
+    date: "2025-01-15 10:30:00",
+    updatedAt: "2025-01-15 10:30:00",
+    location: "Bangalore - Zone A",
+    reason: "Communication failure between modem and meter",
+    signalStrength: 5
+  },
+  {
+    id: "TEST002",
+    code: 202,
+    modemSlNo: "MDM202002",
+    codeDesc: "Modem/DCU Auto Restart",
+    error: "Modem/DCU Auto Restart",
+    status: "warning",
+    date: "2025-01-15 11:15:00",
+    updatedAt: "2025-01-15 11:15:00",
+    location: "Mumbai - Zone B",
+    reason: "Automatic restart detected",
+    signalStrength: 12
+  },
+  {
+    id: "TEST003",
+    code: 214,
+    modemSlNo: "MDM214003",
+    codeDesc: "DCU/Modem Power Failed",
+    error: "DCU/Modem Power Failed",
+    status: "disconnected",
+    date: "2025-01-15 09:45:00",
+    updatedAt: "2025-01-15 09:45:00",
+    location: "Delhi - Zone C",
+    reason: "Power supply interruption detected",
+    signalStrength: 0
+  },
+  {
+    id: "TEST004",
+    code: 112,
+    modemSlNo: "MDM112004",
+    codeDesc: "Meter COM Failed",
+    error: "Meter COM Failed",
+    status: "disconnected",
+    date: "2025-01-15 12:00:00",
+    updatedAt: "2025-01-15 12:00:00",
+    location: "Chennai - Zone D",
+    reason: "Serial communication error",
+    signalStrength: 8
+  }
+];

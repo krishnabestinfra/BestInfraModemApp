@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { View, Text, ScrollView, StyleSheet, Pressable } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
@@ -12,53 +12,140 @@ import LocationIcon from "../../assets/icons/greenMap.svg";
 import ModemIcon from "../../assets/icons/greenMeter.svg";
 import DownloadIcon from "../../assets/icons/downloadbutton.svg";
 import { exportCompletedPDF } from "../utils/exportCompletedPDF";
-import { Alert } from "react-native";
+import { API_ENDPOINTS, API_KEY, getProtectedHeaders } from "../config/apiConfig";
+import { getUserPhone } from "../utils/storage";
 
-const CompletedActivities = ({ navigation }) => {
-    const resolvedList = [
-        {
-            id: "1",
-            modemId: "MDM001",
-            status: "Network Failure",
-            resolvedAt: "Nov 21, 2025 02:45 PM",
-            location: "Building B-Floor 2",
-        },
-        {
-            id: "2",
-            modemId: "MDM002",
-            status: "Modem Auto Restart",
-            resolvedAt: "Nov 21, 2025 02:45 PM",
-            location: "Building B-Floor 2",
-        },
-        {
-            id: "3",
-            modemId: "MDM003",
-            status: "Modem Power Failed",
-            resolvedAt: "Nov 21, 2025 02:45 PM",
-            location: "Building B-Floor 2",
-        },
-        {
-            id: "4",
-            modemId: "MDM004",
-            status: "Network Failure",
-            resolvedAt: "Nov 21, 2025 02:45 PM",
-            location: "Building B-Floor 2",
-        },
-        {
-            id: "5",
-            modemId: "MDM005",
-            status: "Modem Auto Restart",
-            resolvedAt: "Nov 21, 2025 02:45 PM",
-            location: "Building B-Floor 2",
-        },
-        {
-            id: "6",
-            modemId: "MDM006",
-            status: "Modem Power Failed",
-            resolvedAt: "Nov 21, 2025 02:45 PM",
-            location: "Building B-Floor 2",
-        },
-    ];
+const CompletedActivities = ({ navigation, modems = [], modemIds = [], userPhone }) => {
+    const [resolvedList, setResolvedList] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    // const resolvedList = [
+    //     {
+    //         id: "1",
+    //         modemId: "MDM001",
+    //         status: "Network Failure",
+    //         resolvedAt: "Nov 21, 2025 02:45 PM",
+    //         location: "Building B-Floor 2",
+    //     },
+    //     {
+    //         id: "2",
+    //         modemId: "MDM002",
+    //         status: "Modem Auto Restart",
+    //         resolvedAt: "Nov 21, 2025 02:45 PM",
+    //         location: "Building B-Floor 2",
+    //     },
+    //     {
+    //         id: "3",
+    //         modemId: "MDM003",
+    //         status: "Modem Power Failed",
+    //         resolvedAt: "Nov 21, 2025 02:45 PM",
+    //         location: "Building B-Floor 2",
+    //     },
+    //     {
+    //         id: "4",
+    //         modemId: "MDM004",
+    //         status: "Network Failure",
+    //         resolvedAt: "Nov 21, 2025 02:45 PM",
+    //         location: "Building B-Floor 2",
+    //     },
+    //     {
+    //         id: "5",
+    //         modemId: "MDM005",
+    //         status: "Modem Auto Restart",
+    //         resolvedAt: "Nov 21, 2025 02:45 PM",
+    //         location: "Building B-Floor 2",
+    //     },
+    //     {
+    //         id: "6",
+    //         modemId: "MDM006",
+    //         status: "Modem Power Failed",
+    //         resolvedAt: "Nov 21, 2025 02:45 PM",
+    //         location: "Building B-Floor 2",
+    //     },
+    // ];
+    const fetchModems = async () => {
+        try {
+            setLoading(true);
+            
+            // Get user phone - use prop or from storage
+            const phone = userPhone || await getUserPhone();
+            
+            if (!phone) {
+                console.log("No user phone found");
+                setLoading(false);
+                return;
+            }
+
+            if (!modemIds || modemIds.length === 0) {
+                console.log("No modem IDs found");
+                setLoading(false);
+                return;
+            }
+            
+            // Build query with user's modem IDs
+            const modemQuery = modemIds.join(",");
+            const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}`;
+            
+            console.log("Fetching resolved modems from:", url);
+            console.log("User modemIds:", modemIds);
+            
+            const response = await fetch(url, {
+                method: "GET",
+                headers: getProtectedHeaders(API_KEY, phone),
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const json = await response.json();
+            console.log("Modems API response:", json);
+    
+            // Get all modems/alerts from the API response
+            const allModems = json.alerts || json.modems || [];
+    
+            // Filter to only user's modems first (client-side check)
+            const userModems = allModems.filter(item => {
+                const keysToCheck = [
+                    item.modemSlNo,
+                    item.modemno,
+                    item.sno?.toString(),
+                    item.modemId
+                ];
+                return keysToCheck.some(key => key && modemIds.includes(key));
+            });
+    
+            // Then filter modems where resolved === true
+            const resolvedModems = userModems.filter(
+                modem => modem.resolved === true
+            );
+    
+            console.log("Total modems for user:", userModems.length);
+            console.log("Resolved modems (resolved === true):", resolvedModems.length);
+    
+            // Format the resolved modems for display
+            const formatted = resolvedModems.map((item, index) => ({
+                id: item.id?.toString() || item.modemSlNo || item.modemno || item.sno || index.toString(),
+                modemId: item.modemSlNo || item.modemno || item.sno || item.modemId || "Unknown",
+                status: item.codeDesc || item.error || item.status || "Resolved",
+                resolvedAt: item.updatedAt || item.modemDate || item.date || "N/A",
+                location: item.discom || item.location || item.section || item.subdivision || item.division || item.circle || "Not Provided",
+            }));
+    
+            setResolvedList(formatted);
+        } catch (error) {
+            console.log("Error fetching resolved modems:", error);
+            Alert.alert("Error", "Failed to load resolved modems. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    useEffect(() => {
+        if (modemIds.length > 0 && userPhone) {
+            fetchModems();
+        }
+    }, [modemIds, userPhone]);
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -103,6 +190,12 @@ const CompletedActivities = ({ navigation }) => {
                             </Pressable>
                         </View>
                     </View>
+                    {loading && (
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="large" color={COLORS.secondaryFontColor} />
+                            <Text style={styles.loadingText}>Loading resolved modems...</Text>
+                        </View>
+                    )}
                     <ScrollView
                         style={{ flex: 1 }}
                         showsVerticalScrollIndicator={false}
@@ -256,5 +349,16 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: "#202D59",
         fontFamily: "Manrope-Medium",
+    },
+    loadingContainer: {
+        padding: 40,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 14,
+        fontFamily: "Manrope-Regular",
+        color: "#475d89",
     },
 });

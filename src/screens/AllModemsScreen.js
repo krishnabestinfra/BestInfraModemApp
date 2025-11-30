@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -21,36 +21,27 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
-import { API_BASE_URL, API_KEY, API_ENDPOINTS, getProtectedHeaders } from "../config/apiConfig";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_KEY, API_ENDPOINTS, getProtectedHeaders } from "../config/apiConfig";
+import { getUserPhone } from '../utils/storage';
 
-
-
-import { modemStats, modemErrors } from '../data/dummyData';
-import { colors, spacing, borderRadius, typography } from '../styles/theme';
+import { modemErrors } from '../data/dummyData';
+import { colors, spacing } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 
 import SearchIcon from '../../assets/icons/searchIcon.svg';
 import ScanIcon from '../../assets/icons/scan.svg';
 import FilterIcon from '../../assets/icons/filter.svg';
 import NotificationLight from '../../assets/icons/notification.svg';
-import Hand from '../../assets/icons/hand.svg';
 import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
 import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
-import CommunicatingModemsIcon from '../../assets/icons/communicating.svg';
-import NonCommunicatingModemsIcon from '../../assets/icons/noncommicating.svg';
 import { NotificationContext } from '../context/NotificationContext';
-import { useContext } from 'react';
 
 import Meter from '../../assets/images/meter.png';
 
 // Default Manrope font for all Text
 if (!Text.defaultProps) Text.defaultProps = {};
 Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
-
-const { width } = Dimensions.get('window');
-const USE_MOCK_ALERTS = false;
 
 const ERROR_FILTER_OPTIONS = [
   { label: 'All', value: 'all' },
@@ -81,36 +72,32 @@ const getSignalBand = (val = 0) => {
   return 'strong';
 };
 
-const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) => {
-  const { showPopup, popupNotification, setShowPopup, startAlertPolling, stopAlertPolling } = useContext(NotificationContext);
-    
+const AllModemsScreen = ({ navigation, modems = [], modemIds = [], userPhone }) => {
+  const { showPopup, popupNotification, setShowPopup, testNotification } = useContext(NotificationContext);
+  
   const [searchQuery, setSearchQuery] = useState('');
-  const [userName] = useState('Field Officer');
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState({
-    statuses: [],
     signal: 'all',
     errorType: 'all',
     sortBy: 'newest',
   });
 
   const [draftFilters, setDraftFilters] = useState({
-    statuses: [],
     signal: 'all',
     errorType: 'all',
     sortBy: 'newest',
   });
 
   const hasActiveFilters =
-    appliedFilters.statuses.length > 0 ||
     appliedFilters.signal !== 'all' ||
     appliedFilters.errorType !== 'all';
 
   const handleResetFilters = () => {
-    const cleared = { statuses: [], signal: 'all', errorType: 'all', sortBy: 'newest' };
+    const cleared = { signal: 'all', errorType: 'all', sortBy: 'newest' };
     setAppliedFilters(cleared);
     setDraftFilters(cleared);
   };
@@ -118,66 +105,47 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   useEffect(() => {
     if (modemIds.length > 0 && userPhone) {
       fetchApiData();
-      
-      // Start alert polling in context (checks every 5 minutes)
-      startAlertPolling(modemIds, userPhone);
-      
-      return () => {
-        stopAlertPolling();
-      };
     }
   }, [modemIds, userPhone]);
-  
-  
 
   const fetchApiData = async () => {
     try {
       setLoading(true);
-  
+      
+      // Build query with user's modem IDs
       const modemQuery = modemIds.join(",");
       const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}`;
       
-      console.log("Fetching alerts from:", url);
-      console.log("Filtering for modemIds:", modemIds);
-  
+      console.log("Fetching alerts for user modems from:", url);
+      console.log("User modemIds:", modemIds);
+      
       const response = await fetch(url, {
         method: "GET",
         headers: getProtectedHeaders(API_KEY, userPhone),
       });
-  
-      const json = await response.json();
-  
-      console.log("RAW /modems/main RESPONSE:", json);
-
-      // Check if API returned an error
-      if (!response.ok || (json.success === false) || json.error) {
-        console.error("API Error:", json.error || "Unknown error");
-        setApiData({
-          alerts: [],
-          stats: {}
-        });
-        return;
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-  
-      console.log("Officer modemIds:", modemIds);
-      console.log("Total alerts received:", json.alerts?.length);
-      console.log("Sample alert item:", json.alerts?.[0]);
+      
+      const json = await response.json();
+      console.log("All modems API response:", json);
 
-  
-      // FILTER ALERTS FOR THIS FIELD OFFICER ONLY
+      // Filter alerts to ensure only user's modems are included
       const filteredAlerts = Array.isArray(json.alerts)
-      ? json.alerts.filter(item => {
-          const keysToCheck = [
-            item.modemSlNo,
-            item.modemno,
-            item.sno?.toString(),
-            item.modemId
-          ];
-    
-          return keysToCheck.some(key => key && modemIds.includes(key));
-        })
-      : [];
-      console.log("Filtered alerts:", filteredAlerts.length);
+        ? json.alerts.filter(item => {
+            const keysToCheck = [
+              item.modemSlNo,
+              item.modemno,
+              item.sno?.toString(),
+              item.modemId
+            ];
+      
+            return keysToCheck.some(key => key && modemIds.includes(key));
+          })
+        : [];
+      
+      console.log("Total modems received:", filteredAlerts.length);
       
       setApiData({
         alerts: filteredAlerts,
@@ -185,16 +153,12 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
       });
   
     } catch (error) {
-      console.error("Error fetching alerts:", error);
+      console.error("Error fetching all modems:", error);
       setApiData(null);
     } finally {
       setLoading(false);
     }
   };
-  
-  
-  
-  
 
   const getStatusFromCode = (code) => {
     const map = {
@@ -229,6 +193,7 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
       originalAlert: alert,
     };
   };
+
   const transformedAlerts = useMemo(() => {
     if (!apiData?.alerts || apiData.alerts.length === 0) {
       return modemErrors.map((m, i) => normalizeModemRecord(m, i));
@@ -236,93 +201,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
 
     return apiData.alerts.map((alert, index) => normalizeModemRecord(alert, index));
   }, [apiData]);
-
-  // ================================
-  // 📊 DASHBOARD METRICS
-  // ================================
-  const dashboardMetrics = useMemo(() => {
-    const communicatingSet = new Set();
-    const nonCommunicatingSet = new Set();
-    
-    // Non-communicating error codes (these indicate modem is not communicating)
-    const nonCommunicatingCodes = [214, 112, 212];
-    
-    // Initialize all officer modems as communicating (no alerts = communicating)
-    if (modemIds && modemIds.length > 0) {
-      modemIds.forEach(modemId => {
-        if (modemId) {
-          communicatingSet.add(modemId.toString());
-        }
-      });
-    }
-    
-    if (apiData && apiData.alerts && apiData.alerts.length > 0) {
-      const modemStatusMap = new Map();
-      
-      apiData.alerts?.forEach(alert => {
-        const alertModemId = alert.modemSlNo || alert.modemno || alert.sno?.toString() || alert.modemId;
-        
-        if (!alertModemId) return;
-        
-        const alertModemIdStr = alertModemId.toString();
-        
-        const matchingOfficerModemId = modemIds.find(officerModemId => 
-          officerModemId.toString() === alertModemIdStr ||
-          alertModemIdStr.includes(officerModemId.toString()) ||
-          officerModemId.toString().includes(alertModemIdStr)
-        );
-        
-        if (!matchingOfficerModemId) return; 
-        
-        const rawCode = alert.code || alert.errorCode;
-        const code = rawCode ? Number(rawCode) : null;
-        
-        if (modemStatusMap.get(matchingOfficerModemId) === 'non-communicating') {
-          return;
-        }
-        
-        if (code && !isNaN(code) && nonCommunicatingCodes.includes(code)) {
-          modemStatusMap.set(matchingOfficerModemId, 'non-communicating');
-        } else if (code && !isNaN(code)) {
-          
-          if (!modemStatusMap.has(matchingOfficerModemId)) {
-            modemStatusMap.set(matchingOfficerModemId, 'communicating');
-          }
-        }
-      });
-      
-      // Update sets based on alert status
-      modemStatusMap.forEach((status, modemId) => {
-        if (status === 'non-communicating') {
-          nonCommunicatingSet.add(modemId.toString());
-          communicatingSet.delete(modemId.toString()); // Remove from communicating
-        } else {
-          communicatingSet.add(modemId.toString());
-          nonCommunicatingSet.delete(modemId.toString()); // Remove from non-communicating
-        }
-      });
-    }
-
-    return {
-      communicatingModems: communicatingSet.size,
-      nonCommunicatingModems: nonCommunicatingSet.size,
-      totalTasksToday: apiData?.alerts?.length || 0,
-      completedTasksToday: 0,
-    };
-  }, [apiData, modemIds]);
-
-  const wipData = useMemo(
-    () => ({
-      ...dashboardMetrics,
-      metersInstalled: apiData?.stats?.uniqueModems || modemStats.connected,
-      metersCommissioned: apiData?.stats?.totalAlerts || modemStats.disconnected,
-      totalAlerts: apiData?.stats?.totalAlerts || '0',
-      uniqueMeters: apiData?.stats?.uniqueMeters || '0',
-      uniqueDiscoms: apiData?.stats?.uniqueDiscoms || '0',
-      avgSignalStrength: apiData?.stats?.avgSignalStrength1 || '0',
-    }),
-    [apiData, dashboardMetrics]
-  );
 
   // ================================
   // 🔍 FILTERED LIST + SEARCH
@@ -345,46 +223,17 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
     }
 
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter(m => {
-        // Search across multiple fields from the API data
-        const searchableFields = [
-          m.modemId || '',
-          m.meterSlNo || '',
-          m.error || '',
-          m.location || '',
-          m.discom || '',
-          m.reason || '',
-          m.status || '',
-          String(m.code || ''),
-          // Also search in original alert data (all fields from /modems/main API)
-          m.originalAlert?.codeDesc || '',
-          m.originalAlert?.discom || '',
-          m.originalAlert?.section || '',
-          m.originalAlert?.subdivision || '',
-          m.originalAlert?.division || '',
-          m.originalAlert?.circle || '',
-          m.originalAlert?.modemSlNo || '',
-          m.originalAlert?.modemno || '',
-          m.originalAlert?.sno || '',
-          m.originalAlert?.meterSlNo || '',
-          m.originalAlert?.ctmtrno || '',
-        ];
-        
-        const searchableText = searchableFields
-          .join(' ')
-          .toLowerCase();
-        
-        return searchableText.includes(q);
-      });
+      const q = searchQuery.toLowerCase();
+      list = list.filter(m =>
+        `${m.modemId} ${m.error} ${m.location}`
+          .toLowerCase()
+          .includes(q)
+      );
     }
 
     return list;
   }, [transformedAlerts, appliedFilters, searchQuery]);
 
-  // ================================
-  // 📌 JSX UI
-  // ================================
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
@@ -402,84 +251,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
             onPressCenter={() => navigation.navigate('Dashboard')}
             onPressRight={() => navigation.navigate('Profile')}
           />
-
-          {/* GREETING */}
-          <View style={styles.ProfileBox}>
-            <View style={styles.profileGreetingContainer}>
-              <View style={styles.profileGreetingRow}>
-                <Text style={styles.hiText}>Hi, {userName}</Text>
-                <Hand width={30} height={30} />
-              </View>
-              <Text style={styles.stayingText}>Monitoring modems today?</Text>
-            </View>
-          </View>
-
-          {/* ================= CARDS ROW ================= */}
-          <View style={styles.metricsRow}>
-            <TouchableOpacity
-              style={styles.metricCard}
-              // onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'ALL' })}
-              activeOpacity={0.7}
-            >
-              <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Total Field Activities</Text>
-                <Text style={styles.metricValue}>
-                  {loading ? '...' : (wipData?.totalTasksToday ?? 0)}
-                </Text>
-              </View>
-              <View style={styles.metricIconContainer}>
-                <TotalTasksIcon width={21} height={21} />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.metricCard}
-              // onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'COMMISSIONED' })}
-              onPress={() => navigation.navigate("CompletedActivities")}
-              activeOpacity={0.7}
-            >
-              <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Completed Field Activities</Text>
-                <Text style={styles.metricValue}>
-                  {loading ? '...' : (wipData?.completedTasksToday ?? 0)}
-                </Text>
-              </View>
-              <View style={[styles.metricIconContainer, styles.metricIconContainerSuccess]}>
-                <CompletedTasksIcon width={21} height={21} />
-              </View>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.metricsRow}>
-            <TouchableOpacity
-              style={styles.metricCard}
-              // onPress={() => navigation.navigate("ModemDetails")}
-              activeOpacity={0.7}
-            >
-              <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Communicating Modems</Text>
-                <Text style={styles.metricValue}>
-                  {loading ? '...' : wipData.communicatingModems}
-                </Text>
-              </View>
-              <View style={styles.metricIconContainer}>
-                <CommunicatingModemsIcon width={21} height={21} />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.metricCard}
-              // onPress={() => navigation.navigate("ModemDetails")}
-              activeOpacity={0.7}
-            >
-              <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Non-Communicating</Text>
-                <Text style={styles.metricValue}>
-                  {loading ? '...' : wipData.nonCommunicatingModems}
-                </Text>
-              </View>
-              <View style={styles.metricIconContainer}>
-                <NonCommunicatingModemsIcon width={21} height={21} />
-              </View>
-            </TouchableOpacity>
-          </View>
         </View>
 
         {/* ================= SEARCH & FILTER ================= */}
@@ -506,17 +277,16 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
           </TouchableOpacity>
         </View>
 
-
         {/* ================= MODEM CARDS LIST ================= */}
         <View style={styles.cardsWrapper}>
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Loading alerts…</Text>
+              <Text style={styles.loadingText}>Loading modems…</Text>
             </View>
           ) : filteredModems.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No alerts found</Text>
+              <Text style={styles.emptyText}>No modems found</Text>
             </View>
           ) : (
             filteredModems.map((modem) => (
@@ -533,7 +303,7 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
 
           <View style={styles.filterModalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter Alerts</Text>
+              <Text style={styles.modalTitle}>Filter Modems</Text>
               <Pressable onPress={() => setFilterModalVisible(false)}>
                 <Ionicons name="close" size={22} />
               </Pressable>
@@ -636,6 +406,7 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
 // =============================
 const ModemCard = ({ modem, navigation }) => {
   const { startTracking } = useContext(NotificationContext);
+  
   const getSignalIcon = () => {
     if (modem.signalStrength < 15) return <SignalWeaknessIcon width={20} height={20} />;
     if (modem.signalStrength <= 20) return <SignalAverageIcon width={20} height={20} />;
@@ -722,7 +493,7 @@ const ModemCard = ({ modem, navigation }) => {
   );
 };
 
-export default DashboardScreen;
+export default AllModemsScreen;
 
 /* ============================================
    ✅ STYLES
@@ -737,7 +508,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
 
-  /* ---------- HEADER + GREETING ---------- */
+  /* ---------- HEADER ---------- */
   bluecontainer: {
     backgroundColor: '#eef8f0',
     padding: 15,
@@ -768,75 +539,6 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
 
-  ProfileBox: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginHorizontal: 2,
-    marginBottom: 20,
-  },
-  profileGreetingContainer: {
-    gap: 6,
-  },
-  profileGreetingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  hiText: {
-    color: COLORS.primaryFontColor,
-    fontSize: 18,
-    fontFamily: 'Manrope-Bold',
-  },
-  stayingText: {
-    color: COLORS.primaryFontColor,
-    fontSize: 14,
-    fontFamily: 'Manrope-Regular',
-  },
-
-  /* ---------- METRIC CARDS ---------- */
-  metricsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  metricCard: {
-    backgroundColor: '#fff',
-    borderRadius: 5,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    width: (width - 40) / 2,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    height: 100,
-  },
-  textContainer: {
-    width: 120,
-    alignItems: 'flex-start',
-    height: "100%",
-    justifyContent: "space-between",
-  },
-  metricValue: {
-    fontSize: 20,
-    color: colors.secondary,
-    fontFamily: 'Manrope-Bold',
-  },
-  metricTitle: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: 'Manrope-Regular',
-  },
-  metricIconContainer: {
-    width: 34,
-    height: 34,
-    borderRadius: 19,
-    backgroundColor: colors.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  metricIconContainerSuccess: {
-    backgroundColor: '#4CAF50',
-  },
-
   /* ---------- SEARCH + FILTER ---------- */
   searchCardWrapper: {
     flexDirection: 'row',
@@ -845,17 +547,18 @@ const styles = StyleSheet.create({
     elevation: 0.5,
     paddingVertical: 7,
     paddingBottom: 14,
+    paddingHorizontal: 20,
   },
   searchCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: "#F8F8F8",
-    marginHorizontal: 20,
     height: 45,
     paddingHorizontal: 10,
     borderRadius: 5,
     marginTop: 10,
-    width: '55%',
+    flex: 1,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
@@ -913,9 +616,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    ...typography.body,
     color: colors.textSecondary,
     marginTop: spacing.md,
+    fontFamily: 'Manrope-Regular',
+    fontSize: 14,
   },
   emptyContainer: {
     padding: spacing.xl,
@@ -923,8 +627,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyText: {
-    ...typography.body,
     color: colors.textSecondary,
+    fontFamily: 'Manrope-Regular',
+    fontSize: 14,
   },
 
   /* ---------- MODEM CARD ---------- */
@@ -1063,7 +768,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Manrope-Bold',
   },
   modalSection: {
     marginBottom: spacing.lg,
@@ -1179,5 +884,4 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 20,
   },
-
 });

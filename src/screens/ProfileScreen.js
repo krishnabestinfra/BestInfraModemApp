@@ -1,4 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -20,6 +22,8 @@ import NotificationCard from '../components/global/NotificationCard';
 import { COLORS } from '../constants/colors';
 import EmptyNotification from '../../assets/icons/NoNotification.svg';
 // import { notifications as defaultNotifications } from '../data/dummyData';
+import { useContext } from 'react';
+import { NotificationContext } from '../context/NotificationContext';
 
 const iconMapper = {
   payment: HandBill,
@@ -41,31 +45,62 @@ const variantMapper = {
 };
 
 const ProfileScreen = ({ navigation }) => {
-  const [notificationList, setNotificationList] = useState([]);
+  const { notifications, setNotifications } = useContext(NotificationContext);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   const consumerUid = 'BI25GMRA0001';
-
-  const displayNotifications = useMemo(
-    () => notificationList.slice(0, 10),
-    [notificationList]
+  
+  // Reload notifications from AsyncStorage when screen focuses
+  useFocusEffect(
+    useCallback(() => {
+      const loadNotifications = async () => {
+        try {
+          console.log("📱 ProfileScreen focused - loading notifications...");
+          const savedNoti = await AsyncStorage.getItem("notifications");
+          if (savedNoti) {
+            const parsed = JSON.parse(savedNoti);
+            console.log("✅ Loaded notifications from storage:", parsed.length, parsed);
+            setNotifications(parsed);
+          } else {
+            console.log("⚠️ No notifications found in storage");
+            setNotifications([]);
+          }
+        } catch (e) {
+          console.log("❌ Error loading notifications:", e);
+        }
+      };
+      
+      loadNotifications();
+    }, [])
   );
+  
+  const displayNotifications = notifications.slice(0, 5);
+  console.log("📊 Display Notifications:", displayNotifications);
+  console.log("📊 Display Notifications Count:", displayNotifications.length);
+  console.log("📊 Context notifications count:", notifications.length);
 
-  const handleNotificationPress = useCallback((notification) => {
-    setNotificationList((prev) =>
-      prev.map((item) =>
-        item.id === notification.id ? { ...item, is_read: true } : item
-      )
+  const markAsRead = async (id) => {
+    const updated = notifications.map(n =>
+      n.id === id ? { ...n, is_read: true } : n
     );
-  }, []);
+    setNotifications(updated);
+    // Save to AsyncStorage
+    await AsyncStorage.setItem("notifications", JSON.stringify(updated));
+  };
+
+  const handleNotificationPress = (notification) => {
+    if (!notification.is_read) {
+      markAsRead(notification.id);
+    }
+  };
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     setError(null);
     setTimeout(() => {
-      setNotificationList((prev) => [...prev]);
+      setNotifications((prev) => [...prev]);
       setRefreshing(false);
     }, 800);
   }, []);

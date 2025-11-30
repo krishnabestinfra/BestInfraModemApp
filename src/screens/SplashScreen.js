@@ -1,57 +1,17 @@
 import React, { useEffect } from "react";
 import { View, StyleSheet, Image, Dimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import RippleLogo from "../components/global/RippleLogo";
 
 const { width, height } = Dimensions.get("window");
 
-const getUser = async () => {
-  try {
-    const userData = await AsyncStorage.getItem("user"); 
-    return userData ? JSON.parse(userData) : null;
-  } catch (error) {
-    return null;
-  }
-};
-
 const SplashScreen = ({ onFinish }) => {
-
   useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        console.log('🚀 Initializing app...');
-        
-        // Proceed with normal app flow
-        await proceedToMainApp();
-        
-      } catch (error) {
-        console.error('❌ Error during app initialization:', error);
-        // On error, proceed to main app (graceful degradation)
-        await proceedToMainApp();
-      }
-    };
+    const timer = setTimeout(() => {
+      onFinish?.();
+    }, 2000);
 
-    const proceedToMainApp = async () => {
-      const user = await getUser();
-      const timeoutId = setTimeout(() => {
-        onFinish?.(Boolean(user));
-      }, 2000);
-
-      return timeoutId;
-    };
-
-    let cleanupTimeout;
-
-    initializeApp().then((timeoutId) => {
-      cleanupTimeout = timeoutId;
-    });
-
-    return () => {
-      if (cleanupTimeout) {
-        clearTimeout(cleanupTimeout);
-      }
-    };
+    return () => clearTimeout(timer);
   }, [onFinish]);
 
   return (
@@ -93,12 +53,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.3)", // Semi-transparent overlay for better text visibility
+    backgroundColor: "rgba(0, 0, 0, 0.3)", 
   },
   centerWrapper: {
     flex: 1,
-    justifyContent: "center", // Center vertically
-    alignItems: "center", // Center horizontally
-    zIndex: 1, // Ensure content is above background
+    justifyContent: "center", 
+    alignItems: "center", 
+    zIndex: 1, 
   },
 });
