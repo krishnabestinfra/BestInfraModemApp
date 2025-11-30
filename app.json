@@ -51,14 +51,15 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2196F3"
-      }
+      },
+      "package": "com.krishnajayanth.modemdiagnostics"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "75908f7a-ba73-4786-97bf-14d1114c863a"
+        "projectId": "b0c5cdd6-32a9-40d4-91a0-dc3d53ebf42d"
       }
     }
   }

@@ -40,6 +40,8 @@ import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
 import CommunicatingModemsIcon from '../../assets/icons/communicating.svg';
 import NonCommunicatingModemsIcon from '../../assets/icons/noncommicating.svg';
+import TotalTasksIcon from '../../assets/icons/totaltasks.svg';
+import CompletedTasksIcon from '../../assets/icons/completedtasks.svg';
 import { NotificationContext } from '../context/NotificationContext';
 import { useContext } from 'react';
 
