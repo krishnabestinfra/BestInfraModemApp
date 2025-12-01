@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { View, StyleSheet, Image, Dimensions } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import RippleLogo from "../components/global/RippleLogo";
 
@@ -15,7 +16,7 @@ const SplashScreen = ({ onFinish }) => {
   }, [onFinish]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <StatusBar style="light" />
       
       <Image 
@@ -29,7 +30,7 @@ const SplashScreen = ({ onFinish }) => {
       <View style={styles.centerWrapper}>
         <RippleLogo size={120} logoVariant="white" logoSize="large" />
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

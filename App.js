@@ -5,6 +5,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import AppNavigator from './src/navigation/AppNavigator';
 import { SidebarProvider } from './src/context/SidebarContext';
 import { NotificationProvider } from './src/context/NotificationContext';
+import * as NavigationBar from 'expo-navigation-bar';
+
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -25,9 +27,17 @@ export default function App() {
     }
   }, [fontsLoaded]);
 
+  useEffect(() => {
+    NavigationBar.setBehaviorAsync("overlay-swipe");
+    NavigationBar.setVisibilityAsync("visible"); // keeps the bar visible
+    NavigationBar.setBackgroundColorAsync("transparent");
+  }, []);
+
   if (!fontsLoaded) {
     return null;
   }
+
+
 
   return (
     <SafeAreaProvider>

@@ -10,6 +10,7 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Menu from '../../assets/icons/bars.svg';
 import Notification from '../../assets/icons/notificationsWhite.svg';
@@ -112,7 +113,7 @@ const ProfileScreen = ({ navigation }) => {
     variantMapper[type?.toLowerCase()] ?? 'default';
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <StatusBar style="light" />
       <View style={styles.topMenu}>
         <Pressable
@@ -185,7 +186,7 @@ const ProfileScreen = ({ navigation }) => {
           ))
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 75,
+    paddingTop: 15,
     paddingBottom: 15,
     paddingHorizontal: 30,
   },
