@@ -40,6 +40,8 @@ import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
 import CommunicatingModemsIcon from '../../assets/icons/communicating.svg';
 import NonCommunicatingModemsIcon from '../../assets/icons/noncommicating.svg';
+import TotalTasksIcon from '../../assets/icons/totaltasks.svg';
+import CompletedTasksIcon from '../../assets/icons/completedtasks.svg';
 import { NotificationContext } from '../context/NotificationContext';
 import { useContext } from 'react';
 
@@ -414,7 +416,44 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
 
           {/* ================= CARDS ROW ================= */}
           <View style={styles.metricsRow}>
-            <TouchableOpacity style={styles.metricCard} onPress={() => navigation.navigate("ModemDetails")}>
+            <TouchableOpacity
+              style={styles.metricCard}
+              // onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'ALL' })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.textContainer}>
+                <Text style={styles.metricTitle}>Total Field Activities</Text>
+                <Text style={styles.metricValue}>
+                  {loading ? '...' : (wipData?.totalTasksToday ?? 0)}
+                </Text>
+              </View>
+              <View style={styles.metricIconContainer}>
+                <TotalTasksIcon width={21} height={21} />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.metricCard}
+              // onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'COMMISSIONED' })}
+              onPress={() => navigation.navigate("CompletedActivities")}
+              activeOpacity={0.7}
+            >
+              <View style={styles.textContainer}>
+                <Text style={styles.metricTitle}>Completed Field Activities</Text>
+                <Text style={styles.metricValue}>
+                  {loading ? '...' : (wipData?.completedTasksToday ?? 0)}
+                </Text>
+              </View>
+              <View style={[styles.metricIconContainer, styles.metricIconContainerSuccess]}>
+                <CompletedTasksIcon width={21} height={21} />
+              </View>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.metricsRow}>
+            <TouchableOpacity
+              style={styles.metricCard}
+              // onPress={() => navigation.navigate("ModemDetails")}
+              activeOpacity={0.7}
+            >
               <View style={styles.textContainer}>
                 <Text style={styles.metricTitle}>Communicating Modems</Text>
                 <Text style={styles.metricValue}>
@@ -425,8 +464,11 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
                 <CommunicatingModemsIcon width={21} height={21} />
               </View>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.metricCard} onPress={() => navigation.navigate("ModemDetails")}>
+            <TouchableOpacity
+              style={styles.metricCard}
+              // onPress={() => navigation.navigate("ModemDetails")}
+              activeOpacity={0.7}
+            >
               <View style={styles.textContainer}>
                 <Text style={styles.metricTitle}>Non-Communicating</Text>
                 <Text style={styles.metricValue}>
