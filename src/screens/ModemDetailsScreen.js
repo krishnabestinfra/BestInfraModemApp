@@ -265,7 +265,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={[]}>
         <StatusBar style="dark" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -276,7 +276,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
       <ScrollView
         style={styles.scroll}

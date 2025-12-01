@@ -23,23 +23,23 @@ import MetersIcon from "../../assets/icons/meterWhite.svg";
 import ModemsIcon from "../../assets/icons/modem.svg";
 
 
-const SideMenu = ({ navigation, onLogout }) => {
+const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone }) => {
   const { activeItem, setActiveItem } = useSidebar();
 
 
   const renderContent = () => {
     switch (activeItem) {
       case "Dashboard":
-        return <DashboardScreen navigation={navigation} />;
+        return <DashboardScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
   
       case "Modems":
-        return <AllModemsScreen navigation={navigation} />;
+        return <AllModemsScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
   
       case "Resolved":
-        return <CompletedActivities navigation={navigation} />;
+        return <CompletedActivities navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
       
       default:
-        return <DashboardScreen navigation={navigation} />;
+        return <DashboardScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
     }
   };
   

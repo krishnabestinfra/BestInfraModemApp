@@ -384,11 +384,9 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
     return list;
   }, [transformedAlerts, appliedFilters, searchQuery]);
 
-  // ================================
-  // 📌 JSX UI
-  // ================================
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
@@ -726,9 +724,6 @@ const ModemCard = ({ modem, navigation }) => {
 
 export default DashboardScreen;
 
-/* ============================================
-   ✅ STYLES
-   ============================================ */
 
 const styles = StyleSheet.create({
   safeArea: {

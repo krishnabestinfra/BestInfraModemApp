@@ -143,7 +143,7 @@ const TroubleshootScreen = ({ navigation, route }) => {
   const handleComplete = () => navigation.navigate('Dashboard');
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
 
       <View style={styles.container}>

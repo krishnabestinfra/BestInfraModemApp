@@ -183,12 +183,15 @@ const AppNavigator = () => {
               name="SideMenu" 
               options={{ 
                 headerShown: false,
-                animation: 'slide_from_left'
+                animation: 'slide_from_left',
               }}
             >
               {(props) => (
                 <SideMenu
                   {...props}
+                  modems={userModems}
+                  modemIds={userModems.map(m => m.modemno)}
+                  userPhone={userPhone}
                   onLogout={handleLogout}
                 />
               )}
