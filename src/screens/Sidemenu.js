@@ -1,5 +1,7 @@
 import React from "react";
-import { Pressable, ScrollView, StatusBar, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { BlurView } from "expo-blur";
 import { COLORS } from "../constants/colors";
 import MenuIcon from "../../assets/icons/barsWhite.svg";
@@ -61,7 +63,7 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
 
 
   return (
-    <View style={styles.Container}>
+    <SafeAreaView style={styles.Container} edges={[]}>
       <StatusBar style="light" />
 
 
@@ -127,7 +129,7 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
 
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -137,7 +139,7 @@ export default SideMenu;
 const styles = StyleSheet.create({
   Container: {
     backgroundColor: COLORS.brandBlueColor,
-    height: "100%",
+    flex: 1
 
   },
   TopMenu: {

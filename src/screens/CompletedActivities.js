@@ -241,7 +241,6 @@ export default CompletedActivities;
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        
         backgroundColor: "#EEF8F0",
     },
 
@@ -266,16 +265,16 @@ const styles = StyleSheet.create({
 
     // CONTENT
     container: {
+        flex: 1,                // allow container to fill available screen
         paddingHorizontal: 15,
         backgroundColor: "#EEF8F0",
-        height: "100%",
     },
 
     subContainer: {
         backgroundColor: "#fff",
         borderRadius: 5,
-        flex: 1, 
-        overflow: "hidden",    
+        flex: 1,               // make the white card fill remaining vertical space
+        overflow: "hidden",    // prevents child shadows leaking when rounded
     },
     sectionHeader: {
         flexDirection: "row",

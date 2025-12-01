@@ -276,7 +276,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={[]}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar style="dark" />
       <ScrollView
         style={styles.scroll}

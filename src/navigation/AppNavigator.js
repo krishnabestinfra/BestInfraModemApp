@@ -183,7 +183,7 @@ const AppNavigator = () => {
               name="SideMenu" 
               options={{ 
                 headerShown: false,
-                animation: 'slide_from_left',
+                animation: 'slide_from_left'
               }}
             >
               {(props) => (

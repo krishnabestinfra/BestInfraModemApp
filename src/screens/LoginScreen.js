@@ -7,10 +7,10 @@ import {
   Platform,
   KeyboardAvoidingView,
   ScrollView,
-  SafeAreaView,
   TextInput,
   Pressable,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { COLORS } from "../constants/colors";
@@ -248,7 +248,7 @@ const LoginScreen = ({  navigation, onLogin }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <StatusBar style="light" />
 
       <KeyboardAvoidingView

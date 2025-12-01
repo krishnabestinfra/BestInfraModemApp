@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Modem Diagnostics",
+    "name": "Nexus Maintainance",
     "slug": "modem-diagnostics",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -49,7 +49,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#2196F3"
       },
       "package": "com.srusti1234.modemdiagnostics"
@@ -72,7 +72,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "710caf2d-4edb-4957-bd50-5d0b00aefce9"
+        "projectId": "16e87ef0-36f0-41e2-b524-95a5d95dbd87"
       }
     }
   }
