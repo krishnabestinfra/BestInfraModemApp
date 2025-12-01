@@ -235,7 +235,7 @@ const AllModemsScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   }, [transformedAlerts, appliedFilters, searchQuery]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
 
-  /* ---------- SEARCH + FILTER ---------- */
+
   searchCardWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
