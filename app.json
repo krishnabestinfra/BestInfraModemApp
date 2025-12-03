@@ -4,15 +4,17 @@
     "slug": "nexus-field-force",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icons/bi_Icon.png",
+    "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/icons/bi_Icon.png",
+      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2196F3"
+      "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
-      "**/*"
+      "assets/fonts/*",
+      "assets/icons/*",
+      "assets/images/*"
     ],
     "fonts": [
       {
@@ -49,13 +51,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icons/bi_Icon.png",
-        "backgroundColor": "#2196F3"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#1e4a7a"
       },
-      "package": "com.srusti1234.modemdiagnostics"
+      "package": "com.srusti1234.modemdiagnostics",
+      "versionCode": 4
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
       [
@@ -72,7 +75,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "16e87ef0-36f0-41e2-b524-95a5d95dbd87"
+        "projectId": "5f95864a-dc04-41e3-abb5-5dca704738b1"
       }
     }
   }
