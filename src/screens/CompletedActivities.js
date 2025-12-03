@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import RippleLogo from "../components/global/RippleLogo";
@@ -16,6 +16,7 @@ import { API_ENDPOINTS, API_KEY, getProtectedHeaders } from "../config/apiConfig
 import { getUserPhone } from "../utils/storage";
 
 const CompletedActivities = ({ navigation, modems = [], modemIds = [], userPhone }) => {
+    const insets = useSafeAreaInsets();
     const [resolvedList, setResolvedList] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -199,7 +200,7 @@ const CompletedActivities = ({ navigation, modems = [], modemIds = [], userPhone
                     <ScrollView
                         style={{ flex: 1 }}
                         showsVerticalScrollIndicator={false}
-                        contentContainerStyle={{ paddingBottom: 40 }}
+                        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
                     >
                         <View style={styles.cardsContainer}>
                             {resolvedList.map((item) => (

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AlertCard from '../components/AlertCard';
 import { alerts } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography, shadows } from '../styles/theme';
 
 const AlertsScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [selectedSeverity, setSelectedSeverity] = useState('All');
 
   const severityOptions = ['All', 'High', 'Medium', 'Low'];
@@ -84,7 +85,7 @@ const AlertsScreen = ({ navigation }) => {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <AlertCard alert={item} />}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={[styles.listContainer, { paddingBottom: spacing.lg + insets.bottom }]}
       />
     </SafeAreaView>
   );

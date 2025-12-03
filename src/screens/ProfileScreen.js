@@ -10,7 +10,7 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Menu from '../../assets/icons/bars.svg';
 import Notification from '../../assets/icons/notificationsWhite.svg';
@@ -46,6 +46,7 @@ const variantMapper = {
 };
 
 const ProfileScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { notifications, setNotifications } = useContext(NotificationContext);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -137,7 +138,7 @@ const ProfileScreen = ({ navigation }) => {
 
       <ScrollView
         style={styles.notificationsContainer}
-        contentContainerStyle={{ flexGrow: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 15 + insets.bottom }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl

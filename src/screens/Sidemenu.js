@@ -1,6 +1,6 @@
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { BlurView } from "expo-blur";
 import { COLORS } from "../constants/colors";
@@ -26,6 +26,7 @@ import ModemsIcon from "../../assets/icons/modem.svg";
 
 
 const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone }) => {
+  const insets = useSafeAreaInsets();
   const { activeItem, setActiveItem } = useSidebar();
 
 
@@ -115,7 +116,7 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
           />
         </View>
 
-        <View style={styles.componentsbar}>
+        <View style={[styles.componentsbar, { paddingBottom: insets.bottom }]}>
 
           <ScrollView scrollEnabled={false} style={styles.DashComponentsbar}>
             {renderContent()}

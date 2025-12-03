@@ -101,6 +101,7 @@ const formatDisplayDateTime = (dateString) => {
 };
 
 const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
+  const insets = useSafeAreaInsets();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeMenuItem, setActiveMenuItem] = useState('Transactions');
   const [apiData, setApiData] = useState(null);
@@ -280,7 +281,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
       <StatusBar style="dark" />
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xxl + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         <LinearGradient
