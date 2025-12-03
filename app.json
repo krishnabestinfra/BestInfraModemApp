@@ -1,20 +1,18 @@
 {
   "expo": {
-    "name": "Nexus Field Force",
-    "slug": "nexus-field-force",
+    "name": "Modem Diagnostics",
+    "slug": "modem-diagnostics",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#2196F3"
     },
     "assetBundlePatterns": [
-      "assets/fonts/*",
-      "assets/icons/*",
-      "assets/images/*"
+      "**/*"
     ],
     "fonts": [
       {
@@ -51,14 +49,13 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#1e4a7a"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2196F3"
       },
-      "package": "com.srusti1234.modemdiagnostics",
-      "versionCode": 4
+      "package": "com.bestinfra.app"
     },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       [
@@ -75,7 +72,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "5f95864a-dc04-41e3-abb5-5dca704738b1"
+        "projectId": "710caf2d-4edb-4957-bd50-5d0b00aefce9"
       }
     }
   }
