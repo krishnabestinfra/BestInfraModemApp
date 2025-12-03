@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Nexus Maintainance",
-    "slug": "modem-diagnostics",
+    "name": "Nexus Field Force",
+    "slug": "nexus-field-force",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icons/bi_Icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icons/bi_Icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#2196F3"
     },
@@ -49,7 +49,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
+        "foregroundImage": "./assets/icons/bi_Icon.png",
         "backgroundColor": "#2196F3"
       },
       "package": "com.srusti1234.modemdiagnostics"

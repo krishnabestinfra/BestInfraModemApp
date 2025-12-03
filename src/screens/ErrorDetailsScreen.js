@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ErrorRow from '../components/ErrorRow';
 import { modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography, shadows } from '../styles/theme';
 
 const ErrorDetailsScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState('non-communicating'); // 'resolved'
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -83,7 +84,7 @@ const ErrorDetailsScreen = ({ navigation }) => {
           />
         )}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={[styles.listContainer, { paddingBottom: spacing.lg + insets.bottom }]}
       />
     </SafeAreaView>
   );

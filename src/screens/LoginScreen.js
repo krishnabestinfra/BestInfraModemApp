@@ -10,7 +10,7 @@ import {
   TextInput,
   Pressable,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { COLORS } from "../constants/colors";
@@ -28,6 +28,7 @@ const PHONE_LENGTH = 10;
 const OTP_LENGTH = 6;
 
 const LoginScreen = ({  navigation, onLogin }) => {
+  const insets = useSafeAreaInsets();
   const [mobileNumber, setMobileNumber] = useState("");
   const [otpDigits, setOtpDigits] = useState(Array(OTP_LENGTH).fill(""));
   const [rememberMe, setRememberMe] = useState(false);
@@ -257,6 +258,7 @@ const LoginScreen = ({  navigation, onLogin }) => {
       >
         <ScrollView
           style={styles.subContainer}
+          contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
           keyboardShouldPersistTaps="handled"
         >
           <View>
