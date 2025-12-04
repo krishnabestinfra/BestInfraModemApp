@@ -29,7 +29,7 @@ export default function App() {
 
   useEffect(() => {
     NavigationBar.setBehaviorAsync("overlay-swipe");
-    NavigationBar.setVisibilityAsync("visible"); // keeps the bar visible
+    NavigationBar.setVisibilityAsync("visible");
     NavigationBar.setBackgroundColorAsync("transparent");
   }, []);
 
@@ -43,7 +43,7 @@ export default function App() {
     <SafeAreaProvider>
       <SidebarProvider>
         <NotificationProvider>
-        <AppNavigator />
+          <AppNavigator />
         </NotificationProvider>
       </SidebarProvider>
     </SafeAreaProvider>

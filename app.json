@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "Modem Diagnostics",
-    "slug": "modem-diagnostics",
+    "name": "Nexus Field Force",
+    "slug": "nexus-field-force",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2196F3"
+      "backgroundColor": "#163b7c"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -49,8 +49,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#2196F3"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#163b7c"
       },
       "package": "com.bestinfra.app"
     },
@@ -72,7 +72,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "710caf2d-4edb-4957-bd50-5d0b00aefce9"
+        "projectId": "2cfaa739-58be-4516-9c9d-360895d606a7"
       }
     }
   }

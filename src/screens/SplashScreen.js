@@ -1,19 +1,45 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, StyleSheet, Image, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import RippleLogo from "../components/global/RippleLogo";
+import ForceUpdateModal from "../components/ForceUpdateModal";
+import { checkAppVersion } from "../utils/versionCheck";
 
 const { width, height } = Dimensions.get("window");
 
 const SplashScreen = ({ onFinish }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onFinish?.();
-    }, 2000);
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [versionChecked, setVersionChecked] = useState(false);
 
-    return () => clearTimeout(timer);
-  }, [onFinish]);
+  useEffect(() => {
+    // Check for app version update
+    const performVersionCheck = async () => {
+      try {
+        const info = await checkAppVersion();
+        if (info?.needsUpdate) {
+          setUpdateInfo(info);
+        }
+        setVersionChecked(true);
+      } catch (error) {
+        console.error('Version check error:', error);
+        setVersionChecked(true);
+      }
+    };
+
+    performVersionCheck();
+  }, []);
+
+  useEffect(() => {
+    // Only proceed if version check is done and no update is needed
+    if (versionChecked && !updateInfo) {
+      const timer = setTimeout(() => {
+        onFinish?.();
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [versionChecked, updateInfo, onFinish]);
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
@@ -30,6 +56,14 @@ const SplashScreen = ({ onFinish }) => {
       <View style={styles.centerWrapper}>
         <RippleLogo size={120} logoVariant="white" logoSize="large" />
       </View>
+
+      {updateInfo && (
+        <ForceUpdateModal
+          visible={true}
+          message={updateInfo.message}
+          storeUrl={updateInfo.storeUrl}
+        />
+      )}
     </SafeAreaView>
   );
 };

@@ -1,0 +1,10 @@
+{
+  "minimumVersion": "1.0.1",
+  "message": "A new version is available with important updates. Please update to continue using the app.",
+  "storeUrl": {
+    "android": "https://play.google.com/store/apps/details?id=com.bestinfra.app",
+    "ios": "https://apps.apple.com/app/id123456789"
+  }
+}
+
+
