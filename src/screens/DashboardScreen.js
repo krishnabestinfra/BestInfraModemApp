@@ -1,9 +1,10 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   TextInput,
   Pressable,
@@ -23,8 +24,6 @@ import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import { API_BASE_URL, API_KEY, API_ENDPOINTS, getProtectedHeaders } from "../config/apiConfig";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-
 
 import { modemStats, modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
@@ -110,11 +109,28 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
     appliedFilters.signal !== 'all' ||
     appliedFilters.errorType !== 'all';
 
-  const handleResetFilters = () => {
+  const handleResetFilters = useCallback(() => {
     const cleared = { statuses: [], signal: 'all', errorType: 'all', sortBy: 'newest' };
     setAppliedFilters(cleared);
     setDraftFilters(cleared);
-  };
+  }, []);
+
+  const handleOpenFilterModal = useCallback(() => {
+    setFilterModalVisible(true);
+  }, []);
+
+  const handleCloseFilterModal = useCallback(() => {
+    setFilterModalVisible(false);
+  }, []);
+
+  const handleApplyFilters = useCallback(() => {
+    setAppliedFilters(draftFilters);
+    setFilterModalVisible(false);
+  }, [draftFilters]);
+
+  const handleScanPress = useCallback(() => {
+    navigation.navigate("ScanScreen");
+  }, [navigation]);
 
   useEffect(() => {
     if (modemIds.length > 0 && userPhone) {
@@ -127,19 +143,16 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
         stopAlertPolling();
       };
     }
-  }, [modemIds, userPhone]);
+  }, [modemIds, userPhone, fetchApiData, startAlertPolling, stopAlertPolling]);
   
   
 
-  const fetchApiData = async () => {
+  const fetchApiData = useCallback(async () => {
     try {
       setLoading(true);
   
       const modemQuery = modemIds.join(",");
       const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}`;
-      
-      console.log("Fetching alerts from:", url);
-      console.log("Filtering for modemIds:", modemIds);
   
       const response = await fetch(url, {
         method: "GET",
@@ -147,23 +160,15 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
       });
   
       const json = await response.json();
-  
-      console.log("RAW /modems/main RESPONSE:", json);
 
       // Check if API returned an error
       if (!response.ok || (json.success === false) || json.error) {
-        console.error("API Error:", json.error || "Unknown error");
         setApiData({
           alerts: [],
           stats: {}
         });
         return;
       }
-  
-      console.log("Officer modemIds:", modemIds);
-      console.log("Total alerts received:", json.alerts?.length);
-      console.log("Sample alert item:", json.alerts?.[0]);
-
   
       // FILTER ALERTS FOR THIS FIELD OFFICER ONLY
       const filteredAlerts = Array.isArray(json.alerts)
@@ -178,7 +183,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
           return keysToCheck.some(key => key && modemIds.includes(key));
         })
       : [];
-      console.log("Filtered alerts:", filteredAlerts.length);
       
       setApiData({
         alerts: filteredAlerts,
@@ -186,12 +190,11 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
       });
   
     } catch (error) {
-      console.error("Error fetching alerts:", error);
       setApiData(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [modemIds, userPhone]);
   
   
   
@@ -387,7 +390,7 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xl + insets.bottom }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}>
 
         {/* ================= HEADER ================= */}
         <View style={styles.bluecontainer}>
@@ -462,12 +465,10 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
             <SearchIcon width={16} height={16} />
           </View>
 
-          <TouchableOpacity style={styles.scanButton} onPress={() => navigation.navigate("ScanScreen")}>
-            <Text style={styles.scanText}>Scan</Text>
-            <ScanIcon width={16} height={16} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
+          <TouchableOpacity 
+            style={styles.filterButton} 
+            onPress={handleOpenFilterModal}
+          >
             <FilterIcon width={20} height={20} />
             {hasActiveFilters && <View style={styles.filterActiveDot} />}
           </TouchableOpacity>
@@ -493,15 +494,27 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
         </View>
       </ScrollView>
 
+      {/* ================= STICKY SCAN BUTTON ================= */}
+      <View style={[styles.stickyScanButtonContainer, { paddingBottom: spacing.md + insets.bottom }]}>
+        <TouchableOpacity 
+          style={styles.stickyScanButton} 
+          onPress={handleScanPress}
+          activeOpacity={0.8}
+        >
+          <ScanIcon width={20} height={20} />
+          <Text style={styles.stickyScanButtonText}>Scan QR Code</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* ================= FILTER MODAL ================= */}
       <Modal transparent visible={filterModalVisible} animationType="fade">
         <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setFilterModalVisible(false)} />
+          <Pressable style={styles.modalBackdrop} onPress={handleCloseFilterModal} />
 
           <View style={styles.filterModalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filter Alerts</Text>
-              <Pressable onPress={() => setFilterModalVisible(false)}>
+              <Pressable onPress={handleCloseFilterModal}>
                 <Ionicons name="close" size={22} />
               </Pressable>
             </View>
@@ -558,10 +571,7 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => {
-                  setAppliedFilters(draftFilters);
-                  setFilterModalVisible(false);
-                }}
+                onPress={handleApplyFilters}
                 style={[styles.modalButton, styles.modalButtonPrimary]}
               >
                 <Text style={styles.modalButtonText}>Apply</Text>
@@ -601,7 +611,7 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
 // =============================
 // 📌 MODEM CARD COMPONENT
 // =============================
-const ModemCard = ({ modem, navigation }) => {
+const ModemCard = React.memo(({ modem, navigation }) => {
   const { startTracking } = useContext(NotificationContext);
   const getSignalIcon = () => {
     if (modem.signalStrength < 15) return <SignalWeaknessIcon width={20} height={20} />;
@@ -609,17 +619,15 @@ const ModemCard = ({ modem, navigation }) => {
     return <SignalStrongIcon width={20} height={20} />;
   };
 
-  const handleCardPress = () => {
+  const handleCardPress = useCallback(() => {
     navigation.navigate("ModemDetails", {
       modem,
       modemSlNo: modem.modemId
     });
-  };
+  }, [modem, navigation]);
 
-  const handleDirection = async () => {
+  const handleDirection = useCallback(async () => {
     await startTracking(modem.modemId);
-
-    console.log("Now tracking:", modem.modemId);
 
     const lat = 17.3850;
     const lon = 78.4867;
@@ -632,7 +640,7 @@ const ModemCard = ({ modem, navigation }) => {
     Linking.openURL(url).catch(() => {
       Alert.alert("Cannot open maps", "Install Google Maps or Apple Maps to use directions.");
     });
-  };
+  }, [modem.modemId, startTracking]);
 
   return (
     <Pressable onPress={handleCardPress} style={styles.modemCard}>
@@ -687,7 +695,7 @@ const ModemCard = ({ modem, navigation }) => {
       </View>
     </Pressable>
   );
-};
+});
 
 export default DashboardScreen;
 
@@ -819,7 +827,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 5,
     marginTop: 10,
-    width: '55%',
+    flex: 1,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
@@ -827,19 +836,6 @@ const styles = StyleSheet.create({
     color: "#6E6E6E",
     fontFamily: 'Manrope-Regular',
     fontSize: 14,
-  },
-  scanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    backgroundColor: colors.secondary,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 5,
-    marginRight: spacing.sm,
-    height: 45,
-    width: '23%',
-    marginTop: 9,
   },
   scanText: {
     color: '#fff',
@@ -852,7 +848,8 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginTop: 8,
     padding: 10,
-    borderRadius: 5
+    borderRadius: 5,
+    marginRight: 10,
   },
   filterActiveDot: {
     width: 10,
@@ -899,6 +896,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F8F8F8',
     marginBottom: spacing.md,
+    elevation: 0.5,
   },
   itemHeader: {
     flexDirection: 'row',
@@ -1142,6 +1140,40 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-Regular',
     color: '#666',
     lineHeight: 20,
+  },
+
+  /* ---------- STICKY SCAN BUTTON ---------- */
+  stickyScanButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#F8F8F8',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  stickyScanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.secondary,
+    paddingVertical: spacing.ms,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 5,
+    width: '100%',
+    gap: spacing.sm,
+  },
+  stickyScanButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Manrope-SemiBold',
   },
 
 });

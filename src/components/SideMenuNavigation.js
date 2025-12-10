@@ -2,11 +2,9 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import LogoutIcon from '../../assets/icons/logoutMenu.svg';
 import ActiveLogout from '../../assets/icons/activeLogout.svg';
-import QRScannerIcon from '../../assets/icons/QRscanner.svg';
 import { COLORS } from '../constants/colors';
 
-const SideMenuNavigation = ({ items, activeItem, onSelect, onLogout, onScan }) => {
-  const hasScanner = typeof onScan === 'function';
+const SideMenuNavigation = ({ items, activeItem, onSelect, onLogout }) => {
 
   return (
     <View style={{ flex: 1, justifyContent: 'space-between' }}>
@@ -39,13 +37,6 @@ const SideMenuNavigation = ({ items, activeItem, onSelect, onLogout, onScan }) =
 
       {/* LOGOUT */}
       <View style={styles.logoutWrapper}>
-        {hasScanner && (
-          <Pressable style={[styles.menuRow, styles.scanRow]} onPress={onScan}>
-            <QRScannerIcon width={18} height={18} style={styles.menuIcon} />
-            <Text style={[styles.menuText, styles.scanText]}>QR Scanner</Text>
-          </Pressable>
-        )}
-
         <Pressable style={styles.menuRow} onPress={onLogout}>
           {activeItem === "Logout" ? (
             <ActiveLogout width={18} height={18} style={styles.menuIcon} />
@@ -93,12 +84,6 @@ const styles = StyleSheet.create({
   },
   logoutWrapper: {
     paddingBottom: 70,
-  },
-
-  scanText: {
-    fontFamily: 'Manrope',
-    color: COLORS.secondaryFontColor,
-    
   },
   versionText: {
     fontSize: 12,

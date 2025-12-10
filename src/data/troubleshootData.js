@@ -42,13 +42,12 @@ export const troubleshootStepsByCode = {
       },
       {
         id: 3,
-        title: 'Check Signal Strength',
-        description: 'Verify modem LED or app indicator shows stable signal.',
-        image: checkSignalGif,
-    
+        title: 'Confirm Communication',
+        description: 'Check if the meter symbol on your device shows active communication.',
+        image: checkConnectionGif,
         noTitle: 'Communication Not Established',
         noSubtitle: 'The modem is unable to communicate with the network. Follow these steps.',
-        noImage: checkSignal2Gif,
+        noImage: checkConnection2Gif,
         noSteps: [
           'Power cycle the modem by unplugging it for 30 seconds',
           'Check that network cables are securely connected',
@@ -98,6 +97,20 @@ export const troubleshootStepsByCode = {
         'Re-seat the connectors properly — no loose pins or unconnected points.',
         'Check for burnt marks or damage on the SMPS socket area.',
         'Clean dust or moisture at the SMPS installation area before retrying.',
+      ]
+    },
+    {
+      id: 3,
+      title: 'Confirm Communication',
+      description: 'Check if the meter symbol on your device shows active communication.',
+      image: checkConnectionGif,
+      noTitle: 'Communication Not Established',
+      noSubtitle: 'The modem is unable to communicate with the network. Follow these steps.',
+      noImage: checkConnection2Gif,
+      noSteps: [
+        'Power cycle the modem by unplugging it for 30 seconds',
+        'Check that network cables are securely connected',
+        'Verify network settings and configuration are correct',
       ]
     },
   ],
