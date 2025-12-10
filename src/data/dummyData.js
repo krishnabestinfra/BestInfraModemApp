@@ -7,84 +7,46 @@ export const modemStats = {
 
 export const modemErrors = [
   {
-    id: "MDM001",
-    modemId: "MDM001",
+    id: "MDM009",
+    modemId: "MDM009",
+    code: 202,
+    errorCode: 202,
     status: "warning",
-    error: "Low Signal",
-    reason: "Heavy Rain",
-    date: "2025-08-07 09:50",
-    location: "86136 52958 79253",
-    signalStrength: 8
-  },
-  {
-    id: "MDM002",
-    modemId: "MDM002",
-    status: "disconnected",
-    error: "No SIM",
-    reason: "SIM Card Removed",
-    date: "2025-08-07 08:30",
-    location: "86136 52958 79254",
-    signalStrength: 0
-  },
-  {
-    id: "MDM003",
-    modemId: "MDM003",
-    status: "warning",
-    error: "Timeout",
-    reason: "Network Congestion",
-    date: "2025-08-07 10:15",
-    location: "86136 52958 79255",
-    signalStrength: 12
-  },
-  {
-    id: "MDM004",
-    modemId: "MDM004",
-    status: "disconnected",
-    error: "Wire Damage",
-    reason: "Physical Damage",
-    date: "2025-08-07 07:45",
-    location: "86136 52958 79256",
-    signalStrength: 0
-  },
-  {
-    id: "MDM005",
-    modemId: "MDM005",
-    status: "warning",
-    error: "Low Signal",
-    reason: "Poor Coverage",
-    date: "2025-08-07 11:20",
-    location: "86136 52958 79257",
-    signalStrength: 6
-  },
-  {
-    id: "MDM006",
-    modemId: "MDM006",
-    status: "disconnected",
-    error: "None",
-    reason: "Working Fine",
-    date: "2025-08-07 12:00",
-    location: "86136 52958 79258",
+    error: "Modem/DCU Auto Restart",
+    codeDesc: "Modem/DCU Auto Restart",
+    reason: "Automatic restart detected due to system instability",
+    date: "2025-08-07 11:30",
+    location: "Mumbai - Zone B",
+    discom: "Mumbai",
     signalStrength: 15
   },
   {
-    id: "MDM007",
-    modemId: "MDM007",
-    status: "warning",
-    error: "Timeout",
-    reason: "Server Issues",
-    date: "2025-08-07 09:10",
-    location: "86136 52958 79259",
-    signalStrength: 10
+    id: "MDM010",
+    modemId: "MDM010",
+    code: 214,
+    errorCode: 214,
+    status: "disconnected",
+    error: "DCU/Modem Power Failed",
+    codeDesc: "DCU/Modem Power Failed",
+    reason: "Power supply interruption detected",
+    date: "2025-08-07 09:15",
+    location: "Delhi - Zone C",
+    discom: "Delhi",
+    signalStrength: 0
   },
   {
-    id: "MDM008",
-    modemId: "MDM008",
+    id: "MDM011",
+    modemId: "MDM011",
+    code: 112,
+    errorCode: 112,
     status: "disconnected",
-    error: "No SIM",
-    reason: "SIM Expired",
-    date: "2025-08-07 08:55",
-    location: "86136 52958 79260",
-    signalStrength: 0
+    error: "Meter COM Failed",
+    codeDesc: "Meter COM Failed",
+    reason: "Communication failure between modem and meter",
+    date: "2025-08-07 10:45",
+    location: "Bangalore - Zone A",
+    discom: "Bangalore",
+    signalStrength: 8
   }
 ];
 

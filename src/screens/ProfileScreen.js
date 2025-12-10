@@ -59,29 +59,23 @@ const ProfileScreen = ({ navigation }) => {
     useCallback(() => {
       const loadNotifications = async () => {
         try {
-          console.log("📱 ProfileScreen focused - loading notifications...");
           const savedNoti = await AsyncStorage.getItem("notifications");
           if (savedNoti) {
             const parsed = JSON.parse(savedNoti);
-            console.log("✅ Loaded notifications from storage:", parsed.length, parsed);
             setNotifications(parsed);
           } else {
-            console.log("⚠️ No notifications found in storage");
             setNotifications([]);
           }
         } catch (e) {
-          console.log("❌ Error loading notifications:", e);
+          // Silent error handling
         }
       };
       
       loadNotifications();
-    }, [])
+    }, [setNotifications])
   );
   
-  const displayNotifications = notifications.slice(0, 5);
-  console.log("📊 Display Notifications:", displayNotifications);
-  console.log("📊 Display Notifications Count:", displayNotifications.length);
-  console.log("📊 Context notifications count:", notifications.length);
+  const displayNotifications = useMemo(() => notifications.slice(0, 5), [notifications]);
 
   const markAsRead = async (id) => {
     const updated = notifications.map(n =>
@@ -202,8 +196,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 15,
-    paddingBottom: 15,
+    paddingTop: 75,
+    paddingBottom: 35,
     paddingHorizontal: 30,
   },
   barsIcon: {

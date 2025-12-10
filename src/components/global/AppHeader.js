@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import MenuIcon from '../../../assets/icons/bars.svg';
 import NotificationIcon from '../../../assets/icons/notification.svg';
@@ -23,6 +24,8 @@ const AppHeader = ({
   onPressCenter,
   logo = <RippleLogo size={68} />,
 }) => {
+  const insets = useSafeAreaInsets();
+  
   const buttonStyle = React.useMemo(
     () => ({
       width: BUTTON_SIZE,
@@ -31,6 +34,12 @@ const AppHeader = ({
     }),
     []
   );
+
+  // Calculate default padding: use safe area top inset + minimum padding
+  // If containerStyle has paddingTop, it will override this
+  const defaultContainerStyle = React.useMemo(() => ({
+    paddingTop: Math.max(insets.top + 10, 10),
+  }), [insets.top]);
 
   const CenterWrapper = onPressCenter ? Pressable : View;
 
@@ -46,7 +55,7 @@ const AppHeader = ({
   );
 
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View style={[styles.container, defaultContainerStyle, containerStyle]}>
       <View style={[styles.content, contentStyle]}>
         {renderButton(LeftIcon, onPressLeft, leftButtonStyle)}
 

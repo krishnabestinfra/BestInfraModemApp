@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -16,20 +16,6 @@ import NotificationIcon from '../../assets/icons/notificationDark.svg';
 import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
 import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
-import DashboardIcon from '../../assets/icons/dashboardMenu.svg';
-import ActiveDashboard from '../../assets/icons/activeDashboard.svg';
-import UsageIcon from '../../assets/icons/usageMenu.svg';
-import ActiveUsage from '../../assets/icons/activeUsage.svg';
-import PaymentsIcon from '../../assets/icons/paymentsMenu.svg';
-import ActivePayments from '../../assets/icons/activePayments.svg';
-import TransactionsIcon from '../../assets/icons/transactionMenu.svg';
-import ActiveTransactions from '../../assets/icons/transactionsActive.svg';
-import TicketsIcon from '../../assets/icons/ticketsMenu.svg';
-import ActiveTickets from '../../assets/icons/activeTickets.svg';
-import SettingsIcon from '../../assets/icons/settingMenu.svg';
-import ActiveSettings from '../../assets/icons/activeSettings.svg';
-import LogoutIcon from '../../assets/icons/logoutMenu.svg';
-import ActiveLogout from '../../assets/icons/activeLogout.svg';
 
 
 
@@ -102,8 +88,6 @@ const formatDisplayDateTime = (dateString) => {
 
 const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   const insets = useSafeAreaInsets();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeMenuItem, setActiveMenuItem] = useState('Transactions');
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -160,7 +144,6 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
       // Use originalAlert if available (from normalized modem record), otherwise use resolvedModem
       const modemData = resolvedModem.originalAlert || resolvedModem;
       setApiData(modemData);
-      console.log('Using modem data from route params:', resolvedModem.modemId || resolvedModem.modemSlNo || resolvedModem.modemno);
     }
     setLoading(false);
   }, [resolvedModem]);
@@ -255,14 +238,10 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
     return fields;
   }, [modem, apiData]);
 
-  const relatedIssues = useMemo(
-    () => modemErrors.filter((item) => item.modemId === modem.modemId),
-    [modem.modemId]
-  );
 
-  const handleResolve = () => {
+  const handleResolve = useCallback(() => {
     navigation?.navigate?.('Troubleshoot', { modem, status: statusMeta.label });
-  };
+  }, [navigation, modem, statusMeta.label]);
 
   if (loading) {
     return (
@@ -338,25 +317,10 @@ const getSignalIcon = (signalStrength) => {
   }
 };
 
-const handleMenuNavigation = (itemKey, navigation) => {
-  const routeMap = {
-    Dashboard: 'Dashboard',
-    Usage: 'Dashboard',
-    PostPaidRechargePayments: 'Alerts',
-    Transactions: 'ModemDetails',
-    DG: 'Dashboard',
-    Settings: 'Dashboard',
-  };
 
-  const routeName = routeMap[itemKey];
-  if (routeName) {
-    navigation?.navigate?.(routeName);
-  }
-};
-
-const DetailGrid = ({ fields, getSignalIcon }) => (
+const DetailGrid = React.memo(({ fields, getSignalIcon }) => (
   <View style={styles.detailGrid}>
-    {fields.map((field, index) => (
+    {fields.map((field) => (
       <View key={field.label} style={styles.detailItem}>
         <Text style={styles.detailLabel}>{field.label}</Text>
         {field.type === 'signal' ? (
@@ -372,70 +336,8 @@ const DetailGrid = ({ fields, getSignalIcon }) => (
       </View>
     ))}
   </View>
-);
+));
 
-const IssueCard = ({ issue }) => {
-  const statusMeta = statusMetaMap[issue.status] ?? statusMetaMap.default;
-
-  return (
-    <View style={styles.modemCard}>
-      {/* Header row */}
-      <View style={styles.itemHeader}>
-        <View style={styles.itemIdContainer}>
-          <Text style={styles.itemId}>{issue.modemId}</Text>
-          <Text style={styles.itemImei}>IMEI - {issue.location}</Text>
-
-        </View>
-
-        <TouchableOpacity style={styles.directionButton}>
-          <Text style={styles.directionText}>Get Direction</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Body row: left photo block + right details */}
-      <View style={styles.itemDetails}>
-        {/* Photo Section - 25% */}
-        <View style={styles.photoSection}>
-          <View style={styles.photoSectionContent}>
-            <Ionicons name="image-outline" size={22} color="#B0B0B0" />
-            <Text style={styles.detailLabel}>Photos</Text>
-          </View>
-        </View>
-
-        {/* Right details - 75% */}
-        <View style={styles.subDataSection}>
-          {/* Row 1: Error + Meter Type */}
-          <View style={styles.subDataRow}>
-            <View style={styles.subDataItem}>
-              <Text style={styles.detailLabel}>Error</Text>
-              <Text style={styles.detailValueGreen}>{issue.error}</Text>
-            </View>
-
-            <View style={styles.subDataItem}>
-              <Text style={styles.detailLabel}>Meter Type</Text>
-              <Text style={styles.detailValueGreen}>Smart</Text>
-            </View>
-          </View>
-
-          {/* Row 2: HES Status + Issue Occurrence */}
-          <View style={styles.subDataRow}>
-            <View style={styles.subDataItem}>
-              <Text style={styles.detailLabel}>HES Status</Text>
-              <View style={styles.statusPillPending}>
-                <Text style={styles.statusPillText}>Pending</Text>
-              </View>
-            </View>
-
-            <View style={styles.subDataItem}>
-              <Text style={styles.detailLabel}>Issue Occurrence</Text>
-              <Text style={styles.datedetails}>{formatDisplayDateTime(issue.date)}</Text>
-            </View>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-};
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -710,135 +612,6 @@ const styles = StyleSheet.create({
   resolveButton: {
     borderRadius:5,
   },
-  sideMenuRoot: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 99,
-  },
-  sideMenuBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
-  sideMenuPanel: {
-    flex: 1,
-    backgroundColor: COLORS.brandBlueColor,
-    paddingTop: 75,
-    paddingHorizontal: 30,
-  },
-  sideMenuTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 35,
-  },
-  sideMenuCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  circleLight: {
-    backgroundColor: COLORS.secondaryFontColor,
-  },
-  circleSecondary: {
-    backgroundColor: COLORS.secondaryColor,
-  },
-  circleIconLight: {
-    backgroundColor: '#fff',
-  },
-  sideMenuContent: {
-    flexDirection: 'row',
-    flex: 1,
-  },
-  menuListWrapper: {
-    width: '45%',
-    paddingRight: 20,
-    justifyContent: 'space-between',
-  },
-  menuList: {},
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  menuIcon: {
-    marginRight: 20,
-    opacity: 0.5,
-  },
-  menuText: {
-    fontSize: 16,
-    fontFamily: 'Manrope-Medium',
-    color: COLORS.secondaryFontColor,
-    opacity: 0.7,
-  },
-  menuTextActive: {
-    opacity: 1,
-    fontFamily: 'Manrope-Bold',
-  },
-  menuFooter: {
-    paddingBottom: 30,
-  },
-  logoutButtonRow: {
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  logoutText: {
-    fontSize: 16,
-    fontFamily: 'Manrope-Medium',
-    color: COLORS.secondaryFontColor,
-    opacity: 0.7,
-  },
-  logoutIcon: {
-    marginRight: 20,
-    opacity: 0.6,
-  },
-  menuVersion: {
-    fontSize: 12,
-    fontFamily: 'Manrope-Medium',
-    color: '#89A1F3',
-    marginTop: 10,
-    marginLeft: 38,
-  },
-  menuPreviewWrapper: {
-    flex: 1,
-    position: 'relative',
-    paddingLeft: 40,
-  },
-  previewCard: {
-    flex: 1,
-    backgroundColor: '#eef8f0',
-    borderTopLeftRadius: 20,
-    borderBottomLeftRadius: 20,
-    padding: 24,
-    elevation: 10,
-  },
-  previewGhost: {
-    position: 'absolute',
-    top: 80,
-    bottom: 0,
-    left: 25,
-    right: 0,
-    backgroundColor: '#eef8f0',
-    opacity: 0.3,
-    borderTopLeftRadius: 30,
-    borderBottomLeftRadius: 20,
-  },
-  previewTitle: {
-    fontSize: 18,
-    fontFamily: 'Manrope-Bold',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  previewSubtitle: {
-    fontSize: 14,
-    fontFamily: 'Manrope-Medium',
-    color: colors.textSecondary,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -851,126 +624,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
 });
-
-const MENU_ITEMS = [
-  {
-    key: 'Dashboard',
-    label: 'Dashboard',
-    Icon: DashboardIcon,
-    ActiveIcon: ActiveDashboard,
-  },
-  {
-    key: 'Usage',
-    label: 'Usage',
-    Icon: UsageIcon,
-    ActiveIcon: ActiveUsage,
-  },
-  {
-    key: 'PostPaidRechargePayments',
-    label: 'Payments',
-    Icon: PaymentsIcon,
-    ActiveIcon: ActivePayments,
-  },
-  {
-    key: 'Transactions',
-    label: 'Transactions',
-    Icon: TransactionsIcon,
-    ActiveIcon: ActiveTransactions,
-  },
-  {
-    key: 'DG',
-    label: 'Diesel Generator',
-    Icon: TicketsIcon,
-    ActiveIcon: ActiveTickets,
-  },
-  {
-    key: 'Settings',
-    label: 'Settings',
-    Icon: SettingsIcon,
-    ActiveIcon: ActiveSettings,
-  },
-];
-
-const SideMenuOverlay = ({ activeItem, onSelect, onClose, onLogout }) => (
-  <View pointerEvents="box-none" style={styles.sideMenuRoot}>
-    <Pressable style={styles.sideMenuBackdrop} onPress={onClose} />
-
-    <View style={styles.sideMenuPanel}>
-      <View style={styles.sideMenuTopRow}>
-        <Pressable style={[styles.sideMenuCircle, styles.circleLight]} onPress={onClose}>
-          <MenuIcon width={18} height={18} fill="#202d59" />
-        </Pressable>
-
-        <Logo variant="white" size="medium" />
-
-        <Pressable
-          style={[styles.sideMenuCircle, styles.circleIconLight]}
-          onPress={() => {
-            onClose();
-          }}
-        >
-          <NotificationIcon width={18} height={18} fill="#0c1f3d" />
-        </Pressable>
-      </View>
-
-      <View style={styles.sideMenuContent}>
-        <View style={styles.menuListWrapper}>
-          <SideMenuNavigation activeItem={activeItem} onSelect={onSelect} onLogout={onLogout} />
-        </View>
-
-        <View style={styles.menuPreviewWrapper}>
-          <View style={styles.previewCard}>
-            <Text style={styles.previewTitle}>Need quick insights?</Text>
-            <Text style={styles.previewSubtitle}>
-              Access your modem diagnostics, payments, and tickets without leaving the field.
-            </Text>
-          </View>
-          <View style={styles.previewGhost} />
-        </View>
-      </View>
-    </View>
-  </View>
-);
-
-const SideMenuNavigation = ({ activeItem, onSelect, onLogout }) => (
-  <>
-    <View style={styles.menuList}>
-      {MENU_ITEMS.map((item) => {
-        const ItemIcon = activeItem === item.key ? item.ActiveIcon : item.Icon;
-        return (
-          <Pressable key={item.key} style={styles.menuRow} onPress={() => onSelect(item.key)}>
-            <ItemIcon width={18} height={18} style={styles.menuIcon} />
-            <Text
-              style={[
-                styles.menuText,
-                activeItem === item.key && styles.menuTextActive,
-              ]}
-            >
-              {item.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-
-    <View style={styles.menuFooter}>
-      <Button
-        title="Logout"
-        variant="ghost"
-        size="small"
-        onPress={onLogout}
-        style={styles.logoutButtonRow}
-        textStyle={styles.logoutText}
-      >
-        {activeItem === 'Logout' ? (
-          <ActiveLogout width={18} height={18} style={styles.logoutIcon} />
-        ) : (
-          <LogoutIcon width={18} height={18} style={styles.logoutIcon} />
-        )}
-      </Button>
-      <Text style={styles.menuVersion}>Version 1.0.26</Text>
-    </View>
-  </>
-);
 
 export default ModemDetailsScreen;
