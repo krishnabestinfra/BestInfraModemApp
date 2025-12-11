@@ -80,6 +80,35 @@ const getSignalBand = (val = 0) => {
   return 'strong';
 };
 
+/**
+ * Normalizes modem identifiers from both APIs
+ * Handles: modemSINo, modemNo, modemSlNo, modemno, sno, modemId
+ * These fields represent the same modem identifier across different APIs
+ */
+const normalizeModemIdentifier = (item) => {
+  if (!item) return null;
+  
+ 
+  const identifiers = [
+    item.modemSINo,    // From field officer API (nexusenergy.tech)
+    item.modemNo,      // From alerts API (api.bestinfra.app)
+    item.modemSlNo,
+    item.modemno,
+    item.modemId,
+    item.sno,
+    item.id
+  ];
+  
+  // Return the first non-null/undefined value as string, or null
+  for (const id of identifiers) {
+    if (id !== null && id !== undefined && id !== '') {
+      return String(id).trim();
+    }
+  }
+  
+  return null;
+};
+
 const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) => {
   const { showPopup, popupNotification, setShowPopup, startAlertPolling, stopAlertPolling } = useContext(NotificationContext);
   const insets = useSafeAreaInsets();
@@ -152,41 +181,104 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
       setLoading(true);
   
       const modemQuery = modemIds.join(",");
-      const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}`;
-  
-      const response = await fetch(url, {
-        method: "GET",
-        headers: getProtectedHeaders(API_KEY, userPhone),
-      });
-  
-      const json = await response.json();
+      let allAlerts = [];
+      let offset = 0;
+      let hasMore = true;
+      const limit = 50; // API default limit
+      let stats = {};
+      let totalAlertsFromStats = null;
 
-      // Check if API returned an error
-      if (!response.ok || (json.success === false) || json.error) {
-        setApiData({
-          alerts: [],
-          stats: {}
+      while (hasMore) {
+        const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}&limit=${limit}&offset=${offset}`;
+        const response = await fetch(url, {
+          method: "GET",
+          headers: getProtectedHeaders(API_KEY, userPhone),
         });
-        return;
-      }
   
+        const json = await response.json();
+
+        // Check if API returned an error
+        if (!response.ok || (json.success === false) || json.error) {
+          // If first page fails, try without offset parameter (fallback to single request)
+          if (offset === 0) {
+            const fallbackUrl = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}&limit=9999`;
+            const fallbackResponse = await fetch(fallbackUrl, {
+              method: "GET",
+              headers: getProtectedHeaders(API_KEY, userPhone),
+            });
+            const fallbackJson = await fallbackResponse.json();
+            
+            if (fallbackResponse.ok && !fallbackJson.error) {
+              allAlerts = fallbackJson.alerts || [];
+              stats = fallbackJson.stats || {};
+              break;
+            }
+          }
+          
+          // If not first page, stop pagination
+          if (offset > 0) {
+            break;
+          }
+          
+          setApiData({
+            alerts: [],
+            stats: {}
+          });
+          return;
+        }
+
+        const alerts = json.alerts || [];
+        
+        // Store stats from first page
+        if (offset === 0) {
+          stats = json.stats || {};
+          totalAlertsFromStats = stats.totalAlerts ? parseInt(stats.totalAlerts, 10) : null;
+        }
+
+        allAlerts = [...allAlerts, ...alerts];
+
+        // Stop pagination if we've received all alerts according to stats
+        if (totalAlertsFromStats !== null && allAlerts.length >= totalAlertsFromStats) {
+          hasMore = false;
+        }
+        // Stop if no more alerts or less than limit (last page)
+        else if (alerts.length === 0 || alerts.length < limit) {
+          hasMore = false;
+        }
+        // Check API pagination metadata
+        else if (json.hasMore === false || json.nextPage === null) {
+          hasMore = false;
+        }
+        
+        // Safety check: stop after fetching 1000 items
+        if (allAlerts.length >= 1000) {
+          break;
+        }
+        
+        // Continue pagination
+        if (hasMore && alerts.length === limit) {
+          offset += limit;
+        } else {
+          hasMore = false;
+        }
+      }
+      
       // FILTER ALERTS FOR THIS FIELD OFFICER ONLY
-      const filteredAlerts = Array.isArray(json.alerts)
-      ? json.alerts.filter(item => {
-          const keysToCheck = [
-            item.modemSlNo,
-            item.modemno,
-            item.sno?.toString(),
-            item.modemId
-          ];
-    
-          return keysToCheck.some(key => key && modemIds.includes(key));
-        })
-      : [];
+      const normalizedModemIds = new Set(
+        modemIds
+          .map(id => id ? String(id).trim() : null)
+          .filter(Boolean)
+      );
+      
+      const filteredAlerts = allAlerts.filter(item => {
+        const alertModemId = normalizeModemIdentifier(item);
+        if (!alertModemId) return false;
+        return normalizedModemIds.has(alertModemId);
+      });
       
       setApiData({
         alerts: filteredAlerts,
-        stats: json.stats || {}
+        stats: stats
       });
   
     } catch (error) {
@@ -263,18 +355,26 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
     if (apiData && apiData.alerts && apiData.alerts.length > 0) {
       const modemStatusMap = new Map();
       
+      // Normalize modemIds from field officer API for comparison
+      const normalizedModemIds = new Set(
+        modemIds
+          .map(id => id ? String(id).trim() : null)
+          .filter(Boolean)
+      );
+      
       apiData.alerts?.forEach(alert => {
-        const alertModemId = alert.modemSlNo || alert.modemno || alert.sno?.toString() || alert.modemId;
+        // Use the normalized identifier function
+        const alertModemId = normalizeModemIdentifier(alert);
         
         if (!alertModemId) return;
         
-        const alertModemIdStr = alertModemId.toString();
+        // Check if this alert belongs to any field officer modem
+        if (!normalizedModemIds.has(alertModemId)) return;
         
-        const matchingOfficerModemId = modemIds.find(officerModemId => 
-          officerModemId.toString() === alertModemIdStr ||
-          alertModemIdStr.includes(officerModemId.toString()) ||
-          officerModemId.toString().includes(alertModemIdStr)
-        );
+        const matchingOfficerModemId = modemIds.find(officerModemId => {
+          const normalizedOfficerId = String(officerModemId).trim();
+          return normalizedOfficerId === alertModemId;
+        });
         
         if (!matchingOfficerModemId) return; 
         
