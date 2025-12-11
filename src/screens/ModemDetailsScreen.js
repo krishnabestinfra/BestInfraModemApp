@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xxl,
     paddingTop: spacing.sm,
     backgroundColor: "#EEF8F0",
   },
