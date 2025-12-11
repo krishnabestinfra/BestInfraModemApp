@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
   bottomResponseBar: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xxl,
     backgroundColor: '#fff',
   },
   responseRow: {

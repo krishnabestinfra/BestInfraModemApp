@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SplashScreen from '../screens/SplashScreen';
 import OnBoarding from '../screens/OnBoarding';
 import LoginScreen from '../screens/LoginScreen';
-import { clearAuthData, getUserPhone, hasApiKey } from '../utils/storage';
+import { clearAuthData, getUserPhone, hasApiKey, initializeStorageCache } from '../utils/storage';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -53,8 +53,10 @@ const AppNavigator = () => {
     let isMounted = true;
   
     const checkPersistentLogin = async () => {
-      await new Promise(resolve => setTimeout(resolve, 1500)); // splash delay
-  
+      // Initialize storage cache for faster access
+      await initializeStorageCache();
+      
+      // Remove artificial delay - let splash screen handle visual delay
       const apiKeyExists = await hasApiKey();
       if (!apiKeyExists) {
         if (isMounted) {
@@ -66,7 +68,7 @@ const AppNavigator = () => {
   
       const storedPhone = await getUserPhone();
   
-      // Auto-login
+      // Auto-login - batch state updates
       if (isMounted) {
         setIsAuthenticated(true);
         setShowOnboarding(false);
@@ -75,23 +77,20 @@ const AppNavigator = () => {
   
       if (storedPhone && isMounted) {
         try {
-          console.log("Persistent Login → Fetching modems for:", storedPhone);
-      
           const modems = await fetchModemsByOfficer(storedPhone);
-          console.log("Persistent Modems Loaded:", modems);
-      
           if (isMounted) setUserModems(modems);
         } catch (err) {
-          console.log("Persistent fetch error:", err);
+          // Silent error handling
         }
       }
       
-  
       if (isMounted) setIsLoading(false);
     };
   
     checkPersistentLogin();
-    return () => (isMounted = false);
+    return () => {
+      isMounted = false;
+    };
   }, []);
   
 
@@ -139,6 +138,8 @@ const AppNavigator = () => {
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
+          // Prevent React Navigation from wrapping screens in ScrollView
+          contentStyle: { flex: 1 },
         }}
       >
         {isLoading ? (

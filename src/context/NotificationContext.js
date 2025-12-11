@@ -1,6 +1,7 @@
-import React, { createContext, useEffect, useState, useRef } from "react";
+import React, { createContext, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_KEY, API_ENDPOINTS, getProtectedHeaders } from "../config/apiConfig";
+import { cachedFetch } from "../utils/apiCache";
 
 export const NotificationContext = createContext();
 
@@ -73,7 +74,7 @@ export const NotificationProvider = ({ children }) => {
   };
 
   // Start alert polling for new alerts
-  const startAlertPolling = async (modemIds, userPhone) => {
+  const startAlertPolling = useCallback(async (modemIds, userPhone) => {
     if (!modemIds || modemIds.length === 0 || !userPhone) {
       return;
     }
@@ -93,7 +94,7 @@ export const NotificationProvider = ({ children }) => {
     alertPollingIntervalRef.current = setInterval(async () => {
       await checkForNewAlerts(modemIds, userPhone);
     }, 5 * 60 * 1000);
-  };
+  }, [checkForNewAlerts]);
 
   // Stop alert polling
   const stopAlertPolling = () => {
@@ -107,17 +108,19 @@ export const NotificationProvider = ({ children }) => {
   };
 
   // Check for new alerts
-  const checkForNewAlerts = async (modemIds, userPhone) => {
+  const checkForNewAlerts = useCallback(async (modemIds, userPhone) => {
     try {
       if (!modemIds || modemIds.length === 0 || !userPhone) return;
 
       const modemQuery = modemIds.join(",");
       const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}`;
+      const headers = getProtectedHeaders(API_KEY, userPhone);
       
-      const response = await fetch(url, {
+      // Use cached fetch - cache for 4 minutes (less than polling interval)
+      const response = await cachedFetch(url, {
         method: "GET",
-        headers: getProtectedHeaders(API_KEY, userPhone),
-      });
+        headers,
+      }, 4 * 60 * 1000);
       
       const json = await response.json();
 
@@ -193,7 +196,7 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       // Silent error handling
     }
-  };
+  }, []);
 
   // 5 min checker for modem status
   useEffect(() => {
@@ -247,23 +250,31 @@ export const NotificationProvider = ({ children }) => {
     }
   }
 
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    trackingModemId,
+    notifications,
+    startTracking,
+    stopTracking,
+    setNotifications,
+    showPopup,
+    popupNotification,
+    setShowPopup,
+    pushNotification,
+    startAlertPolling,
+    stopAlertPolling,
+    alertPollingActive,
+  }), [
+    trackingModemId,
+    notifications,
+    showPopup,
+    popupNotification,
+    alertPollingActive,
+    startAlertPolling,
+  ]);
+
   return (
-    <NotificationContext.Provider
-      value={{
-        trackingModemId,
-        notifications,
-        startTracking,
-        stopTracking,
-        setNotifications,
-        showPopup,
-        popupNotification,
-        setShowPopup,
-        pushNotification,
-        startAlertPolling,
-        stopAlertPolling,
-        alertPollingActive,
-      }}
-    >
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );
