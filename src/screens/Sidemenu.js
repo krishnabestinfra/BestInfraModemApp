@@ -12,17 +12,13 @@ import AppHeader from "../components/global/AppHeader";
 import DashboardScreen from "../screens/DashboardScreen";
 import Troubleshoot from "../screens/TroubleshootScreen";
 import CompletedActivities from "../screens/CompletedActivities";
-import Profile from "../screens/ProfileScreen";
-import AllModemsScreen from "../screens/AllModemsScreen";
 import { useSidebar } from "../context/SidebarContext";
 import SideMenuNavigation from "../components/SideMenuNavigation";
 import DashboardIcon from "../../assets/icons/dashboardMenu.svg";
 import ActiveDashboard from "../../assets/icons/activeDashboard.svg";
-import UsageIcon from "../../assets/icons/usageMenu.svg";
-import ActiveUsage from "../../assets/icons/activeUsage.svg";
 import ActiveTickets from "../../assets/icons/activeTickets.svg";
 import MetersIcon from "../../assets/icons/meterWhite.svg";
-import ModemsIcon from "../../assets/icons/modem.svg";
+import QRScannerIcon from "../../assets/icons/QRscanner.svg";
 
 
 const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone }) => {
@@ -34,9 +30,6 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
     switch (activeItem) {
       case "Dashboard":
         return <DashboardScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
-  
-      case "Modems":
-        return <AllModemsScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
   
       case "Resolved":
         return <CompletedActivities navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
@@ -95,11 +88,11 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
                 ActiveIcon: ActiveDashboard
               },
               {
-                key: "Modems",
-                label: "Modems",
-                route: "AllModems",
-                Icon: ModemsIcon,
-                ActiveIcon: ActiveUsage
+                key: "QRScanner",
+                label: "QR Scanner",
+                route: "ScanScreen",
+                Icon: QRScannerIcon,
+                ActiveIcon: QRScannerIcon
               },
               {
                 key: "Resolved",
@@ -112,7 +105,6 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
             activeItem={activeItem}
             onSelect={handleMenuPress}
             onLogout={handleLogout}
-            onScan={() => navigation.navigate("ScanScreen")}
           />
         </View>
 

@@ -24,17 +24,13 @@ export const NotificationProvider = ({ children }) => {
         const savedNoti = await AsyncStorage.getItem("notifications");
         if (savedModem) {
           setTrackingModemId(savedModem);
-          console.log("📱 Loaded tracking modem ID:", savedModem);
         }
         if (savedNoti) {
           const parsed = JSON.parse(savedNoti);
           setNotifications(parsed);
-          console.log("📱 Loaded notifications from storage on mount:", parsed.length, parsed);
-        } else {
-          console.log("📱 No notifications found in storage on mount");
         }
       } catch (e) {
-        console.log("❌ Error loading data from storage:", e);
+        // Silent error handling
       }
     })();
   }, []);
@@ -79,7 +75,6 @@ export const NotificationProvider = ({ children }) => {
   // Start alert polling for new alerts
   const startAlertPolling = async (modemIds, userPhone) => {
     if (!modemIds || modemIds.length === 0 || !userPhone) {
-      console.log("Cannot start alert polling: missing modemIds or userPhone");
       return;
     }
 
@@ -196,7 +191,7 @@ export const NotificationProvider = ({ children }) => {
         isInitialLoadRef.current = false;
       }
     } catch (error) {
-      console.log("Error checking for new alerts:", error);
+      // Silent error handling
     }
   };
 
@@ -226,8 +221,6 @@ export const NotificationProvider = ({ children }) => {
       // Use the status API endpoint
       const url = `https://api.bestinfra.app/v2tgnpdcl/api/modems/modem/${trackingModemId}/status`;
       
-      console.log("Checking modem status from:", url);
-      
       const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -240,7 +233,6 @@ export const NotificationProvider = ({ children }) => {
       }
 
       const json = await response.json();
-      console.log("Modem status check response:", json);
 
       // Check if modem status is "resolved"
       if (json.success && json.data && json.data.status === "resolved") {
@@ -251,7 +243,7 @@ export const NotificationProvider = ({ children }) => {
         await stopTracking();
       }
     } catch (e) {
-      console.log("Error in checking modem status:", e);
+      // Silent error handling
     }
   }
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -119,7 +119,7 @@ const TroubleshootScreen = ({ navigation, route }) => {
     return { label: 'Non-Communicating', color: '#C62828' };
   }, [route?.params?.status]);
 
-  const handleResponse = (isSuccess) => {
+  const handleResponse = useCallback((isSuccess) => {
     if (!isSuccess) {
       setShowRetry(true);
       setFeedback({
@@ -138,9 +138,16 @@ const TroubleshootScreen = ({ navigation, route }) => {
     } else {
       setCurrentStepIndex(troubleshootSteps.length);
     }
-  };
+  }, [currentStep, currentStepIndex, troubleshootSteps.length]);
 
-  const handleComplete = () => navigation.navigate('Dashboard');
+  const handleComplete = useCallback(() => {
+    navigation.navigate('Dashboard');
+  }, [navigation]);
+
+  const handleRetry = useCallback(() => {
+    setShowRetry(false);
+    setFeedback(null);
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
@@ -201,10 +208,7 @@ const TroubleshootScreen = ({ navigation, route }) => {
               {showRetry ? (
                 <TouchableOpacity
                   style={[styles.responseButton, styles.responseButtonRetry]}
-                  onPress={() => {
-                    setShowRetry(false);
-                    setFeedback(null);
-                  }}
+                  onPress={handleRetry}
                 >
                   <Text style={styles.responseTextYes}>Retry Check</Text>
                 </TouchableOpacity>
@@ -235,7 +239,7 @@ const TroubleshootScreen = ({ navigation, route }) => {
 };
 
 /* PROGRESS BARS COMPONENT */
-const ProgressBars = ({ currentStep = 1, totalSteps = 3 }) => {
+const ProgressBars = React.memo(({ currentStep = 1, totalSteps = 3 }) => {
   const steps = useMemo(() => Array.from({ length: totalSteps }, (_, idx) => idx + 1), [totalSteps]);
 
   return (
@@ -251,10 +255,10 @@ const ProgressBars = ({ currentStep = 1, totalSteps = 3 }) => {
       ))}
     </View>
   );
-};
+});
 
 /* STEP CONTENT */
-const StepContent = ({ step, feedback, showRetry }) => (
+const StepContent = React.memo(({ step, feedback, showRetry }) => (
   <View style={[styles.stepCard, styles.cardShadow]}>
 
     <ExpoImage
@@ -285,10 +289,10 @@ const StepContent = ({ step, feedback, showRetry }) => (
     )}
 
   </View>
-);
+));
 
 /* SUCCESS COMPONENT */
-const SuccessCard = ({ image, onComplete }) => (
+const SuccessCard = React.memo(({ image, onComplete }) => (
   <View style={styles.successWrapper}>
     <View style={styles.successCard}>
       <ExpoImage
@@ -308,7 +312,7 @@ const SuccessCard = ({ image, onComplete }) => (
       <Button title="Issue Fixed" onPress={onComplete} style={styles.completeButton} />
     </View>
   </View>
-);
+));
 
 /* STYLES */
 const styles = StyleSheet.create({
