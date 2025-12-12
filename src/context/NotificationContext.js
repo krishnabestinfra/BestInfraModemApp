@@ -107,7 +107,7 @@ export const NotificationProvider = ({ children }) => {
     previousAlertIdsRef.current.clear();
   };
 
-  // Check for new alerts1
+  // Check for new alerts
   const checkForNewAlerts = useCallback(async (modemIds, userPhone) => {
     try { 
       if (!modemIds || modemIds.length === 0 || !userPhone) return;
