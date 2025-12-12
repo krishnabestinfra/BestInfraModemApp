@@ -45,7 +45,6 @@ import { useContext } from 'react';
 
 import Meter from '../../assets/images/meter.png';
 
-// Default Manrope font for all Text
 if (!Text.defaultProps) Text.defaultProps = {};
 Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
 
@@ -100,7 +99,6 @@ const normalizeModemIdentifier = (item) => {
     item.id
   ];
   
-  // Return the first non-null/undefined value as string, or null
   for (const id of identifiers) {
     if (id !== null && id !== undefined && id !== '') {
       return String(id).trim();
@@ -166,7 +164,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
     if (modemIds.length > 0 && userPhone) {
       fetchApiData();
       
-      // Start alert polling in context (checks every 5 minutes)
       startAlertPolling(modemIds, userPhone);
       
       return () => {
@@ -198,9 +195,7 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   
         const json = await response.json();
 
-        // Check if API returned an error
         if (!response.ok || (json.success === false) || json.error) {
-          // If first page fails, try without offset parameter (fallback to single request)
           if (offset === 0) {
             const fallbackUrl = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}&limit=9999`;
             const fallbackResponse = await fetch(fallbackUrl, {
@@ -216,7 +211,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
             }
           }
           
-          // If not first page, stop pagination
           if (offset > 0) {
             break;
           }
@@ -230,7 +224,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
 
         const alerts = json.alerts || [];
         
-        // Store stats from first page
         if (offset === 0) {
           stats = json.stats || {};
           totalAlertsFromStats = stats.totalAlerts ? parseInt(stats.totalAlerts, 10) : null;
@@ -238,25 +231,20 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
 
         allAlerts = [...allAlerts, ...alerts];
 
-        // Stop pagination if we've received all alerts according to stats
         if (totalAlertsFromStats !== null && allAlerts.length >= totalAlertsFromStats) {
           hasMore = false;
         }
-        // Stop if no more alerts or less than limit (last page)
         else if (alerts.length === 0 || alerts.length < limit) {
           hasMore = false;
         }
-        // Check API pagination metadata
         else if (json.hasMore === false || json.nextPage === null) {
           hasMore = false;
         }
         
-        // Safety check: stop after fetching 1000 items
         if (allAlerts.length >= 1000) {
           break;
         }
         
-        // Continue pagination
         if (hasMore && alerts.length === limit) {
           offset += limit;
         } else {
@@ -264,7 +252,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
         }
       }
       
-      // FILTER ALERTS FOR THIS FIELD OFFICER ONLY
       const normalizedModemIds = new Set(
         modemIds
           .map(id => id ? String(id).trim() : null)
@@ -308,14 +295,11 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   const normalizeModemRecord = (alert = {}, index = 0) => {
     const modemId = alert.modemSlNo || alert.modemno || alert.sno || alert.modemId || 'unknown';
     const code = alert.code || alert.errorCode || 'N/A';
-    // Create unique ID - use alert.id if available, otherwise combine modemId, code, timestamp, and index
     const timestamp = alert.modemDate || alert.date || alert.logTimestamp || alert.lastCommunicatedAt || '';
     const uniqueId = alert.id?.toString() || `${modemId}-${code}-${timestamp}-${index}`;
     const id = uniqueId || `alert-${index}`;
 
     let rawDate = alert.logTimestamp || alert.modemDate || alert.date || alert.lastCommunicatedAt || alert.installedOn || alert.updatedAt || 'N/A';
-    
-    // Format the date
     const formattedDate = formatDisplayDateTime(rawDate);
 
     return {
@@ -342,17 +326,12 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
     return apiData.alerts.map((alert, index) => normalizeModemRecord(alert, index));
   }, [apiData]);
 
-  // ================================
-  // 📊 DASHBOARD METRICS
-  // ================================
   const dashboardMetrics = useMemo(() => {
     const communicatingSet = new Set();
     const nonCommunicatingSet = new Set();
     
-    // Non-communicating error codes (these indicate modem is not communicating)
     const nonCommunicatingCodes = [214, 112, 212];
     
-    // Initialize all officer modems as communicating (no alerts = communicating)
     if (modemIds && modemIds.length > 0) {
       modemIds.forEach(modemId => {
         if (modemId) {
@@ -364,7 +343,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
     if (apiData && apiData.alerts && apiData.alerts.length > 0) {
       const modemStatusMap = new Map();
       
-      // Normalize modemIds from field officer API for comparison
       const normalizedModemIds = new Set(
         modemIds
           .map(id => id ? String(id).trim() : null)
@@ -372,12 +350,10 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
       );
       
       apiData.alerts?.forEach(alert => {
-        // Use the normalized identifier function
         const alertModemId = normalizeModemIdentifier(alert);
         
         if (!alertModemId) return;
         
-        // Check if this alert belongs to any field officer modem
         if (!normalizedModemIds.has(alertModemId)) return;
         
         const matchingOfficerModemId = modemIds.find(officerModemId => {
@@ -404,7 +380,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
         }
       });
       
-      // Update sets based on alert status
       modemStatusMap.forEach((status, modemId) => {
         if (status === 'non-communicating') {
           nonCommunicatingSet.add(modemId.toString());
@@ -437,9 +412,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
     [apiData, dashboardMetrics]
   );
 
-  // ================================
-  // 🔍 FILTERED LIST + SEARCH
-  // ================================
   const filteredModems = useMemo(() => {
     let list = [...transformedAlerts];
 
@@ -457,10 +429,9 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
       list.sort((a, b) => new Date(a.date) - new Date(b.date));
     }
 
-    if (searchQuery.trim()) {
+        if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(m => {
-        // Search across multiple fields from the API data
         const searchableFields = [
           m.modemId || '',
           m.meterSlNo || '',
@@ -470,7 +441,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
           m.reason || '',
           m.status || '',
           String(m.code || ''),
-          // Also search in original alert data (all fields from /modems/main API)
           m.originalAlert?.codeDesc || '',
           m.originalAlert?.discom || '',
           m.originalAlert?.section || '',
@@ -501,7 +471,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
       <StatusBar style="dark" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}>
 
-        {/* ================= HEADER ================= */}
         <View style={styles.bluecontainer}>
           <AppHeader
             containerStyle={styles.TopMenu}
@@ -514,7 +483,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
             onPressRight={() => navigation.navigate('Profile')}
           />
 
-          {/* GREETING */}
           <View style={styles.ProfileBox}>
             <View style={styles.profileGreetingContainer}>
               <View style={styles.profileGreetingRow}>
@@ -525,11 +493,9 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
             </View>
           </View>
 
-          {/* ================= CARDS ROW ================= */}
           <View style={styles.metricsRow}>
             <TouchableOpacity
               style={styles.metricCard}
-              // onPress={() => navigation.navigate("ModemDetails")}
               activeOpacity={0.7}
             >
               <View style={styles.textContainer}>
@@ -545,7 +511,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
 
             <TouchableOpacity
               style={styles.metricCard}
-              // onPress={() => navigation.navigate('FindMeters', { selectedStatus: 'ALL' })}
               activeOpacity={0.7}
             >
               <View style={styles.textContainer}>
@@ -561,7 +526,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
           </View>
         </View>
 
-        {/* ================= SEARCH & FILTER ================= */}
         <View style={styles.searchCardWrapper}>
           <View style={styles.searchCard}>
             <TextInput
@@ -584,7 +548,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
         </View>
 
 
-        {/* ================= MODEM CARDS LIST ================= */}
         <View style={styles.cardsWrapper}>
           {loading ? (
             <View style={styles.loadingContainer}>
@@ -603,7 +566,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
         </View>
       </ScrollView>
 
-      {/* ================= STICKY SCAN BUTTON ================= */}
       <View style={[styles.stickyScanButtonContainer, { paddingBottom: spacing.md + insets.bottom }]}>
         <TouchableOpacity 
           style={styles.stickyScanButton} 
@@ -615,7 +577,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
         </TouchableOpacity>
       </View>
 
-      {/* ================= FILTER MODAL ================= */}
       <Modal transparent visible={filterModalVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={handleCloseFilterModal} />
@@ -690,7 +651,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
         </View>
       </Modal>
 
-      {/* ================= NOTIFICATION POPUP ================= */}
       <Modal
         transparent
         visible={showPopup}
@@ -717,9 +677,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   );
 };
 
-// =============================
-// 📌 MODEM CARD COMPONENT
-// =============================
 const ModemCard = React.memo(({ modem, navigation }) => {
   const { startTracking } = useContext(NotificationContext);
   const getSignalIcon = () => {
@@ -818,7 +775,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
 
-  /* ---------- HEADER + GREETING ---------- */
   bluecontainer: {
     backgroundColor: '#eef8f0',
     padding: 15,
@@ -873,7 +829,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-Regular',
   },
 
-  /* ---------- METRIC CARDS ---------- */
   metricsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -918,7 +873,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
   },
 
-  /* ---------- SEARCH + FILTER ---------- */
   searchCardWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -970,7 +924,6 @@ const styles = StyleSheet.create({
     right: 8,
   },
 
-  /* ---------- MODEM LIST ---------- */
   cardsWrapper: {
     marginTop: spacing.md,
     paddingHorizontal: spacing.md,
@@ -997,7 +950,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  /* ---------- MODEM CARD ---------- */
   modemCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
@@ -1108,7 +1060,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-ExtraBold',
   },
 
-  /* ---------- FILTER MODAL ---------- */
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
@@ -1199,7 +1150,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
 
-  /* ---------- DIRECTION BUTTON ---------- */
   directionButton: {
     backgroundColor: colors.secondary,
     borderRadius: 5,
@@ -1212,7 +1162,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-Bold',
   },
 
-  /* ---------- NOTIFICATION POPUP ---------- */
   notificationPopupOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1251,7 +1200,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  /* ---------- STICKY SCAN BUTTON ---------- */
   stickyScanButtonContainer: {
     position: 'absolute',
     bottom: 0,

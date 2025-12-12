@@ -18,85 +18,25 @@ import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 import { getTroubleshootSteps, hasTroubleshootSteps } from '../data/troubleshootData';
 
-import checkConnectionGif from '../../assets/images/Check_connection.gif';
-import voltageCheckGif from '../../assets/images/voltageCheck.gif';
-import checkSignalGif from '../../assets/images/Check_singal.gif';
 import successImg from '../../assets/images/Success_page.gif';
-import checkConnection2Gif from '../../assets/icons/check_connection2.gif';
-import voltageCheck2Gif from '../../assets/icons/voltageCheck2.gif';
-import checkSignal2Gif from '../../assets/icons/Check_singal2.gif';
-
 
 import NotificationLight from '../../assets/icons/notification.svg';
 import CheckCircleIcon from '../../assets/icons/successIcon.svg';
 
-// Default font
 if (!Text.defaultProps) Text.defaultProps = {};
 Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
 
-// Default generic troubleshooting steps (fallback)
-const defaultTroubleshootSteps = [
-  {
-    id: 1,
-    title: 'Check Cable Connection',
-    description: 'Ensure every cable and connector is firmly seated on the modem and meter.',
-    image: checkConnectionGif,
-
-    noTitle: 'Cable Not Connected Properly',
-    noSubtitle: 'The cable connection check has failed. Please follow these steps.',
-    noImage: checkConnection2Gif,
-    noSteps: [
-      'Disconnect all cables and inspect for any visible damage',
-      'Firmly reconnect all cables ensuring you hear/feel a click when properly seated',
-      'Wait 30 seconds for the modem to recognize the connections',
-    ]
-  },
-  {
-    id: 2,
-    title: 'Measure Input Voltage',
-    description: 'Use the multimeter to confirm the supply voltage.',
-    image: voltageCheckGif,
-
-    noTitle: 'Voltage Not Detected at Input Line',
-    noImage: voltageCheck2Gif,
-    noSubtitle: 'No voltage has been detected. Follow these corrective steps carefully.',
-    noSteps: [
-      'Check if the power outlet is working by testing with another device',
-      'Inspect the power adapter for any damage or burnt smell',
-      'Verify the circuit breaker has not tripped for this line',
-    ]
-  },
-  {
-    id: 3,
-    title: 'Check Signal Strength',
-    description: 'Verify modem LED or app indicator shows stable signal.',
-    image: checkSignalGif,
-
-    noTitle: 'Communication Not Established',
-    noSubtitle: 'The modem is unable to communicate with the network. Follow these steps.',
-    noImage: checkSignal2Gif,
-    noSteps: [
-      'Power cycle the modem by unplugging it for 30 seconds',
-      'Check that network cables are securely connected',
-      'Verify network settings and configuration are correct',
-    ]
-  },
-];
-
 const TroubleshootScreen = ({ navigation, route }) => {
   const modem = route?.params?.modem;
-  
-  // Get error code from modem
   const errorCode = modem?.code || modem?.errorCode || modem?.originalAlert?.code || modem?.originalData?.code;
 
-  // Get troubleshooting steps based on error code
   const troubleshootSteps = useMemo(() => {
     const codeNum = typeof errorCode === 'number' ? errorCode : parseInt(errorCode);
     
     if (codeNum && !isNaN(codeNum) && hasTroubleshootSteps(codeNum)) {
       return getTroubleshootSteps(codeNum);
     }
-    return defaultTroubleshootSteps;
+    return [];
   }, [errorCode]);
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -110,7 +50,8 @@ const TroubleshootScreen = ({ navigation, route }) => {
   }, [errorCode]);
 
   const currentStep = troubleshootSteps[currentStepIndex];
-  const isComplete = currentStepIndex >= troubleshootSteps.length;
+  const hasSteps = troubleshootSteps.length > 0;
+  const isComplete = hasSteps && currentStepIndex >= troubleshootSteps.length;
 
   const statusMeta = useMemo(() => {
     if (route?.params?.status === 'Communicating') {
@@ -189,7 +130,11 @@ const TroubleshootScreen = ({ navigation, route }) => {
             </View>
           )}
           <View style={styles.contentWrapper}>
-            {!isComplete ? (
+            {!hasSteps ? (
+              <View style={styles.noStepsContainer}>
+                <Text style={styles.noStepsText}>No troubleshooting steps available for this error code.</Text>
+              </View>
+            ) : !isComplete ? (
               <StepContent
                 step={currentStep}
                 feedback={feedback}
@@ -257,7 +202,6 @@ const ProgressBars = React.memo(({ currentStep = 1, totalSteps = 3 }) => {
   );
 });
 
-/* STEP CONTENT */
 const StepContent = React.memo(({ step, feedback, showRetry }) => (
   <View style={[styles.stepCard, styles.cardShadow]}>
 
@@ -291,7 +235,6 @@ const StepContent = React.memo(({ step, feedback, showRetry }) => (
   </View>
 ));
 
-/* SUCCESS COMPONENT */
 const SuccessCard = React.memo(({ image, onComplete }) => (
   <View style={styles.successWrapper}>
     <View style={styles.successCard}>
@@ -314,7 +257,6 @@ const SuccessCard = React.memo(({ image, onComplete }) => (
   </View>
 ));
 
-/* STYLES */
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
 
@@ -346,7 +288,6 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
 
-  /* MAIN AREA */
   stepArea: {
     flex: 1,
     paddingHorizontal: spacing.md,
@@ -386,7 +327,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  /* STEP CARD */
   stepCard: {
     backgroundColor: colors.cardBackground,
     borderRadius: borderRadius.xl,
@@ -440,7 +380,6 @@ const styles = StyleSheet.create({
   responseTextYes: { fontSize: 14, color: '#fff', fontWeight: '500' },
   responseTextNo: { fontSize: 14, color: '#6E6E6E', fontWeight: '500' },
 
-  /* FAILURE CONTENT */
   feedbackCardInside: {
     backgroundColor: '#F7F7F7',
     paddingHorizontal: spacing.md,
@@ -469,7 +408,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope',
   },
 
-  /* SUCCESS */
   successWrapper: {
     flex: 1,
     justifyContent: 'center',
@@ -507,6 +445,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: spacing.xs,
     textAlign: 'center',
+  },
+  noStepsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+  },
+  noStepsText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    fontFamily: 'Manrope-Medium',
   },
   completeButton: {
     width: '100%',

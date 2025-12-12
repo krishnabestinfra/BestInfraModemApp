@@ -11,6 +11,7 @@ import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 import { modemErrors } from '../data/dummyData';
+import { formatDisplayDateTime } from '../utils/dateUtils';
 import NotificationLight from '../../assets/icons/notification.svg';
 import NotificationIcon from '../../assets/icons/notificationDark.svg';
 import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
@@ -41,55 +42,11 @@ const statusMetaMap = {
 const API_BASE_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
 const USE_MOCK_ALERTS = false; // flip to false to hit live endpoint
 
-const formatDisplayDateTime = (dateString) => {
-  if (!dateString || dateString === 'N/A') return 'N/A';
-
-  const normalizeInput = (value) => value.replace(/\s+/g, ' ').trim();
-  const formatParts = (date) => {
-    const month = date.toLocaleString('en-US', { month: 'short' });
-    const day = date.getDate().toString().padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const formattedHour = ((hours % 12) || 12).toString().padStart(2, '0');
-    const formattedMinute = minutes.toString().padStart(2, '0');
-    return `${month} ${day}, ${year} ${formattedHour}:${formattedMinute} ${period}`;
-  };
-
-  try {
-    const normalized = normalizeInput(dateString);
-    const parts = normalized.split(' ');
-    const candidate = parts.length >= 5 ? parts.slice(0, 5).join(' ') : normalized;
-    const parsed = new Date(candidate);
-    if (!Number.isNaN(parsed.getTime())) {
-      return formatParts(parsed);
-    }
-  } catch {
-    // fall through to regex fallback
-  }
-
-  const regex =
-    /(\d{1,2})\s([A-Za-z]{3})\s(\d{4})\s(\d{1,2}):(\d{2})(?::\d{2})?\s?(AM|PM)?/i;
-  const match = dateString.match(regex);
-  if (match) {
-    const [, day, monthStr, year, hourStr, minuteStr, suffix] = match;
-    const month =
-      monthStr.charAt(0).toUpperCase() + monthStr.slice(1).toLowerCase();
-    const hourNum = Number(hourStr);
-    const period = suffix?.toUpperCase() ?? 'AM';
-    const formattedHour = ((hourNum % 12) || 12).toString().padStart(2, '0');
-    const formattedMinute = minuteStr.padStart(2, '0');
-    return `${month} ${day.padStart(2, '0')}, ${year} ${formattedHour}:${formattedMinute} ${period}`;
-  }
-
-  return dateString.length > 20 ? dateString.substring(0, 20) : dateString;
-};
-
 const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   const insets = useSafeAreaInsets();
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dataFetchedAt, setDataFetchedAt] = useState(null); // Track when data was loaded
 
   const assignedModems = Array.isArray(modems) ? modems : [];
   const routeModem = route?.params?.modem;
@@ -138,12 +95,10 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   };
 
   useEffect(() => {
-    // Modem data is already passed via route params when navigating from Dashboard/AllModems
-    // No API call needed - use the data from route
     if (resolvedModem) {
-      // Use originalAlert if available (from normalized modem record), otherwise use resolvedModem
       const modemData = resolvedModem.originalAlert || resolvedModem;
       setApiData(modemData);
+      setDataFetchedAt(new Date().toISOString());
     }
     setLoading(false);
   }, [resolvedModem]);
@@ -159,7 +114,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
         error: apiData.codeDesc || fallbackModem.error,
         errorCode: apiData.code || 'N/A',
         reason: apiData.codeDesc || fallbackModem.reason,
-        location: apiData.discom || 'N/A', // Using discom as location
+        location: apiData.discom || 'N/A',
         date: apiData.modemDate ? `${apiData.modemDate} ${apiData.modemTime || ''}` : fallbackModem.date,
         signalStrength: apiData.signalStrength1 || apiData.signalStrength2 || 0,
         discom: apiData.discom || 'N/A',
@@ -180,7 +135,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
       };
     }
     return fallbackModem;
-  }, [apiData, fallbackModem]);
+  }, [apiData, fallbackModem, dataFetchedAt]);
 
   const statusMeta =
     statusMetaMap[modem.status] ??
@@ -188,12 +143,8 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
       ? statusMetaMap.disconnected
       : statusMetaMap.default);
 
-  // Format last update date
   const formatLastUpdate = (dateString) => formatDisplayDateTime(dateString);
 
-  // Get signal strength icon based on value - moved outside to be accessible
-
-  // Map network type to display format
   const getNetworkType = (sysmode) => {
     if (!sysmode || sysmode === 'N/A') return 'N/A';
     if (sysmode.includes('LTE')) return '4G';
@@ -203,7 +154,6 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   };
 
   const detailFields = useMemo(() => {
-    // Always show the required fields in the specified order
     const fields = [];
     
     if (apiData && modem) {
@@ -217,10 +167,9 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
         { label: 'Network Type', value: getNetworkType(modem.sysmode), type: 'text' },
         { label: 'Operator', value: modem.simService || 'N/A', type: 'text' },
         { label: 'Signal Strength', value: modem.signalStrength || 0, type: 'signal' },
-        { label: 'Last Update', value: formatLastUpdate(modem.logTimestamp), type: 'text' },
+        { label: 'Last Update', value: formatLastUpdate(dataFetchedAt || new Date().toISOString()), type: 'text' },
       );
     } else {
-      // Fallback fields
       fields.push(
         { label: 'Error Code', value: 'N/A', type: 'text' },
         { label: 'Error Type', value: 'N/A', type: 'text' },
@@ -236,7 +185,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
     }
     
     return fields;
-  }, [modem, apiData]);
+  }, [modem, apiData, dataFetchedAt]); // Add dataFetchedAt to dependencies
 
 
   const handleResolve = useCallback(() => {

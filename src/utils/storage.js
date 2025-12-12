@@ -6,7 +6,6 @@ const KEYS = {
   USER_DATA: '@app:user_data',
 };
 
-// API Key functions
 export const storeApiKey = async (apiKey) => {
   try {
     await AsyncStorage.setItem(KEYS.API_KEY, apiKey);
@@ -63,7 +62,6 @@ export const removeUserPhone = async () => {
   }
 };
 
-// Clear all auth data
 export const clearAuthData = async () => {
   try {
     await Promise.all([

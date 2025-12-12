@@ -27,7 +27,6 @@ const AppNavigator = () => {
   const [userModems, setUserModems] = useState([]);
   const [userPhone, setUserPhone] = useState(null);
 
-  // Helper function to extract modem ID from modem object (checks all possible fields)
   const extractModemId = (modem) => {
     return modem?.modemSINo ||    // From field officer API (nexusenergy.tech)
            modem?.modemNo ||       // From alerts API (api.bestinfra.app)
@@ -56,7 +55,6 @@ const AppNavigator = () => {
     
     const modems = Array.isArray(json) ? json : [];
     
-    // Log extracted modem IDs for debugging
     const extractedIds = modems.map(m => ({
       modemno: m.modemno,
       modemSlNo: m.modemSlNo,
@@ -125,8 +123,6 @@ const AppNavigator = () => {
   
 
   const handleSplashFinish = useCallback(() => {
-    // SplashScreen is now purely visual - loading is controlled by useEffect
-    // This callback is kept for backwards compatibility but doesn't control loading
   }, []);
 
   const handleOnboardingComplete = useCallback(() => {
@@ -149,10 +145,7 @@ const AppNavigator = () => {
   }, []);
 
   const handleLogout = useCallback(async () => {
-    // Clear API Key and auth data from AsyncStorage
     await clearAuthData();
-    
-    // Clear local state
     setUserModems([]);
     setUserPhone(null);
     setIsAuthenticated(false);

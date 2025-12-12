@@ -19,6 +19,29 @@ export const formatDisplayDateTime = (dateString) => {
     return `${month} ${day}, ${year} ${formattedHour}:${formattedMinute} ${period}`;
   };
 
+  const ddMmmYyyyPattern = /^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s+(AM|PM)$/i;
+  const match = dateString.match(ddMmmYyyyPattern);
+  if (match) {
+    const [, day, monthStr, year, hourStr, minuteStr, secondStr, period] = match;
+    try {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthIndex = monthNames.findIndex(m => m.toLowerCase() === monthStr.toLowerCase());
+      if (monthIndex !== -1) {
+        const date = new Date(parseInt(year), monthIndex, parseInt(day), 
+          period.toUpperCase() === 'PM' && parseInt(hourStr) !== 12 
+            ? parseInt(hourStr) + 12 
+            : period.toUpperCase() === 'AM' && parseInt(hourStr) === 12 
+            ? 0 
+            : parseInt(hourStr), 
+          parseInt(minuteStr), parseInt(secondStr));
+        if (!Number.isNaN(date.getTime())) {
+          return formatParts(date);
+        }
+      }
+    } catch {
+    }
+  }
+
   try {
     const normalized = normalizeInput(dateString);
     const parts = normalized.split(' ');
@@ -28,10 +51,8 @@ export const formatDisplayDateTime = (dateString) => {
       return formatParts(parsed);
     }
   } catch {
-    // fall through to regex fallback
   }
 
-  // Try parsing if date and time are separate
   try {
     const normalized = normalizeInput(dateString);
     const parsed = new Date(normalized);
@@ -39,9 +60,8 @@ export const formatDisplayDateTime = (dateString) => {
       return formatParts(parsed);
     }
   } catch {
-    // fall through
   }
 
-  return dateString; // Return original if parsing fails
+  return dateString;
 };
 

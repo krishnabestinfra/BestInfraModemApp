@@ -10,13 +10,11 @@ export const NotificationProvider = ({ children }) => {
   const [showPopup, setShowPopup] = useState(false);
   const [popupNotification, setPopupNotification] = useState(null);
   
-  // Alert polling state
   const [alertPollingActive, setAlertPollingActive] = useState(false);
   const previousAlertIdsRef = useRef(new Set());
   const isInitialLoadRef = useRef(true);
   const alertPollingIntervalRef = useRef(null);
 
-  // Load saved data
   useEffect(() => {
     (async () => {
       try {
@@ -30,7 +28,6 @@ export const NotificationProvider = ({ children }) => {
           setNotifications(parsed);
         }
       } catch (e) {
-        // Silent error handling
       }
     })();
   }, []);
@@ -40,13 +37,11 @@ export const NotificationProvider = ({ children }) => {
     await AsyncStorage.setItem("trackingModemId", modemId);
   };
 
-  // Stop tracking when resolved
   const stopTracking = async () => {
     setTrackingModemId(null);
     await AsyncStorage.removeItem("trackingModemId");
   };
 
-  // Add notification (with popup)
   const pushNotification = async (title, message) => {
     const newItem = {
       id: Date.now().toString(),
@@ -61,24 +56,20 @@ export const NotificationProvider = ({ children }) => {
     setNotifications(updated);
     await AsyncStorage.setItem("notifications", JSON.stringify(updated));
     
-    // Show popup notification
     setPopupNotification(newItem);
     setShowPopup(true);
     
-    // Auto-hide popup after 5 seconds
     setTimeout(() => {
       setShowPopup(false);
       setPopupNotification(null);
     }, 5000);
   };
 
-  // Start alert polling for new alerts
   const startAlertPolling = async (modemIds, userPhone) => {
     if (!modemIds || modemIds.length === 0 || !userPhone) {
       return;
     }
 
-    // Stop any existing polling
     if (alertPollingIntervalRef.current) {
       clearInterval(alertPollingIntervalRef.current);
     }
@@ -86,16 +77,13 @@ export const NotificationProvider = ({ children }) => {
     setAlertPollingActive(true);
     isInitialLoadRef.current = true;
     
-    // Initial fetch
     await checkForNewAlerts(modemIds, userPhone);
     
-    // Poll every 5 minutes
     alertPollingIntervalRef.current = setInterval(async () => {
       await checkForNewAlerts(modemIds, userPhone);
     }, 5 * 60 * 1000);
   };
 
-  // Stop alert polling
   const stopAlertPolling = () => {
     if (alertPollingIntervalRef.current) {
       clearInterval(alertPollingIntervalRef.current);
@@ -120,9 +108,7 @@ export const NotificationProvider = ({ children }) => {
       let hasMore = true;
       const limit = 50; // API default limit
 
-      // Fetch all pages using offset-based pagination
       while (hasMore) {
-        // Try offset-based pagination (more common than page-based)
         const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}&limit=${limit}&offset=${offset}`;
         
         console.log("NotificationContext - Checking for new alerts, modems:", modemIds, `offset=${offset}, limit=${limit}`);
@@ -136,9 +122,7 @@ export const NotificationProvider = ({ children }) => {
 
         console.log("NotificationContext - API Response Status:", response.status);
 
-        // Check if API returned an error
         if (!response.ok || (json.success === false) || json.error) {
-          // If first page fails, try without offset parameter (fallback)
           if (offset === 0) {
             const fallbackUrl = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}&limit=9999`;
             console.log("NotificationContext - Trying fallback URL without offset");
@@ -149,7 +133,6 @@ export const NotificationProvider = ({ children }) => {
             const fallbackJson = await fallbackResponse.json();
             
             if (fallbackResponse.ok && !fallbackJson.error) {
-              // Handle different response structures
               if (Array.isArray(fallbackJson)) {
                 allAlerts = fallbackJson;
               } else if (Array.isArray(fallbackJson.alerts)) {
@@ -164,7 +147,6 @@ export const NotificationProvider = ({ children }) => {
             }
           }
           
-          // If not first page, stop pagination
           if (offset > 0) {
             console.log("NotificationContext - Error on offset > 0, stopping pagination");
             break;
@@ -174,7 +156,6 @@ export const NotificationProvider = ({ children }) => {
           return;
         }
 
-        // Handle different response structures
         let alertsArray = [];
         if (Array.isArray(json)) {
           alertsArray = json;
@@ -188,7 +169,6 @@ export const NotificationProvider = ({ children }) => {
 
         console.log(`NotificationContext - Page ${Math.floor(offset / limit) + 1}: Got ${alertsArray.length} alerts (total so far: ${allAlerts.length + alertsArray.length})`);
 
-        // Check if we got less than the limit (last page)
         if (alertsArray.length === 0) {
           hasMore = false;
           console.log("NotificationContext - No more alerts, stopping pagination");
@@ -196,7 +176,6 @@ export const NotificationProvider = ({ children }) => {
           hasMore = false;
           console.log("NotificationContext - Got less than limit, this is the last page");
         } else {
-          // Check if API provides pagination metadata
           if (json.hasMore === false || json.nextPage === null || json.total !== undefined) {
             const total = json.total || (allAlerts.length + alertsArray.length);
             if (allAlerts.length + alertsArray.length >= total) {
@@ -208,13 +187,11 @@ export const NotificationProvider = ({ children }) => {
 
         allAlerts = [...allAlerts, ...alertsArray];
         
-        // Safety check: stop after fetching 500 items (10 pages of 50) for polling
         if (allAlerts.length >= 500) {
           console.warn("NotificationContext - Reached safety limit (500 items) for polling");
           break;
         }
         
-        // If we got exactly the limit, there might be more
         if (alertsArray.length < limit) {
           hasMore = false;
         } else {
@@ -224,10 +201,7 @@ export const NotificationProvider = ({ children }) => {
       
       console.log("NotificationContext - Total alerts fetched:", allAlerts.length);
 
-      // Use allAlerts as alertsArray for filtering
       const alertsArray = allAlerts;
-
-      // FILTER ALERTS FOR THIS FIELD OFFICER ONLY
       const filteredAlerts = alertsArray.filter(item => {
         const keysToCheck = [
           item.modemSlNo,
@@ -243,9 +217,7 @@ export const NotificationProvider = ({ children }) => {
       console.log("NotificationContext - Modem IDs for filtering:", modemIds);
       console.log("NotificationContext - Filtered alerts count:", filteredAlerts.length);
       
-      // Detect new alerts and show notifications
       if (!isInitialLoadRef.current && filteredAlerts.length > 0) {
-        // Create a unique ID for each alert (using multiple fields for better matching)
         const getAlertId = (alert) => {
           return alert.id?.toString() || 
                  alert.modemSlNo?.toString() || 
@@ -258,7 +230,6 @@ export const NotificationProvider = ({ children }) => {
           filteredAlerts.map(alert => getAlertId(alert))
         );
         
-        // Find new alerts (alerts that weren't in previous set)
         const newAlerts = filteredAlerts.filter(alert => {
           const alertId = getAlertId(alert);
           return !previousAlertIdsRef.current.has(alertId);
@@ -266,7 +237,6 @@ export const NotificationProvider = ({ children }) => {
         
         console.log("NotificationContext - New alerts detected:", newAlerts.length);
         
-        // Show notification for EACH new alert (not just the first one)
         if (newAlerts.length > 0) {
           for (const newAlert of newAlerts) {
             const modemId = newAlert.modemSlNo || newAlert.modemno || newAlert.sno || 'Unknown';
@@ -278,15 +248,12 @@ export const NotificationProvider = ({ children }) => {
               `Modem ${modemId}: ${errorType}${errorCode ? ` (Code: ${errorCode})` : ''}`
             );
             
-            // Add small delay between notifications to avoid overwhelming the user
             await new Promise(resolve => setTimeout(resolve, 800));
           }
         }
         
-        // Update previous alert IDs
         previousAlertIdsRef.current = currentAlertIds;
       } else if (isInitialLoadRef.current) {
-        // On first load, just store the alert IDs without showing notifications
         const getAlertId = (alert) => {
           return alert.id?.toString() || 
                  alert.modemSlNo?.toString() || 
@@ -308,7 +275,6 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
-  // 5 min checker for modem status
   useEffect(() => {
     if (!trackingModemId) return;
 
