@@ -102,14 +102,6 @@ const AppNavigator = () => {
       if (storedPhone && isMounted) {
         try {
           const modems = await fetchModemsByOfficer(storedPhone);
-<<<<<<< HEAD
-          console.log("Persistent Modems Loaded:", modems);
-          const extractedIds = modems.map(m => extractModemId(m)).filter(Boolean);
-          console.log("Persistent Login - Extracted Modem IDs:", extractedIds);
-          console.log("Persistent Login - Total modems:", modems.length, "Extracted IDs:", extractedIds.length);
-      
-=======
->>>>>>> d113c89d6db6bf866ceea312f62d7fe0bf88919f
           if (isMounted) setUserModems(modems);
         } catch (err) {
           // Silent error handling

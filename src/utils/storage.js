@@ -6,16 +6,12 @@ const KEYS = {
   USER_DATA: '@app:user_data',
 };
 
-<<<<<<< HEAD
-=======
-// Cache for frequently accessed values
 const cache = {
   apiKey: null,
   userPhone: null,
   initialized: false,
 };
 
-// Initialize cache on app start
 export const initializeStorageCache = async () => {
   if (cache.initialized) return;
   
@@ -29,12 +25,9 @@ export const initializeStorageCache = async () => {
     cache.userPhone = userPhone[1];
     cache.initialized = true;
   } catch (error) {
-    // Silent error handling
   }
 };
 
-// API Key functions
->>>>>>> d113c89d6db6bf866ceea312f62d7fe0bf88919f
 export const storeApiKey = async (apiKey) => {
   try {
     await AsyncStorage.setItem(KEYS.API_KEY, apiKey);
@@ -114,10 +107,6 @@ export const removeUserPhone = async () => {
   }
 };
 
-<<<<<<< HEAD
-=======
-// Clear all auth data - optimized with multiRemove
->>>>>>> d113c89d6db6bf866ceea312f62d7fe0bf88919f
 export const clearAuthData = async () => {
   try {
     // Use multiRemove for better performance

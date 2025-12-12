@@ -66,12 +66,7 @@ export const NotificationProvider = ({ children }) => {
     }, 5000);
   };
 
-<<<<<<< HEAD
-  const startAlertPolling = async (modemIds, userPhone) => {
-=======
-  // Start alert polling for new alerts
   const startAlertPolling = useCallback(async (modemIds, userPhone) => {
->>>>>>> d113c89d6db6bf866ceea312f62d7fe0bf88919f
     if (!modemIds || modemIds.length === 0 || !userPhone) {
       return;
     }
@@ -103,49 +98,24 @@ export const NotificationProvider = ({ children }) => {
   // Check for new alerts
   const checkForNewAlerts = useCallback(async (modemIds, userPhone) => {
     try {
-<<<<<<< HEAD
-      if (!modemIds || modemIds.length === 0 || !userPhone) {
-        console.log("NotificationContext - Skipping alert check: missing modemIds or userPhone");
-=======
       if (!modemIds || modemIds.length === 0 || !userPhone) return;
-
-      const modemQuery = modemIds.join(",");
-      const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}`;
-      const headers = getProtectedHeaders(API_KEY, userPhone);
-      
-      // Use cached fetch - cache for 4 minutes (less than polling interval)
-      const response = await cachedFetch(url, {
-        method: "GET",
-        headers,
-      }, 4 * 60 * 1000);
-      
-      const json = await response.json();
-
-      // Check if API returned an error
-      if (!response.ok || (json.success === false) || json.error) {
->>>>>>> d113c89d6db6bf866ceea312f62d7fe0bf88919f
-        return;
-      }
 
       const modemQuery = modemIds.join(",");
       let allAlerts = [];
       let offset = 0;
       let hasMore = true;
-      const limit = 50; // API default limit
+      const limit = 50;
 
       while (hasMore) {
         const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}&limit=${limit}&offset=${offset}`;
+        const headers = getProtectedHeaders(API_KEY, userPhone);
         
-        console.log("NotificationContext - Checking for new alerts, modems:", modemIds, `offset=${offset}, limit=${limit}`);
-        
-        const response = await fetch(url, {
+        const response = await cachedFetch(url, {
           method: "GET",
-          headers: getProtectedHeaders(API_KEY, userPhone),
-        });
+          headers,
+        }, 4 * 60 * 1000);
         
         const json = await response.json();
-
-        console.log("NotificationContext - API Response Status:", response.status);
 
         if (!response.ok || (json.success === false) || json.error) {
           if (offset === 0) {
