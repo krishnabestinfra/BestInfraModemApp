@@ -28,6 +28,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { modemStats, modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
+import { formatDisplayDateTime } from '../utils/dateUtils';
 
 import SearchIcon from '../../assets/icons/searchIcon.svg';
 import ScanIcon from '../../assets/icons/scan.svg';
@@ -305,9 +306,17 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   };
 
   const normalizeModemRecord = (alert = {}, index = 0) => {
-    const id = alert.id?.toString() || alert.modemSlNo || alert.modemno || alert.sno || `alert-${index}`;
-    const modemId = alert.modemSlNo || alert.modemno || alert.sno || alert.modemId || id;
+    const modemId = alert.modemSlNo || alert.modemno || alert.sno || alert.modemId || 'unknown';
     const code = alert.code || alert.errorCode || 'N/A';
+    // Create unique ID - use alert.id if available, otherwise combine modemId, code, timestamp, and index
+    const timestamp = alert.modemDate || alert.date || alert.logTimestamp || alert.lastCommunicatedAt || '';
+    const uniqueId = alert.id?.toString() || `${modemId}-${code}-${timestamp}-${index}`;
+    const id = uniqueId || `alert-${index}`;
+
+    let rawDate = alert.logTimestamp || alert.modemDate || alert.date || alert.lastCommunicatedAt || alert.installedOn || alert.updatedAt || 'N/A';
+    
+    // Format the date
+    const formattedDate = formatDisplayDateTime(rawDate);
 
     return {
       id,
@@ -315,7 +324,7 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
       location: alert.discom || alert.location || alert.meterLocation || alert.section || alert.subdivision || alert.division || alert.circle || 'N/A',
       error: alert.codeDesc || alert.error || alert.commissionStatus || alert.communicationStatus || 'N/A',
       reason: alert.reason || alert.codeDesc || alert.comments || alert.techSupportStatus || 'N/A',
-      date: alert.modemDate ? `${alert.modemDate} ${alert.modemTime || ''}` : alert.date || alert.lastCommunicatedAt || alert.installedOn || alert.updatedAt || 'N/A',
+      date: formattedDate,
       status: getStatusFromCode(code),
       signalStrength: alert.signalStrength1 || alert.signalStrength2 || alert.signalStrength || 0,
       discom: alert.discom || alert.circle || alert.division || 'N/A',
@@ -587,8 +596,8 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
               <Text style={styles.emptyText}>No alerts found</Text>
             </View>
           ) : (
-            filteredModems.map((modem) => (
-              <ModemCard key={modem.id} modem={modem} navigation={navigation} />
+            filteredModems.map((modem, index) => (
+              <ModemCard key={modem.id || `modem-${index}`} modem={modem} navigation={navigation} />
             ))
           )}
         </View>
