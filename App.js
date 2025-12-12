@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -6,7 +6,6 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { SidebarProvider } from './src/context/SidebarContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import * as NavigationBar from 'expo-navigation-bar';
-
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -21,23 +20,23 @@ export default function App() {
     'Manrope-ExtraBold': require('./assets/fonts/Manrope-ExtraBold.ttf'),
   });
 
+  // Hide splash screen when fonts are loaded
   useEffect(() => {
     if (fontsLoaded) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded]);
 
+  // Configure navigation bar once on mount
   useEffect(() => {
-    NavigationBar.setBehaviorAsync("overlay-swipe");
-    NavigationBar.setVisibilityAsync("visible");
-    NavigationBar.setBackgroundColorAsync("transparent");
+    NavigationBar.setBehaviorAsync("overlay-swipe").catch(() => {});
+    NavigationBar.setVisibilityAsync("visible").catch(() => {});
+    NavigationBar.setBackgroundColorAsync("transparent").catch(() => {});
   }, []);
 
   if (!fontsLoaded) {
     return null;
   }
-
-
 
   return (
     <SafeAreaProvider>

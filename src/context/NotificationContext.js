@@ -1,6 +1,7 @@
-import React, { createContext, useEffect, useState, useRef } from "react";
+import React, { createContext, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_KEY, API_ENDPOINTS, getProtectedHeaders } from "../config/apiConfig";
+import { cachedFetch } from "../utils/apiCache";
 
 export const NotificationContext = createContext();
 
@@ -65,7 +66,12 @@ export const NotificationProvider = ({ children }) => {
     }, 5000);
   };
 
+<<<<<<< HEAD
   const startAlertPolling = async (modemIds, userPhone) => {
+=======
+  // Start alert polling for new alerts
+  const startAlertPolling = useCallback(async (modemIds, userPhone) => {
+>>>>>>> d113c89d6db6bf866ceea312f62d7fe0bf88919f
     if (!modemIds || modemIds.length === 0 || !userPhone) {
       return;
     }
@@ -82,7 +88,7 @@ export const NotificationProvider = ({ children }) => {
     alertPollingIntervalRef.current = setInterval(async () => {
       await checkForNewAlerts(modemIds, userPhone);
     }, 5 * 60 * 1000);
-  };
+  }, [checkForNewAlerts]);
 
   const stopAlertPolling = () => {
     if (alertPollingIntervalRef.current) {
@@ -95,10 +101,29 @@ export const NotificationProvider = ({ children }) => {
   };
 
   // Check for new alerts
-  const checkForNewAlerts = async (modemIds, userPhone) => {
+  const checkForNewAlerts = useCallback(async (modemIds, userPhone) => {
     try {
+<<<<<<< HEAD
       if (!modemIds || modemIds.length === 0 || !userPhone) {
         console.log("NotificationContext - Skipping alert check: missing modemIds or userPhone");
+=======
+      if (!modemIds || modemIds.length === 0 || !userPhone) return;
+
+      const modemQuery = modemIds.join(",");
+      const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}`;
+      const headers = getProtectedHeaders(API_KEY, userPhone);
+      
+      // Use cached fetch - cache for 4 minutes (less than polling interval)
+      const response = await cachedFetch(url, {
+        method: "GET",
+        headers,
+      }, 4 * 60 * 1000);
+      
+      const json = await response.json();
+
+      // Check if API returned an error
+      if (!response.ok || (json.success === false) || json.error) {
+>>>>>>> d113c89d6db6bf866ceea312f62d7fe0bf88919f
         return;
       }
 
@@ -273,7 +298,7 @@ export const NotificationProvider = ({ children }) => {
       console.error("NotificationContext - checkForNewAlerts ERROR:", error);
       console.error("NotificationContext - Error details:", error.message);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!trackingModemId) return;
@@ -326,23 +351,31 @@ export const NotificationProvider = ({ children }) => {
     }
   }
 
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    trackingModemId,
+    notifications,
+    startTracking,
+    stopTracking,
+    setNotifications,
+    showPopup,
+    popupNotification,
+    setShowPopup,
+    pushNotification,
+    startAlertPolling,
+    stopAlertPolling,
+    alertPollingActive,
+  }), [
+    trackingModemId,
+    notifications,
+    showPopup,
+    popupNotification,
+    alertPollingActive,
+    startAlertPolling,
+  ]);
+
   return (
-    <NotificationContext.Provider
-      value={{
-        trackingModemId,
-        notifications,
-        startTracking,
-        stopTracking,
-        setNotifications,
-        showPopup,
-        popupNotification,
-        setShowPopup,
-        pushNotification,
-        startAlertPolling,
-        stopAlertPolling,
-        alertPollingActive,
-      }}
-    >
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );

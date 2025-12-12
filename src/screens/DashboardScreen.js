@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   FlatList,
   TouchableOpacity,
   TextInput,
@@ -15,7 +14,9 @@ import {
   Linking,
   Alert,
   Platform,
+  RefreshControl,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -23,7 +24,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import { API_BASE_URL, API_KEY, API_ENDPOINTS, getProtectedHeaders } from "../config/apiConfig";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { cachedFetch } from '../utils/apiCache';
 
 import { modemStats, modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
@@ -42,6 +43,7 @@ import CommunicatingModemsIcon from '../../assets/icons/communicating.svg';
 import NonCommunicatingModemsIcon from '../../assets/icons/noncommicating.svg';
 import { NotificationContext } from '../context/NotificationContext';
 import { useContext } from 'react';
+import { SkeletonLoader } from '../utils/loadingManager';
 
 import Meter from '../../assets/images/meter.png';
 
@@ -113,9 +115,19 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   const insets = useSafeAreaInsets();
     
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [userName] = useState('Field Officer');
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Debounce search input to reduce lag
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState({
@@ -188,10 +200,12 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
 
       while (hasMore) {
         const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}&limit=${limit}&offset=${offset}`;
-        const response = await fetch(url, {
+      const headers = getProtectedHeaders(API_KEY, userPhone);
+        // Use cached fetch - cache for 2 minutes
+      const response = await cachedFetch(url, {
           method: "GET",
-          headers: getProtectedHeaders(API_KEY, userPhone),
-        });
+          headers,
+        }, 2 * 60 * 1000);
   
         const json = await response.json();
 
@@ -268,13 +282,40 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
         alerts: filteredAlerts,
         stats: stats
       });
+
+      if (!showLoading && filteredAlerts.length > 0) {
+        console.log('Alerts refreshed successfully', filteredAlerts.length, 'alerts loaded');
+      }
   
     } catch (error) {
       setApiData(null);
+      if (showLoading) {
+        console.error('Network error. Please check your connection.', error);
+      }
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
+      setRefreshing(false);
     }
   }, [modemIds, userPhone]);
+
+  useEffect(() => {
+    if (modemIds.length > 0 && userPhone) {
+      fetchApiData();
+      
+      // Start alert polling in context (checks every 5 minutes)
+      startAlertPolling(modemIds, userPhone);
+      
+      return () => {
+        stopAlertPolling();
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modemIds.length, userPhone]); // Only depend on actual values, not function references
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchApiData(false);
+  }, [fetchApiData]);
   
   
   
@@ -423,10 +464,19 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
       list = list.filter(m => matchesErrorFilter(m, appliedFilters.errorType));
     }
 
+    // Optimize date sorting by using pre-parsed dates
     if (appliedFilters.sortBy === 'newest') {
-      list.sort((a, b) => new Date(b.date) - new Date(a.date));
+      list.sort((a, b) => {
+        const dateA = a._parsedDate || (a._parsedDate = new Date(a.date).getTime());
+        const dateB = b._parsedDate || (b._parsedDate = new Date(b.date).getTime());
+        return dateB - dateA;
+      });
     } else {
-      list.sort((a, b) => new Date(a.date) - new Date(b.date));
+      list.sort((a, b) => {
+        const dateA = a._parsedDate || (a._parsedDate = new Date(a.date).getTime());
+        const dateB = b._parsedDate || (b._parsedDate = new Date(b.date).getTime());
+        return dateA - dateB;
+      });
     }
 
         if (searchQuery.trim()) {
@@ -463,25 +513,23 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
     }
 
     return list;
-  }, [transformedAlerts, appliedFilters, searchQuery]);
+  }, [transformedAlerts, appliedFilters, debouncedSearchQuery]);
 
 
-  return (
-    <SafeAreaView style={styles.safeArea} edges={[]}>
-      <StatusBar style="dark" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}>
-
-        <View style={styles.bluecontainer}>
-          <AppHeader
-            containerStyle={styles.TopMenu}
-            leftButtonStyle={styles.barsIcon}
-            rightButtonStyle={styles.bellIcon}
-            rightIcon={NotificationLight}
-            logo={<RippleLogo size={68} />}
-            onPressLeft={() => navigation.navigate('SideMenu')}
-            onPressCenter={() => navigation.navigate('Dashboard')}
-            onPressRight={() => navigation.navigate('Profile')}
-          />
+  const renderHeader = useCallback(() => (
+    <>
+      {/* ================= HEADER ================= */}
+      <View style={styles.bluecontainer}>
+        <AppHeader
+          containerStyle={styles.TopMenu}
+          leftButtonStyle={styles.barsIcon}
+          rightButtonStyle={styles.bellIcon}
+          rightIcon={NotificationLight}
+          logo={<RippleLogo size={68} />}
+          onPressLeft={() => navigation.navigate('SideMenu')}
+          onPressCenter={() => navigation.navigate('Dashboard')}
+          onPressRight={() => navigation.navigate('Profile')}
+        />
 
           <View style={styles.ProfileBox}>
             <View style={styles.profileGreetingContainer}>
@@ -493,78 +541,137 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
             </View>
           </View>
 
-          <View style={styles.metricsRow}>
-            <TouchableOpacity
-              style={styles.metricCard}
-              activeOpacity={0.7}
-            >
-              <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Communicating Modems</Text>
-                <Text style={styles.metricValue}>
-                  {loading ? '...' : wipData.communicatingModems}
-                </Text>
-              </View>
-              <View style={styles.metricIconContainer}>
-                <CommunicatingModemsIcon width={21} height={21} />
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.metricCard}
-              activeOpacity={0.7}
-            >
-              <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Non-Communicating</Text>
-                <Text style={styles.metricValue}>
-                  {loading ? '...' : wipData.nonCommunicatingModems}
-                </Text>
-              </View>
-              <View style={styles.metricIconContainer}>
-                <NonCommunicatingModemsIcon width={21} height={21} />
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.searchCardWrapper}>
-          <View style={styles.searchCard}>
-            <TextInput
-              placeholder="Quick Search"
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              style={styles.searchInput}
-            />
-            <SearchIcon width={16} height={16} />
-          </View>
-
-          <TouchableOpacity 
-            style={styles.filterButton} 
-            onPress={handleOpenFilterModal}
+        {/* ================= CARDS ROW ================= */}
+        <View style={styles.metricsRow}>
+          <TouchableOpacity
+            style={styles.metricCard}
+            activeOpacity={0.7}
           >
-            <FilterIcon width={20} height={20} />
-            {hasActiveFilters && <View style={styles.filterActiveDot} />}
+            <View style={styles.textContainer}>
+              <Text style={styles.metricTitle}>Communicating Modems</Text>
+              <Text style={styles.metricValue}>
+                {loading ? '...' : wipData.communicatingModems}
+              </Text>
+            </View>
+            <View style={styles.metricIconContainer}>
+              <CommunicatingModemsIcon width={21} height={21} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.metricCard}
+            activeOpacity={0.7}
+          >
+            <View style={styles.textContainer}>
+              <Text style={styles.metricTitle}>Non-Communicating</Text>
+              <Text style={styles.metricValue}>
+                {loading ? '...' : wipData.nonCommunicatingModems}
+              </Text>
+            </View>
+            <View style={styles.metricIconContainer}>
+              <NonCommunicatingModemsIcon width={21} height={21} />
+            </View>
           </TouchableOpacity>
         </View>
+      </View>
 
-
-        <View style={styles.cardsWrapper}>
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Loading alerts…</Text>
-            </View>
-          ) : filteredModems.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No alerts found</Text>
-            </View>
-          ) : (
-            filteredModems.map((modem, index) => (
-              <ModemCard key={modem.id || `modem-${index}`} modem={modem} navigation={navigation} />
-            ))
-          )}
+      {/* ================= SEARCH & FILTER ================= */}
+      <View style={styles.searchCardWrapper}>
+        <View style={styles.searchCard}>
+          <TextInput
+            placeholder="Quick Search"
+            placeholderTextColor={colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={styles.searchInput}
+          />
+          <SearchIcon width={16} height={16} />
         </View>
-      </ScrollView>
+
+        <TouchableOpacity 
+          style={styles.filterButton} 
+          onPress={handleOpenFilterModal}
+        >
+          <FilterIcon width={20} height={20} />
+          {hasActiveFilters && <View style={styles.filterActiveDot} />}
+        </TouchableOpacity>
+      </View>
+    </>
+  ), [navigation, userName, loading, wipData, searchQuery, hasActiveFilters, handleOpenFilterModal]);
+
+  const renderEmptyComponent = useCallback(() => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyIcon}>📭</Text>
+      <Text style={styles.emptyText}>No Alerts Found</Text>
+      <Text style={styles.emptySubText}>
+        {debouncedSearchQuery.trim() || hasActiveFilters
+          ? 'Try adjusting your search or filters'
+          : 'All modems are operating normally'}
+      </Text>
+      {hasActiveFilters && (
+        <TouchableOpacity 
+          style={styles.clearFiltersButton}
+          onPress={handleResetFilters}
+        >
+          <Text style={styles.clearFiltersText}>Clear Filters</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  ), [debouncedSearchQuery, hasActiveFilters, handleResetFilters]);
+
+  const renderModemItem = useCallback(({ item }) => (
+    <View style={styles.cardsWrapper}>
+      <ModemCard modem={item} navigation={navigation} />
+    </View>
+  ), [navigation]);
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={[]}>
+      <StatusBar style="dark" />
+      {loading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <View style={styles.skeletonContainer}>
+            {[1, 2, 3].map((i) => (
+              <View key={i} style={styles.skeletonCard}>
+                <SkeletonLoader style={styles.skeletonHeader} />
+                <SkeletonLoader style={styles.skeletonBody} />
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.flatListContainer}>
+          <FlatList
+            data={filteredModems}
+            keyExtractor={(item) => item.id}
+            renderItem={renderModemItem}
+            ListHeaderComponent={renderHeader}
+            ListEmptyComponent={renderEmptyComponent}
+            contentContainerStyle={[
+              styles.listContent,
+              filteredModems.length === 0 && styles.listContentEmpty,
+              { paddingBottom: 100 + insets.bottom }
+            ]}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[colors.secondary]}
+                tintColor={colors.secondary}
+              />
+            }
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            updateCellsBatchingPeriod={50}
+            initialNumToRender={10}
+            windowSize={10}
+            nestedScrollEnabled={false}
+            scrollEnabled={true}
+            keyboardShouldPersistTaps="handled"
+          />
+        </View>
+      )}
 
       <View style={[styles.stickyScanButtonContainer, { paddingBottom: spacing.md + insets.bottom }]}>
         <TouchableOpacity 
@@ -724,7 +831,14 @@ const ModemCard = React.memo(({ modem, navigation }) => {
       <View style={styles.itemDetails}>
         {/* PHOTO */}
         <View style={styles.photoSection}>
-          <Image source={modem.photos[0]} style={styles.photoImage} resizeMode="cover" />
+          <ExpoImage
+            source={modem.photos[0]}
+            style={styles.photoImage}
+            contentFit="cover"
+            transition={200}
+            placeholder={require('../../assets/images/meter.png')}
+            cachePolicy="memory-disk"
+          />
         </View>
 
         {/* DETAILS */}
@@ -770,6 +884,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  flatListContainer: {
+    flex: 1,
   },
   scrollContent: {
     paddingBottom: spacing.xl,
@@ -925,9 +1042,11 @@ const styles = StyleSheet.create({
   },
 
   cardsWrapper: {
-    marginTop: spacing.md,
     paddingHorizontal: spacing.md,
-    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  listContent: {
+    paddingBottom: spacing.xl,
   },
 
   loadingContainer: {
@@ -940,14 +1059,69 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.md,
   },
+  emptyScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    minHeight: 400,
+  },
   emptyContainer: {
     padding: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: spacing.md,
+  },
   emptyText: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    fontFamily: 'Manrope-Bold',
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  emptySubText: {
     ...typography.body,
     color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  clearFiltersButton: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.secondary,
+    borderRadius: 8,
+  },
+  clearFiltersText: {
+    color: '#fff',
+    fontFamily: 'Manrope-SemiBold',
+    fontSize: 14,
+  },
+  skeletonContainer: {
+    paddingHorizontal: spacing.md,
+  },
+  skeletonCard: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#F8F8F8',
+  },
+  skeletonHeader: {
+    height: 20,
+    width: '60%',
+    marginBottom: 12,
+    borderRadius: 4,
+  },
+  skeletonBody: {
+    height: 80,
+    width: '100%',
+    borderRadius: 4,
+  },
+  listContent: {
+    paddingBottom: spacing.xl,
   },
 
   modemCard: {
