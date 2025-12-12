@@ -11,13 +11,11 @@ export const NotificationProvider = ({ children }) => {
   const [showPopup, setShowPopup] = useState(false);
   const [popupNotification, setPopupNotification] = useState(null);
   
-  // Alert polling state
   const [alertPollingActive, setAlertPollingActive] = useState(false);
   const previousAlertIdsRef = useRef(new Set());
   const isInitialLoadRef = useRef(true);
   const alertPollingIntervalRef = useRef(null);
 
-  // Load saved data
   useEffect(() => {
     (async () => {
       try {
@@ -31,7 +29,6 @@ export const NotificationProvider = ({ children }) => {
           setNotifications(parsed);
         }
       } catch (e) {
-        // Silent error handling
       }
     })();
   }, []);
@@ -41,13 +38,11 @@ export const NotificationProvider = ({ children }) => {
     await AsyncStorage.setItem("trackingModemId", modemId);
   };
 
-  // Stop tracking when resolved
   const stopTracking = async () => {
     setTrackingModemId(null);
     await AsyncStorage.removeItem("trackingModemId");
   };
 
-  // Add notification (with popup)
   const pushNotification = async (title, message) => {
     const newItem = {
       id: Date.now().toString(),
@@ -62,24 +57,25 @@ export const NotificationProvider = ({ children }) => {
     setNotifications(updated);
     await AsyncStorage.setItem("notifications", JSON.stringify(updated));
     
-    // Show popup notification
     setPopupNotification(newItem);
     setShowPopup(true);
     
-    // Auto-hide popup after 5 seconds
     setTimeout(() => {
       setShowPopup(false);
       setPopupNotification(null);
     }, 5000);
   };
 
+<<<<<<< HEAD
+  const startAlertPolling = async (modemIds, userPhone) => {
+=======
   // Start alert polling for new alerts
   const startAlertPolling = useCallback(async (modemIds, userPhone) => {
+>>>>>>> d113c89d6db6bf866ceea312f62d7fe0bf88919f
     if (!modemIds || modemIds.length === 0 || !userPhone) {
       return;
     }
 
-    // Stop any existing polling
     if (alertPollingIntervalRef.current) {
       clearInterval(alertPollingIntervalRef.current);
     }
@@ -87,16 +83,13 @@ export const NotificationProvider = ({ children }) => {
     setAlertPollingActive(true);
     isInitialLoadRef.current = true;
     
-    // Initial fetch
     await checkForNewAlerts(modemIds, userPhone);
     
-    // Poll every 5 minutes
     alertPollingIntervalRef.current = setInterval(async () => {
       await checkForNewAlerts(modemIds, userPhone);
     }, 5 * 60 * 1000);
   }, [checkForNewAlerts]);
 
-  // Stop alert polling
   const stopAlertPolling = () => {
     if (alertPollingIntervalRef.current) {
       clearInterval(alertPollingIntervalRef.current);
@@ -110,6 +103,10 @@ export const NotificationProvider = ({ children }) => {
   // Check for new alerts
   const checkForNewAlerts = useCallback(async (modemIds, userPhone) => {
     try {
+<<<<<<< HEAD
+      if (!modemIds || modemIds.length === 0 || !userPhone) {
+        console.log("NotificationContext - Skipping alert check: missing modemIds or userPhone");
+=======
       if (!modemIds || modemIds.length === 0 || !userPhone) return;
 
       const modemQuery = modemIds.join(",");
@@ -126,79 +123,183 @@ export const NotificationProvider = ({ children }) => {
 
       // Check if API returned an error
       if (!response.ok || (json.success === false) || json.error) {
+>>>>>>> d113c89d6db6bf866ceea312f62d7fe0bf88919f
         return;
       }
 
-      // FILTER ALERTS FOR THIS FIELD OFFICER ONLY
-      const filteredAlerts = Array.isArray(json.alerts)
-        ? json.alerts.filter(item => {
-            const keysToCheck = [
-              item.modemSlNo,
-              item.modemno,
-              item.sno?.toString(),
-              item.modemId
-            ];
+      const modemQuery = modemIds.join(",");
+      let allAlerts = [];
+      let offset = 0;
+      let hasMore = true;
+      const limit = 50; // API default limit
+
+      while (hasMore) {
+        const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}&limit=${limit}&offset=${offset}`;
+        
+        console.log("NotificationContext - Checking for new alerts, modems:", modemIds, `offset=${offset}, limit=${limit}`);
+        
+        const response = await fetch(url, {
+          method: "GET",
+          headers: getProtectedHeaders(API_KEY, userPhone),
+        });
+        
+        const json = await response.json();
+
+        console.log("NotificationContext - API Response Status:", response.status);
+
+        if (!response.ok || (json.success === false) || json.error) {
+          if (offset === 0) {
+            const fallbackUrl = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}&limit=9999`;
+            console.log("NotificationContext - Trying fallback URL without offset");
+            const fallbackResponse = await fetch(fallbackUrl, {
+              method: "GET",
+              headers: getProtectedHeaders(API_KEY, userPhone),
+            });
+            const fallbackJson = await fallbackResponse.json();
+            
+            if (fallbackResponse.ok && !fallbackJson.error) {
+              if (Array.isArray(fallbackJson)) {
+                allAlerts = fallbackJson;
+              } else if (Array.isArray(fallbackJson.alerts)) {
+                allAlerts = fallbackJson.alerts;
+              } else if (Array.isArray(fallbackJson.data?.alerts)) {
+                allAlerts = fallbackJson.data.alerts;
+              } else if (Array.isArray(fallbackJson.data)) {
+                allAlerts = fallbackJson.data;
+              }
+              console.log("NotificationContext - Fallback successful, got", allAlerts.length, "alerts");
+              break;
+            }
+          }
+          
+          if (offset > 0) {
+            console.log("NotificationContext - Error on offset > 0, stopping pagination");
+            break;
+          }
+          
+          console.warn("NotificationContext - API returned error:", json.error || "Unknown error");
+          return;
+        }
+
+        let alertsArray = [];
+        if (Array.isArray(json)) {
+          alertsArray = json;
+        } else if (Array.isArray(json.alerts)) {
+          alertsArray = json.alerts;
+        } else if (Array.isArray(json.data?.alerts)) {
+          alertsArray = json.data.alerts;
+        } else if (Array.isArray(json.data)) {
+          alertsArray = json.data;
+        }
+
+        console.log(`NotificationContext - Page ${Math.floor(offset / limit) + 1}: Got ${alertsArray.length} alerts (total so far: ${allAlerts.length + alertsArray.length})`);
+
+        if (alertsArray.length === 0) {
+          hasMore = false;
+          console.log("NotificationContext - No more alerts, stopping pagination");
+        } else if (alertsArray.length < limit) {
+          hasMore = false;
+          console.log("NotificationContext - Got less than limit, this is the last page");
+        } else {
+          if (json.hasMore === false || json.nextPage === null || json.total !== undefined) {
+            const total = json.total || (allAlerts.length + alertsArray.length);
+            if (allAlerts.length + alertsArray.length >= total) {
+              hasMore = false;
+              console.log("NotificationContext - Reached total count from API metadata");
+            }
+          }
+        }
+
+        allAlerts = [...allAlerts, ...alertsArray];
+        
+        if (allAlerts.length >= 500) {
+          console.warn("NotificationContext - Reached safety limit (500 items) for polling");
+          break;
+        }
+        
+        if (alertsArray.length < limit) {
+          hasMore = false;
+        } else {
+          offset += limit;
+        }
+      }
       
-            return keysToCheck.some(key => key && modemIds.includes(key));
-          })
-        : [];
+      console.log("NotificationContext - Total alerts fetched:", allAlerts.length);
+
+      const alertsArray = allAlerts;
+      const filteredAlerts = alertsArray.filter(item => {
+        const keysToCheck = [
+          item.modemSlNo,
+          item.modemno,
+          item.sno?.toString(),
+          item.modemId
+        ];
       
-      // Detect new alerts and show notifications
+        return keysToCheck.some(key => key && modemIds.includes(key));
+      });
+      
+      console.log("NotificationContext - Total alerts from API:", alertsArray.length);
+      console.log("NotificationContext - Modem IDs for filtering:", modemIds);
+      console.log("NotificationContext - Filtered alerts count:", filteredAlerts.length);
+      
       if (!isInitialLoadRef.current && filteredAlerts.length > 0) {
+        const getAlertId = (alert) => {
+          return alert.id?.toString() || 
+                 alert.modemSlNo?.toString() || 
+                 alert.modemno?.toString() || 
+                 alert.sno?.toString() || 
+                 `${alert.modemSlNo || alert.modemno || alert.sno || 'unknown'}-${alert.code || alert.errorCode || 'no-code'}-${alert.logTimestamp || alert.date || 'no-date'}`;
+        };
+        
         const currentAlertIds = new Set(
-          filteredAlerts.map(alert => 
-            alert.id?.toString() || 
-            alert.modemSlNo || 
-            alert.modemno || 
-            alert.sno?.toString() || 
-            `alert-${Date.now()}`
-          )
+          filteredAlerts.map(alert => getAlertId(alert))
         );
         
-        // Find new alerts (alerts that weren't in previous set)
         const newAlerts = filteredAlerts.filter(alert => {
-          const alertId = alert.id?.toString() || 
-                         alert.modemSlNo || 
-                         alert.modemno || 
-                         alert.sno?.toString() || 
-                         `alert-${Date.now()}`;
+          const alertId = getAlertId(alert);
           return !previousAlertIdsRef.current.has(alertId);
         });
         
-        // Show notification for the first new alert
+        console.log("NotificationContext - New alerts detected:", newAlerts.length);
+        
         if (newAlerts.length > 0) {
-          const firstNewAlert = newAlerts[0];
-          const modemId = firstNewAlert.modemSlNo || firstNewAlert.modemno || firstNewAlert.sno || 'Unknown';
-          const errorType = firstNewAlert.codeDesc || firstNewAlert.error || 'Alert';
-          
-          await pushNotification(
-            "New Alert",
-            `Modem ${modemId}: ${errorType}`
-          );
+          for (const newAlert of newAlerts) {
+            const modemId = newAlert.modemSlNo || newAlert.modemno || newAlert.sno || 'Unknown';
+            const errorType = newAlert.codeDesc || newAlert.error || 'Alert';
+            const errorCode = newAlert.code || newAlert.errorCode || '';
+            
+            await pushNotification(
+              "New Alert",
+              `Modem ${modemId}: ${errorType}${errorCode ? ` (Code: ${errorCode})` : ''}`
+            );
+            
+            await new Promise(resolve => setTimeout(resolve, 800));
+          }
         }
         
-        // Update previous alert IDs
         previousAlertIdsRef.current = currentAlertIds;
       } else if (isInitialLoadRef.current) {
-        // On first load, just store the alert IDs without showing notifications
+        const getAlertId = (alert) => {
+          return alert.id?.toString() || 
+                 alert.modemSlNo?.toString() || 
+                 alert.modemno?.toString() || 
+                 alert.sno?.toString() || 
+                 `${alert.modemSlNo || alert.modemno || alert.sno || 'unknown'}-${alert.code || alert.errorCode || 'no-code'}-${alert.logTimestamp || alert.date || 'no-date'}`;
+        };
+        
         const currentAlertIds = new Set(
-          filteredAlerts.map(alert => 
-            alert.id?.toString() || 
-            alert.modemSlNo || 
-            alert.modemno || 
-            alert.sno?.toString() || 
-            `alert-${Date.now()}`
-          )
+          filteredAlerts.map(alert => getAlertId(alert))
         );
         previousAlertIdsRef.current = currentAlertIds;
         isInitialLoadRef.current = false;
+        console.log("NotificationContext - Initial load complete. Stored", currentAlertIds.size, "alert IDs");
       }
     } catch (error) {
-      // Silent error handling
+      console.error("NotificationContext - checkForNewAlerts ERROR:", error);
+      console.error("NotificationContext - Error details:", error.message);
     }
   }, []);
 
-  // 5 min checker for modem status
   useEffect(() => {
     if (!trackingModemId) return;
 

@@ -22,7 +22,6 @@ import Logo from '../components/global/Logo';
 import NotificationCard from '../components/global/NotificationCard';
 import { COLORS } from '../constants/colors';
 import EmptyNotification from '../../assets/icons/NoNotification.svg';
-// import { notifications as defaultNotifications } from '../data/dummyData';
 import { useContext } from 'react';
 import { NotificationContext } from '../context/NotificationContext';
 
@@ -54,7 +53,6 @@ const ProfileScreen = ({ navigation }) => {
 
   const consumerUid = 'BI25GMRA0001';
   
-  // Reload notifications from AsyncStorage when screen focuses
   useFocusEffect(
     useCallback(() => {
       const loadNotifications = async () => {
@@ -82,7 +80,6 @@ const ProfileScreen = ({ navigation }) => {
       n.id === id ? { ...n, is_read: true } : n
     );
     setNotifications(updated);
-    // Save to AsyncStorage
     await AsyncStorage.setItem("notifications", JSON.stringify(updated));
   };
 
