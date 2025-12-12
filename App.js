@@ -6,7 +6,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { SidebarProvider } from './src/context/SidebarContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import * as NavigationBar from 'expo-navigation-bar';
-
+ 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {

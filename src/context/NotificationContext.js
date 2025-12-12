@@ -97,7 +97,7 @@ export const NotificationProvider = ({ children }) => {
 
   // Check for new alerts
   const checkForNewAlerts = useCallback(async (modemIds, userPhone) => {
-    try {
+    try { 
       if (!modemIds || modemIds.length === 0 || !userPhone) return;
 
       const modemQuery = modemIds.join(",");
