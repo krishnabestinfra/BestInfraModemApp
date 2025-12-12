@@ -147,7 +147,6 @@ export const notifications = [
   }
 ];
 
-// Test alerts with error codes for testing purposes
 export const testAlerts = [
   {
     id: "TEST001",

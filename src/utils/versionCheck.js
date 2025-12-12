@@ -1,13 +1,11 @@
 import { Platform } from 'react-native';
 import { VERSION_CHECK_URL, FALLBACK_VERSION_CONFIG } from '../config/versionConfig';
 
-// Get current app version from app.json
 export const getCurrentVersion = () => {
   const appConfig = require('../../app.json');
   return appConfig.expo.version;
 };
 
-// Compare versions: returns true if current < required
 export const needsUpdate = (current, required) => {
   const currentParts = current.split('.').map(Number);
   const requiredParts = required.split('.').map(Number);
@@ -19,12 +17,9 @@ export const needsUpdate = (current, required) => {
   return false;
 };
 
-// Check if update is required
 export const checkAppVersion = async () => {
   try {
     const currentVersion = getCurrentVersion();
-    
-    // Try to fetch from remote URL
     let versionData = null;
     
     if (VERSION_CHECK_URL && VERSION_CHECK_URL !== 'https://your-website.com/version.json') {
@@ -42,7 +37,6 @@ export const checkAppVersion = async () => {
       }
     }
     
-    // Use fallback if remote check failed or not configured
     if (!versionData) {
       versionData = FALLBACK_VERSION_CONFIG;
     }
@@ -52,7 +46,6 @@ export const checkAppVersion = async () => {
     
     const updateNeeded = needsUpdate(currentVersion, requiredVersion);
     
-    // Only show update if needed
     if (!updateNeeded) return null;
     
     return {

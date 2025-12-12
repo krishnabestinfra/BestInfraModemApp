@@ -13,7 +13,6 @@ const SplashScreen = ({ onFinish }) => {
   const [versionChecked, setVersionChecked] = useState(false);
 
   useEffect(() => {
-    // Check for app version update
     const performVersionCheck = async () => {
       try {
         const info = await checkAppVersion();
@@ -31,7 +30,6 @@ const SplashScreen = ({ onFinish }) => {
   }, []);
 
   useEffect(() => {
-    // Only proceed if version check is done and no update is needed
     if (versionChecked && !updateInfo) {
       const timer = setTimeout(() => {
         onFinish?.();
