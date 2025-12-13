@@ -24,7 +24,6 @@ const CompletedActivities = ({ navigation, modems = [], modemIds = [], userPhone
         try {
             setLoading(true);
             
-            // Get user phone - use prop or from storage
             const phone = userPhone || await getUserPhone();
             
             if (!phone) {
@@ -196,7 +195,6 @@ const styles = StyleSheet.create({
         backgroundColor: "#EEF8F0",
     },
 
-    // HEADER
     headerContainer: {
         paddingVertical: 20,
         paddingHorizontal: 20,
@@ -216,7 +214,7 @@ const styles = StyleSheet.create({
     },
 
     container: {
-        flex: 1,                // allow container to fill available screen
+        flex: 1,
         paddingHorizontal: 15,
         backgroundColor: "#EEF8F0",
     },
@@ -237,7 +235,7 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 5,
         borderTopRightRadius: 5,
         marginBottom: 10,
-        zIndex: 10,   // helps keep above list
+        zIndex: 10,
     },
 
     sectionTitle: {

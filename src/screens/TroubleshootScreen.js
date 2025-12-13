@@ -183,7 +183,6 @@ const TroubleshootScreen = ({ navigation, route }) => {
   );
 };
 
-/* PROGRESS BARS COMPONENT */
 const ProgressBars = React.memo(({ currentStep = 1, totalSteps = 3 }) => {
   const steps = useMemo(() => Array.from({ length: totalSteps }, (_, idx) => idx + 1), [totalSteps]);
 
@@ -235,6 +234,7 @@ const StepContent = React.memo(({ step, feedback, showRetry }) => (
   </View>
 ));
 
+/* SUCCESS COMPONENT */
 const SuccessCard = React.memo(({ image, onComplete }) => (
   <View style={styles.successWrapper}>
     <View style={styles.successCard}>
@@ -257,6 +257,7 @@ const SuccessCard = React.memo(({ image, onComplete }) => (
   </View>
 ));
 
+/* STYLES */
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
 
@@ -286,8 +287,8 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     justifyContent: 'center',
     alignItems: 'center'
-  },
-
+    },
+  
   stepArea: {
     flex: 1,
     paddingHorizontal: spacing.md,
@@ -325,8 +326,8 @@ const styles = StyleSheet.create({
 
   contentWrapper: {
     flex: 1,
-  },
-
+    },
+  
   stepCard: {
     backgroundColor: colors.cardBackground,
     borderRadius: borderRadius.xl,
@@ -360,7 +361,7 @@ const styles = StyleSheet.create({
   bottomResponseBar: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.lg,
     backgroundColor: '#fff',
   },
   responseRow: {
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
 
   responseTextYes: { fontSize: 14, color: '#fff', fontWeight: '500' },
   responseTextNo: { fontSize: 14, color: '#6E6E6E', fontWeight: '500' },
-
+  
   feedbackCardInside: {
     backgroundColor: '#F7F7F7',
     paddingHorizontal: spacing.md,
@@ -407,7 +408,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontFamily: 'Manrope',
   },
-
+  
   successWrapper: {
     flex: 1,
     justifyContent: 'center',

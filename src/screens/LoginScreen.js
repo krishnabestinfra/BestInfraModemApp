@@ -210,7 +210,6 @@ const LoginScreen = ({  navigation, onLogin }) => {
       return;
     }
 
-    // Verify OTP stage
     setTouched({ mobile: true, otp: true });
 
     const newErrors = {};

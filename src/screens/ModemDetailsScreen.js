@@ -1,46 +1,25 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
-import { modemErrors } from '../data/dummyData';
 import { formatDisplayDateTime } from '../utils/dateUtils';
 import NotificationLight from '../../assets/icons/notification.svg';
-import NotificationIcon from '../../assets/icons/notificationDark.svg';
 import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
 import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
-
-
-
-const fallbackDetails = {
-  drtSlNo: '2345',
-  feederNo: '123456783',
-  feederName: 'Tadepalligudem - Rural',
-  substationNo: '1234533423',
-  substationName: 'Tadepalligudem - Rural',
-  section: 'Tadepalligudem',
-  subDivision: 'Tadepalligudem',
-  division: 'Tadepalligudem',
-  circle: 'Tadepalligudem - Rural',
-  organisation: 'NPDCL',
-};
 
 const statusMetaMap = {
   warning: { label: 'Warning', color: '#F57C00', bg: '#FFF3E0' },
   disconnected: { label: 'Non-Communicating', color: '#FF1E00', bg: '#FFF' },
   default: { label: 'Active', color: colors.secondary, bg: '#E6F7EE' },
 };
-
-const API_BASE_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
-const USE_MOCK_ALERTS = false; // flip to false to hit live endpoint
 
 const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   const insets = useSafeAreaInsets();
@@ -98,7 +77,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
     if (resolvedModem) {
       const modemData = resolvedModem.originalAlert || resolvedModem;
       setApiData(modemData);
-      setDataFetchedAt(new Date().toISOString());
+      setDataFetchedAt(new Date().toISOString()); // Track current timestamp when data is loaded
     }
     setLoading(false);
   }, [resolvedModem]);
@@ -114,7 +93,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
         error: apiData.codeDesc || fallbackModem.error,
         errorCode: apiData.code || 'N/A',
         reason: apiData.codeDesc || fallbackModem.reason,
-        location: apiData.discom || 'N/A',
+        location: apiData.discom || 'N/A', // Using discom as location
         date: apiData.modemDate ? `${apiData.modemDate} ${apiData.modemTime || ''}` : fallbackModem.date,
         signalStrength: apiData.signalStrength1 || apiData.signalStrength2 || 0,
         discom: apiData.discom || 'N/A',
@@ -135,7 +114,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
       };
     }
     return fallbackModem;
-  }, [apiData, fallbackModem, dataFetchedAt]);
+  }, [apiData, fallbackModem, dataFetchedAt]); // Add dataFetchedAt to dependencies
 
   const statusMeta =
     statusMetaMap[modem.status] ??
@@ -254,7 +233,6 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   );
 };
 
-// Get signal strength icon based on value
 const getSignalIcon = (signalStrength) => {
   const strength = signalStrength || 0;
   if (strength < 15) {
@@ -554,7 +532,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.lg,
     paddingTop: spacing.sm,
     backgroundColor: "#EEF8F0",
   },

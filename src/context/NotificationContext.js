@@ -1,7 +1,6 @@
-import React, { createContext, useEffect, useState, useRef, useMemo, useCallback } from "react";
+import React, { createContext, useEffect, useState, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_KEY, API_ENDPOINTS, getProtectedHeaders } from "../config/apiConfig";
-import { cachedFetch } from "../utils/apiCache";
 
 export const NotificationContext = createContext();
 
@@ -66,8 +65,7 @@ export const NotificationProvider = ({ children }) => {
     }, 5000);
   };
 
-  // Start alert polling for new alerts
-  const startAlertPolling = useCallback(async (modemIds, userPhone) => {
+  const startAlertPolling = async (modemIds, userPhone) => {
     if (!modemIds || modemIds.length === 0 || !userPhone) {
       return;
     }
@@ -84,7 +82,7 @@ export const NotificationProvider = ({ children }) => {
     alertPollingIntervalRef.current = setInterval(async () => {
       await checkForNewAlerts(modemIds, userPhone);
     }, 5 * 60 * 1000);
-  }, [checkForNewAlerts]);
+  };
 
   const stopAlertPolling = () => {
     if (alertPollingIntervalRef.current) {
@@ -96,16 +94,18 @@ export const NotificationProvider = ({ children }) => {
     previousAlertIdsRef.current.clear();
   };
 
-  // Check for new alerts
-  const checkForNewAlerts = useCallback(async (modemIds, userPhone) => {
-    try { 
-      if (!modemIds || modemIds.length === 0 || !userPhone) return;
+  const checkForNewAlerts = async (modemIds, userPhone) => {
+    try {
+      if (!modemIds || modemIds.length === 0 || !userPhone) {
+        console.log("NotificationContext - Skipping alert check: missing modemIds or userPhone");
+        return;
+      }
 
       const modemQuery = modemIds.join(",");
       let allAlerts = [];
       let offset = 0;
       let hasMore = true;
-      const limit = 50; // API default limit
+      const limit = 50;
 
       while (hasMore) {
         const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}&limit=${limit}&offset=${offset}`;
@@ -201,6 +201,7 @@ export const NotificationProvider = ({ children }) => {
       console.log("NotificationContext - Total alerts fetched:", allAlerts.length);
 
       const alertsArray = allAlerts;
+
       const filteredAlerts = alertsArray.filter(item => {
         const keysToCheck = [
           item.modemSlNo,
@@ -272,7 +273,7 @@ export const NotificationProvider = ({ children }) => {
       console.error("NotificationContext - checkForNewAlerts ERROR:", error);
       console.error("NotificationContext - Error details:", error.message);
     }
-  }, []);
+  };
 
   useEffect(() => {
     if (!trackingModemId) return;
@@ -282,7 +283,6 @@ export const NotificationProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [trackingModemId]);
 
-  // Cleanup polling on unmount
   useEffect(() => {
     return () => {
       if (alertPollingIntervalRef.current) {
@@ -291,12 +291,10 @@ export const NotificationProvider = ({ children }) => {
     };
   }, []);
 
-  // API CALL - Check modem status via /modems/modem/{modemId}/status
   async function checkStatus() {
     try {
       if (!trackingModemId) return;
 
-      // Use the status API endpoint
       const url = `https://api.bestinfra.app/v2tgnpdcl/api/modems/modem/${trackingModemId}/status`;
       
       const response = await fetch(url, {
@@ -312,7 +310,6 @@ export const NotificationProvider = ({ children }) => {
 
       const json = await response.json();
 
-      // Check if modem status is "resolved"
       if (json.success && json.data && json.data.status === "resolved") {
         await pushNotification(
           "Modem Resolved",
@@ -321,35 +318,26 @@ export const NotificationProvider = ({ children }) => {
         await stopTracking();
       }
     } catch (e) {
-      // Silent error handling
     }
   }
 
-  // Memoize context value to prevent unnecessary re-renders
-  const contextValue = useMemo(() => ({
-    trackingModemId,
-    notifications,
-    startTracking,
-    stopTracking,
-    setNotifications,
-    showPopup,
-    popupNotification,
-    setShowPopup,
-    pushNotification,
-    startAlertPolling,
-    stopAlertPolling,
-    alertPollingActive,
-  }), [
-    trackingModemId,
-    notifications,
-    showPopup,
-    popupNotification,
-    alertPollingActive,
-    startAlertPolling,
-  ]);
-
   return (
-    <NotificationContext.Provider value={contextValue}>
+    <NotificationContext.Provider
+      value={{
+        trackingModemId,
+        notifications,
+        startTracking,
+        stopTracking,
+        setNotifications,
+        showPopup,
+        popupNotification,
+        setShowPopup,
+        pushNotification,
+        startAlertPolling,
+        stopAlertPolling,
+        alertPollingActive,
+      }}
+    >
       {children}
     </NotificationContext.Provider>
   );

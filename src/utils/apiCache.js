@@ -3,7 +3,7 @@
  * Caches API responses to reduce network calls and improve performance
  */
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes default
+const CACHE_DURATION = 5 * 60 * 1000;
 const cache = new Map();
 
 /**
@@ -64,7 +64,6 @@ export const clearAllCache = () => {
 export const cachedFetch = async (url, options = {}, maxAge = CACHE_DURATION) => {
   const headers = options.headers || {};
   
-  // Check cache first
   const cached = getCachedResponse(url, headers, maxAge);
   if (cached) {
     return {
@@ -74,12 +73,10 @@ export const cachedFetch = async (url, options = {}, maxAge = CACHE_DURATION) =>
     };
   }
   
-  // Make actual request
   const response = await fetch(url, options);
   
   if (response.ok) {
     const data = await response.json();
-    // Cache successful responses
     setCachedResponse(url, headers, data);
     return {
       ...response,
