@@ -65,7 +65,6 @@ const ProfileScreen = ({ navigation }) => {
             setNotifications([]);
           }
         } catch (e) {
-          // Silent error handling
         }
       };
       

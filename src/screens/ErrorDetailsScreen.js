@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ErrorRow from '../components/ErrorRow';
 import { modemErrors } from '../data/dummyData';
@@ -7,10 +7,11 @@ import { colors, spacing, borderRadius, typography, shadows } from '../styles/th
 
 const ErrorDetailsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState('non-communicating');
+  const [activeTab, setActiveTab] = useState('non-communicating'); // 'resolved'
   const [searchQuery, setSearchQuery] = useState('');
 
   const allModems = modemErrors;
+
   const filteredErrors = allModems.filter(error =>
     error.modemId.toLowerCase().includes(searchQuery.toLowerCase()) ||
     error.location.toLowerCase().includes(searchQuery.toLowerCase())

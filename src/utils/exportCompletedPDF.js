@@ -3,7 +3,6 @@ import * as Sharing from "expo-sharing";
 
 export const exportCompletedPDF = async (resolvedList = []) => {
   try {
-    // Create table rows
     const rows = resolvedList
       .map(
         (item) => `
@@ -16,7 +15,6 @@ export const exportCompletedPDF = async (resolvedList = []) => {
       )
       .join("");
 
-    // Build HTML
     const html = `
       <html>
         <body style="font-family: 'Manrope-Regular'; padding: 20px;">
@@ -39,10 +37,8 @@ export const exportCompletedPDF = async (resolvedList = []) => {
       </html>
     `;
 
-    // Generate PDF
     const { uri } = await Print.printToFileAsync({ html });
 
-    // Share PDF via native share dialog
     const canShare = await Sharing.isAvailableAsync();
     if (!canShare) {
       return { success: false, error: "Sharing not available on this device" };
