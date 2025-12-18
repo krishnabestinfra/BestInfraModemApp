@@ -10,9 +10,8 @@ import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
-import { modemErrors } from '../data/dummyData';
+import { formatDisplayDateTime } from '../utils/dateUtils';
 import NotificationLight from '../../assets/icons/notification.svg';
-import NotificationIcon from '../../assets/icons/notificationDark.svg';
 import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
 import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
@@ -39,52 +38,6 @@ const statusMetaMap = {
 };
 
 const API_BASE_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
-const USE_MOCK_ALERTS = false; // flip to false to hit live endpoint
-
-const formatDisplayDateTime = (dateString) => {
-  if (!dateString || dateString === 'N/A') return 'N/A';
-
-  const normalizeInput = (value) => value.replace(/\s+/g, ' ').trim();
-  const formatParts = (date) => {
-    const month = date.toLocaleString('en-US', { month: 'short' });
-    const day = date.getDate().toString().padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const formattedHour = ((hours % 12) || 12).toString().padStart(2, '0');
-    const formattedMinute = minutes.toString().padStart(2, '0');
-    return `${month} ${day}, ${year} ${formattedHour}:${formattedMinute} ${period}`;
-  };
-
-  try {
-    const normalized = normalizeInput(dateString);
-    const parts = normalized.split(' ');
-    const candidate = parts.length >= 5 ? parts.slice(0, 5).join(' ') : normalized;
-    const parsed = new Date(candidate);
-    if (!Number.isNaN(parsed.getTime())) {
-      return formatParts(parsed);
-    }
-  } catch {
-    // fall through to regex fallback
-  }
-
-  const regex =
-    /(\d{1,2})\s([A-Za-z]{3})\s(\d{4})\s(\d{1,2}):(\d{2})(?::\d{2})?\s?(AM|PM)?/i;
-  const match = dateString.match(regex);
-  if (match) {
-    const [, day, monthStr, year, hourStr, minuteStr, suffix] = match;
-    const month =
-      monthStr.charAt(0).toUpperCase() + monthStr.slice(1).toLowerCase();
-    const hourNum = Number(hourStr);
-    const period = suffix?.toUpperCase() ?? 'AM';
-    const formattedHour = ((hourNum % 12) || 12).toString().padStart(2, '0');
-    const formattedMinute = minuteStr.padStart(2, '0');
-    return `${month} ${day.padStart(2, '0')}, ${year} ${formattedHour}:${formattedMinute} ${period}`;
-  }
-
-  return dateString.length > 20 ? dateString.substring(0, 20) : dateString;
-};
 
 const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   const insets = useSafeAreaInsets();
@@ -188,8 +141,6 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
       ? statusMetaMap.disconnected
       : statusMetaMap.default);
 
-  // Format last update date
-  const formatLastUpdate = (dateString) => formatDisplayDateTime(dateString);
 
   // Get signal strength icon based on value - moved outside to be accessible
 
@@ -217,7 +168,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
         { label: 'Network Type', value: getNetworkType(modem.sysmode), type: 'text' },
         { label: 'Operator', value: modem.simService || 'N/A', type: 'text' },
         { label: 'Signal Strength', value: modem.signalStrength || 0, type: 'signal' },
-        { label: 'Last Update', value: formatLastUpdate(modem.logTimestamp), type: 'text' },
+        { label: 'Last Update', value: formatDisplayDateTime(modem.logTimestamp), type: 'text' },
       );
     } else {
       // Fallback fields

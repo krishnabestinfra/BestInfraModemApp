@@ -6,11 +6,12 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { SidebarProvider } from './src/context/SidebarContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import * as NavigationBar from 'expo-navigation-bar';
+import ErrorBoundary from './src/components/ErrorBoundary';
  
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     'Manrope-ExtraLight': require('./assets/fonts/Manrope-ExtraLight.ttf'),
     'Manrope-Light': require('./assets/fonts/Manrope-Light.ttf'),
     'Manrope-Regular': require('./assets/fonts/Manrope-Regular.ttf'),
@@ -22,10 +23,10 @@ export default function App() {
 
   // Hide splash screen when fonts are loaded
   useEffect(() => {
-    if (fontsLoaded) {
+    if (fontsLoaded || fontError) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, fontError]);
 
   // Configure navigation bar once on mount
   useEffect(() => {
@@ -34,17 +35,19 @@ export default function App() {
     NavigationBar.setBackgroundColorAsync("transparent").catch(() => {});
   }, []);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && !fontError) {
     return null;
   }
 
   return (
-    <SafeAreaProvider>
-      <SidebarProvider>
-        <NotificationProvider>
-          <AppNavigator />
-        </NotificationProvider>
-      </SidebarProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <SidebarProvider>
+          <NotificationProvider>
+            <AppNavigator />
+          </NotificationProvider>
+        </SidebarProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

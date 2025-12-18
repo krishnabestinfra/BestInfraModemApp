@@ -3,8 +3,19 @@ import { VERSION_CHECK_URL, FALLBACK_VERSION_CONFIG } from '../config/versionCon
 
 // Get current app version from app.json
 export const getCurrentVersion = () => {
-  const appConfig = require('../../app.json');
-  return appConfig.expo.version;
+  try {
+    const appConfig = require('../../app.json');
+    return appConfig?.expo?.version || '1.0.0';
+  } catch (error) {
+    console.warn('Failed to load app.json, using default version:', error);
+    // Fallback to package.json version or default
+    try {
+      const packageJson = require('../../package.json');
+      return packageJson?.version || '1.0.0';
+    } catch (e) {
+      return '1.0.0';
+    }
+  }
 };
 
 // Compare versions: returns true if current < required

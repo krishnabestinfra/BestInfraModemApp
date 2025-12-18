@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Dimensions,
   ActivityIndicator,
   Modal,
-  Image,
   Linking,
   Alert,
   Platform,
@@ -19,12 +18,22 @@ import {
 import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
-import { API_BASE_URL, API_KEY, API_ENDPOINTS, getProtectedHeaders } from "../config/apiConfig";
-import { cachedFetch } from '../utils/apiCache';
+import { API_KEY, API_ENDPOINTS, getProtectedHeaders } from "../config/apiConfig";
+import { cachedFetch, clearCache } from '../utils/apiCache';
+import {
+  normalizeModemRecord,
+  filterAlertsByModemIds,
+  searchModems,
+  getSignalBand,
+  extractModemId,
+  isModemInList,
+} from '../utils/modemHelpers';
+import { formatDisplayDateTime } from '../utils/dateUtils';
 
 import { modemStats, modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
@@ -42,7 +51,6 @@ import CommunicatingModemsIcon from '../../assets/icons/communicating.svg';
 import NonCommunicatingModemsIcon from '../../assets/icons/noncommicating.svg';
 import { NotificationContext } from '../context/NotificationContext';
 import { useContext } from 'react';
-import { SkeletonLoader } from '../utils/loadingManager';
 
 import Meter from '../../assets/images/meter.png';
 
@@ -51,7 +59,6 @@ if (!Text.defaultProps) Text.defaultProps = {};
 Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
 
 const { width } = Dimensions.get('window');
-const USE_MOCK_ALERTS = false;
 
 const ERROR_FILTER_OPTIONS = [
   { label: 'All', value: 'all' },
@@ -75,12 +82,7 @@ const matchesErrorFilter = (item, filterValue) => {
   return true;
 };
 
-const getSignalBand = (val = 0) => {
-  const n = Number(val) || 0;
-  if (n < 15) return 'weak';
-  if (n <= 20) return 'average';
-  return 'strong';
-};
+// getSignalBand moved to modemHelpers.js
 
 const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) => {
   const { showPopup, popupNotification, setShowPopup, startAlertPolling, stopAlertPolling } = useContext(NotificationContext);
@@ -173,18 +175,7 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
       }
   
       // FILTER ALERTS FOR THIS FIELD OFFICER ONLY
-      const filteredAlerts = Array.isArray(json.alerts)
-      ? json.alerts.filter(item => {
-          const keysToCheck = [
-            item.modemSlNo,
-            item.modemno,
-            item.sno?.toString(),
-            item.modemId
-          ];
-    
-          return keysToCheck.some(key => key && modemIds.includes(key));
-        })
-      : [];
+      const filteredAlerts = filterAlertsByModemIds(json.alerts || [], modemIds);
       
       setApiData({
         alerts: filteredAlerts,
@@ -220,6 +211,23 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modemIds.length, userPhone]); // Only depend on actual values, not function references
 
+  // Refresh data when screen comes into focus (e.g., returning from TroubleshootScreen)
+  useFocusEffect(
+    useCallback(() => {
+      // Check if we need to refresh (e.g., when coming back from troubleshooting)
+      if (modemIds.length > 0 && userPhone) {
+        // Clear cache for alerts endpoint to get fresh data
+        const modemQuery = modemIds.join(",");
+        const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}`;
+        const headers = getProtectedHeaders(API_KEY, userPhone);
+        clearCache(url, headers);
+        
+        // Fetch fresh data
+        fetchApiData(false);
+      }
+    }, [modemIds, userPhone, fetchApiData])
+  );
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchApiData(false);
@@ -229,111 +237,49 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   
   
 
-  const getStatusFromCode = (code) => {
-    const map = {
-      202: 'warning',
-      213: 'success',
-      214: 'disconnected',
-      215: 'success',
-      112: 'disconnected',
-      212: 'disconnected',
-    };
-    return map[code] || 'default';
-  };
-
-  const normalizeModemRecord = (alert = {}, index = 0) => {
-    const id = alert.id?.toString() || alert.modemSlNo || alert.modemno || alert.sno || `alert-${index}`;
-    const modemId = alert.modemSlNo || alert.modemno || alert.sno || alert.modemId || id;
-    const code = alert.code || alert.errorCode || 'N/A';
-    const dateStr = alert.modemDate ? `${alert.modemDate} ${alert.modemTime || ''}` : alert.date || alert.lastCommunicatedAt || alert.installedOn || alert.updatedAt || 'N/A';
-
-    return {
-      id,
-      modemId,
-      location: alert.discom || alert.location || alert.meterLocation || alert.section || alert.subdivision || alert.division || alert.circle || 'N/A',
-      error: alert.codeDesc || alert.error || alert.commissionStatus || alert.communicationStatus || 'N/A',
-      reason: alert.reason || alert.codeDesc || alert.comments || alert.techSupportStatus || 'N/A',
-      date: dateStr,
-      _parsedDate: new Date(dateStr).getTime(), // Pre-parse date for sorting
-      status: getStatusFromCode(code),
-      signalStrength: alert.signalStrength1 || alert.signalStrength2 || alert.signalStrength || 0,
-      discom: alert.discom || alert.circle || alert.division || 'N/A',
-      meterSlNo: alert.meterSlNo || alert.ctmtrno || alert.modemSlNo || alert.modemno || 'N/A',
-      code: code,
-      photos: [Meter],
-      originalAlert: alert,
-    };
-  };
   const transformedAlerts = useMemo(() => {
-    if (!apiData?.alerts || apiData.alerts.length === 0) {
-      return modemErrors.map((m, i) => normalizeModemRecord(m, i));
-    }
-
-    return apiData.alerts.map((alert, index) => normalizeModemRecord(alert, index));
+    const alerts = apiData?.alerts && apiData.alerts.length > 0 
+      ? apiData.alerts 
+      : modemErrors;
+    
+    return alerts.map((alert, index) => normalizeModemRecord(alert, index, Meter));
   }, [apiData]);
 
   // ================================
   // 📊 DASHBOARD METRICS
   // ================================
   const dashboardMetrics = useMemo(() => {
-    const communicatingSet = new Set();
+    const nonCommunicatingCodes = [214, 112, 212];
+    const communicatingSet = new Set(modemIds.map(id => id?.toString()).filter(Boolean));
     const nonCommunicatingSet = new Set();
     
-    // Non-communicating error codes (these indicate modem is not communicating)
-    const nonCommunicatingCodes = [214, 112, 212];
-    
-    // Initialize all officer modems as communicating (no alerts = communicating)
-    if (modemIds && modemIds.length > 0) {
-      modemIds.forEach(modemId => {
-        if (modemId) {
-          communicatingSet.add(modemId.toString());
-        }
-      });
-    }
-    
-    if (apiData && apiData.alerts && apiData.alerts.length > 0) {
+    if (apiData?.alerts?.length > 0) {
       const modemStatusMap = new Map();
       
-      apiData.alerts?.forEach(alert => {
-        const alertModemId = alert.modemSlNo || alert.modemno || alert.sno?.toString() || alert.modemId;
+      apiData.alerts.forEach(alert => {
+        const alertModemId = extractModemId(alert);
+        if (!alertModemId || !isModemInList(alertModemId, modemIds)) return;
         
-        if (!alertModemId) return;
-        
-        const alertModemIdStr = alertModemId.toString();
-        
-        const matchingOfficerModemId = modemIds.find(officerModemId => 
-          officerModemId.toString() === alertModemIdStr ||
-          alertModemIdStr.includes(officerModemId.toString()) ||
-          officerModemId.toString().includes(alertModemIdStr)
+        const matchingModemId = modemIds.find(id => 
+          isModemInList(extractModemId(alert), [id])
         );
+        if (!matchingModemId || modemStatusMap.get(matchingModemId) === 'non-communicating') return;
         
-        if (!matchingOfficerModemId) return; 
-        
-        const rawCode = alert.code || alert.errorCode;
-        const code = rawCode ? Number(rawCode) : null;
-        
-        if (modemStatusMap.get(matchingOfficerModemId) === 'non-communicating') {
-          return;
-        }
-        
-        if (code && !isNaN(code) && nonCommunicatingCodes.includes(code)) {
-          modemStatusMap.set(matchingOfficerModemId, 'non-communicating');
-        } else if (code && !isNaN(code)) {
-          
-          if (!modemStatusMap.has(matchingOfficerModemId)) {
-            modemStatusMap.set(matchingOfficerModemId, 'communicating');
-          }
+        const code = Number(alert.code || alert.errorCode);
+        if (!isNaN(code)) {
+          const status = nonCommunicatingCodes.includes(code) ? 'non-communicating' : 'communicating';
+          modemStatusMap.set(matchingModemId, status);
         }
       });
       
-      // Update sets based on alert status
       modemStatusMap.forEach((status, modemId) => {
+        const modemIdStr = modemId.toString();
         if (status === 'non-communicating') {
-          nonCommunicatingSet.add(modemId.toString());
-          communicatingSet.delete(modemId.toString()); // Remove from communicating
+          nonCommunicatingSet.add(modemIdStr);
+          communicatingSet.delete(modemIdStr);
         } else {
-          communicatingSet.add(modemId.toString());
-          nonCommunicatingSet.delete(modemId.toString()); // Remove from non-communicating
+          communicatingSet.add(modemIdStr);
+          nonCommunicatingSet.delete(modemIdStr);
         }
       });
     }
@@ -373,54 +319,18 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
       list = list.filter(m => matchesErrorFilter(m, appliedFilters.errorType));
     }
 
-    // Optimize date sorting by using pre-parsed dates
-    if (appliedFilters.sortBy === 'newest') {
+    // Sort by date (using pre-parsed dates for performance)
+    if (appliedFilters.sortBy) {
       list.sort((a, b) => {
-        const dateA = a._parsedDate || (a._parsedDate = new Date(a.date).getTime());
-        const dateB = b._parsedDate || (b._parsedDate = new Date(b.date).getTime());
-        return dateB - dateA;
-      });
-    } else {
-      list.sort((a, b) => {
-        const dateA = a._parsedDate || (a._parsedDate = new Date(a.date).getTime());
-        const dateB = b._parsedDate || (b._parsedDate = new Date(b.date).getTime());
-        return dateA - dateB;
+        const dateA = a._parsedDate || new Date(a.date).getTime();
+        const dateB = b._parsedDate || new Date(b.date).getTime();
+        return appliedFilters.sortBy === 'newest' ? dateB - dateA : dateA - dateB;
       });
     }
 
+    // Apply search filter
     if (debouncedSearchQuery.trim()) {
-      const q = debouncedSearchQuery.toLowerCase().trim();
-      list = list.filter(m => {
-        // Search across multiple fields from the API data
-        const searchableFields = [
-          m.modemId || '',
-          m.meterSlNo || '',
-          m.error || '',
-          m.location || '',
-          m.discom || '',
-          m.reason || '',
-          m.status || '',
-          String(m.code || ''),
-          // Also search in original alert data (all fields from /modems/main API)
-          m.originalAlert?.codeDesc || '',
-          m.originalAlert?.discom || '',
-          m.originalAlert?.section || '',
-          m.originalAlert?.subdivision || '',
-          m.originalAlert?.division || '',
-          m.originalAlert?.circle || '',
-          m.originalAlert?.modemSlNo || '',
-          m.originalAlert?.modemno || '',
-          m.originalAlert?.sno || '',
-          m.originalAlert?.meterSlNo || '',
-          m.originalAlert?.ctmtrno || '',
-        ];
-        
-        const searchableText = searchableFields
-          .join(' ')
-          .toLowerCase();
-        
-        return searchableText.includes(q);
-      });
+      list = searchModems(list, debouncedSearchQuery);
     }
 
     return list;
@@ -540,50 +450,37 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
-      {loading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <View style={styles.skeletonContainer}>
-            {[1, 2, 3].map((i) => (
-              <View key={i} style={styles.skeletonCard}>
-                <SkeletonLoader style={styles.skeletonHeader} />
-                <SkeletonLoader style={styles.skeletonBody} />
-              </View>
-            ))}
-          </View>
-        </View>
-      ) : (
-        <View style={styles.flatListContainer}>
-          <FlatList
-            data={filteredModems}
-            keyExtractor={(item) => item.id}
-            renderItem={renderModemItem}
-            ListHeaderComponent={renderHeader}
-            ListEmptyComponent={renderEmptyComponent}
-            contentContainerStyle={[
-              styles.listContent,
-              filteredModems.length === 0 && styles.listContentEmpty,
-              { paddingBottom: 100 + insets.bottom }
-            ]}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={[colors.secondary]}
-                tintColor={colors.secondary}
-              />
-            }
-            removeClippedSubviews={true}
-            maxToRenderPerBatch={10}
-            updateCellsBatchingPeriod={50}
-            initialNumToRender={10}
-            windowSize={10}
-            nestedScrollEnabled={false}
-            scrollEnabled={true}
-            keyboardShouldPersistTaps="handled"
-          />
-        </View>
-      )}
+      <View style={styles.flatListContainer}>
+        <FlatList
+          data={filteredModems}
+          keyExtractor={(item) => item.id}
+          renderItem={renderModemItem}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={renderEmptyComponent}
+          contentContainerStyle={[
+            styles.listContent,
+            filteredModems.length === 0 && styles.listContentEmpty,
+            { paddingBottom: 100 + insets.bottom }
+          ]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.secondary]}
+              tintColor={colors.secondary}
+            />
+          }
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          initialNumToRender={10}
+          windowSize={10}
+          nestedScrollEnabled={false}
+          scrollEnabled={true}
+          keyboardShouldPersistTaps="handled"
+        />
+      </View>
 
       {/* ================= STICKY SCAN BUTTON ================= */}
       <View style={[styles.stickyScanButtonContainer, { paddingBottom: spacing.md + insets.bottom }]}>
@@ -705,8 +602,9 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
 const ModemCard = React.memo(({ modem, navigation }) => {
   const { startTracking } = useContext(NotificationContext);
   const getSignalIcon = () => {
-    if (modem.signalStrength < 15) return <SignalWeaknessIcon width={20} height={20} />;
-    if (modem.signalStrength <= 20) return <SignalAverageIcon width={20} height={20} />;
+    const band = getSignalBand(modem.signalStrength);
+    if (band === 'weak') return <SignalWeaknessIcon width={20} height={20} />;
+    if (band === 'average') return <SignalAverageIcon width={20} height={20} />;
     return <SignalStrongIcon width={20} height={20} />;
   };
 
@@ -786,7 +684,7 @@ const ModemCard = React.memo(({ modem, navigation }) => {
 
             <View style={styles.subDataItem}>
               <Text style={styles.detailLabel}>Occurred On</Text>
-              <Text style={styles.datedetails}>{modem.date}</Text>
+              <Text style={styles.datedetails}>{formatDisplayDateTime(modem.date)}</Text>
             </View>
           </View>
         </View>
@@ -805,9 +703,6 @@ const styles = StyleSheet.create({
   },
   flatListContainer: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: spacing.xl,
   },
 
   /* ---------- HEADER + GREETING ---------- */
@@ -906,9 +801,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  metricIconContainerSuccess: {
-    backgroundColor: '#4CAF50',
-  },
 
   /* ---------- SEARCH + FILTER ---------- */
   searchCardWrapper: {
@@ -938,11 +830,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-Regular',
     fontSize: 14,
   },
-  scanText: {
-    color: '#fff',
-    fontFamily: 'Manrope-Regular',
-    fontSize: 16,
-  },
   filterButton: {
     marginLeft: 5,
     backgroundColor: '#fff',
@@ -969,22 +856,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: spacing.xl,
-  },
-
-  loadingContainer: {
-    padding: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
-  },
-  emptyScrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    minHeight: 400,
   },
   emptyContainer: {
     padding: spacing.xl,
@@ -1019,31 +890,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: 'Manrope-SemiBold',
     fontSize: 14,
-  },
-  skeletonContainer: {
-    paddingHorizontal: spacing.md,
-  },
-  skeletonCard: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: '#F8F8F8',
-  },
-  skeletonHeader: {
-    height: 20,
-    width: '60%',
-    marginBottom: 12,
-    borderRadius: 4,
-  },
-  skeletonBody: {
-    height: 80,
-    width: '100%',
-    borderRadius: 4,
-  },
-  listContent: {
-    paddingBottom: spacing.xl,
   },
 
   /* ---------- MODEM CARD ---------- */

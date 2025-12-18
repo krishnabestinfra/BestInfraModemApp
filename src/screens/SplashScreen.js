@@ -20,14 +20,25 @@ const SplashScreen = ({ onFinish }) => {
         if (info?.needsUpdate) {
           setUpdateInfo(info);
         }
-        setVersionChecked(true);
       } catch (error) {
-        console.error('Version check error:', error);
+        // Silently fail - don't block app launch
+        console.warn('Version check error:', error);
+      } finally {
+        // Always mark as checked to allow app to proceed
         setVersionChecked(true);
       }
     };
 
+    // Add timeout to prevent blocking app launch
+    const timeout = setTimeout(() => {
+      if (!versionChecked) {
+        setVersionChecked(true);
+      }
+    }, 3000); // Max 3 seconds for version check
+
     performVersionCheck();
+
+    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {

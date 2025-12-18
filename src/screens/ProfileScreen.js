@@ -22,7 +22,6 @@ import Logo from '../components/global/Logo';
 import NotificationCard from '../components/global/NotificationCard';
 import { COLORS } from '../constants/colors';
 import EmptyNotification from '../../assets/icons/NoNotification.svg';
-// import { notifications as defaultNotifications } from '../data/dummyData';
 import { useContext } from 'react';
 import { NotificationContext } from '../context/NotificationContext';
 
