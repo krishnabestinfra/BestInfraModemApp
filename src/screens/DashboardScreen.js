@@ -10,13 +10,13 @@ import {
   Dimensions,
   ActivityIndicator,
   Modal,
-  Image,
   Linking,
   Alert,
   Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import RippleLogo from '../components/global/RippleLogo';
@@ -70,12 +70,7 @@ const matchesErrorFilter = (item, filterValue) => {
   return true;
 };
 
-const getSignalBand = (val = 0) => {
-  const n = Number(val) || 0;
-  if (n < 15) return 'weak';
-  if (n <= 20) return 'average';
-  return 'strong';
-};
+// getSignalBand moved to modemHelpers.js
 
 /**
  * Normalizes modem identifiers from both APIs
@@ -312,17 +307,19 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
     };
   };
   const transformedAlerts = useMemo(() => {
-    if (!apiData?.alerts || apiData.alerts.length === 0) {
-      return modemErrors.map((m, i) => normalizeModemRecord(m, i));
-    }
-
-    return apiData.alerts.map((alert, index) => normalizeModemRecord(alert, index));
+    const alerts = apiData?.alerts && apiData.alerts.length > 0 
+      ? apiData.alerts 
+      : modemErrors;
+    
+    return alerts.map((alert, index) => normalizeModemRecord(alert, index, Meter));
   }, [apiData]);
 
   const dashboardMetrics = useMemo(() => {
     const communicatingSet = new Set();
     const nonCommunicatingSet = new Set();
     const nonCommunicatingCodes = [214, 112, 212];
+    const communicatingSet = new Set(modemIds.map(id => id?.toString()).filter(Boolean));
+    const nonCommunicatingSet = new Set();
     
     if (modemIds && modemIds.length > 0) {
       modemIds.forEach(modemId => {
@@ -351,32 +348,21 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
           return normalizedOfficerId === alertModemId;
         });
         
-        if (!matchingOfficerModemId) return; 
-        
-        const rawCode = alert.code || alert.errorCode;
-        const code = rawCode ? Number(rawCode) : null;
-        
-        if (modemStatusMap.get(matchingOfficerModemId) === 'non-communicating') {
-          return;
-        }
-        
-        if (code && !isNaN(code) && nonCommunicatingCodes.includes(code)) {
-          modemStatusMap.set(matchingOfficerModemId, 'non-communicating');
-        } else if (code && !isNaN(code)) {
-          
-          if (!modemStatusMap.has(matchingOfficerModemId)) {
-            modemStatusMap.set(matchingOfficerModemId, 'communicating');
-          }
+        const code = Number(alert.code || alert.errorCode);
+        if (!isNaN(code)) {
+          const status = nonCommunicatingCodes.includes(code) ? 'non-communicating' : 'communicating';
+          modemStatusMap.set(matchingModemId, status);
         }
       });
       
       modemStatusMap.forEach((status, modemId) => {
+        const modemIdStr = modemId.toString();
         if (status === 'non-communicating') {
-          nonCommunicatingSet.add(modemId.toString());
-          communicatingSet.delete(modemId.toString()); // Remove from communicating
+          nonCommunicatingSet.add(modemIdStr);
+          communicatingSet.delete(modemIdStr);
         } else {
-          communicatingSet.add(modemId.toString());
-          nonCommunicatingSet.delete(modemId.toString()); // Remove from non-communicating
+          communicatingSet.add(modemIdStr);
+          nonCommunicatingSet.delete(modemIdStr);
         }
       });
     }
@@ -666,8 +652,9 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
 const ModemCard = React.memo(({ modem, navigation }) => {
   const { startTracking } = useContext(NotificationContext);
   const getSignalIcon = () => {
-    if (modem.signalStrength < 15) return <SignalWeaknessIcon width={20} height={20} />;
-    if (modem.signalStrength <= 20) return <SignalAverageIcon width={20} height={20} />;
+    const band = getSignalBand(modem.signalStrength);
+    if (band === 'weak') return <SignalWeaknessIcon width={20} height={20} />;
+    if (band === 'average') return <SignalAverageIcon width={20} height={20} />;
     return <SignalStrongIcon width={20} height={20} />;
   };
 
@@ -740,7 +727,7 @@ const ModemCard = React.memo(({ modem, navigation }) => {
 
             <View style={styles.subDataItem}>
               <Text style={styles.detailLabel}>Occurred On</Text>
-              <Text style={styles.datedetails}>{modem.date}</Text>
+              <Text style={styles.datedetails}>{formatDisplayDateTime(modem.date)}</Text>
             </View>
           </View>
         </View>
@@ -855,9 +842,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  metricIconContainerSuccess: {
-    backgroundColor: '#4CAF50',
-  },
 
   searchCardWrapper: {
     flexDirection: 'row',
@@ -885,11 +869,6 @@ const styles = StyleSheet.create({
     color: "#6E6E6E",
     fontFamily: 'Manrope-Regular',
     fontSize: 14,
-  },
-  scanText: {
-    color: '#fff',
-    fontFamily: 'Manrope-Regular',
-    fontSize: 16,
   },
   filterButton: {
     marginLeft: 5,

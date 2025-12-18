@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, borderRadius, typography, shadows } from '../styles/theme';
+import { formatDisplayDateTime } from '../utils/dateUtils';
 
 const AlertCard = ({ alert }) => {
   const getSeverityColor = (severity) => {
@@ -53,7 +54,9 @@ const AlertCard = ({ alert }) => {
         </View>
         <View style={styles.timeContainer}>
           <Text style={styles.timeLabel}>Time</Text>
-          <Text style={styles.timeValue}>{alert.date.split(' ')[1]}</Text>
+          <Text style={styles.timeValue}>
+            {formatDisplayDateTime(alert.date).split(' ').slice(-2).join(' ')}
+          </Text>
         </View>
       </View>
       
@@ -64,7 +67,9 @@ const AlertCard = ({ alert }) => {
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>📅 Date</Text>
-          <Text style={styles.detailValue}>{alert.date.split(' ')[0]}</Text>
+          <Text style={styles.detailValue}>
+            {formatDisplayDateTime(alert.date).split(',').slice(0, 2).join(',')}
+          </Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>⚡ Severity</Text>

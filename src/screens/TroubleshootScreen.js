@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Pressable,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,9 +13,10 @@ import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
-import { colors, spacing, borderRadius, typography } from '../styles/theme';
+import { colors, spacing, borderRadius } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 import { getTroubleshootSteps, hasTroubleshootSteps } from '../data/troubleshootData';
+import { extractModemId } from '../utils/modemHelpers';
 
 import successImg from '../../assets/images/Success_page.gif';
 
@@ -42,6 +42,7 @@ const TroubleshootScreen = ({ navigation, route }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [showRetry, setShowRetry] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
   useEffect(() => {
     setCurrentStepIndex(0);
@@ -81,9 +82,53 @@ const TroubleshootScreen = ({ navigation, route }) => {
     }
   }, [currentStep, currentStepIndex, troubleshootSteps.length]);
 
-  const handleComplete = useCallback(() => {
-    navigation.navigate('Dashboard');
-  }, [navigation]);
+  const checkModemStatus = useCallback(async (modemId) => {
+    try {
+      if (!modemId) return false;
+
+      const url = `https://api.bestinfra.app/v2tgnpdcl/api/modems/modem/${modemId}/status`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const json = await response.json();
+      return json.success && json.data && json.data.status === "resolved";
+    } catch (error) {
+      console.error('Error checking modem status:', error);
+      return false;
+    }
+  }, []);
+
+  const handleComplete = useCallback(async () => {
+    setCheckingStatus(true);
+    
+    // Extract modem ID from various possible fields
+    const modemId = extractModemId(modem) || 
+                    modem?.modemId || 
+                    modem?.modemSlNo || 
+                    modem?.modemno || 
+                    route?.params?.modemId;
+
+    try {
+      const isResolved = await checkModemStatus(modemId);
+      
+      if (isResolved) {
+        // Status is resolved - refresh dashboard and navigate
+        navigation.navigate('Dashboard', { refresh: true });
+      } else {
+        // Status is not resolved - redirect to dashboard so user can start process again
+        navigation.navigate('Dashboard', { refresh: true });
+      }
+    } catch (error) {
+      // On error, redirect to dashboard so user can start process again
+      navigation.navigate('Dashboard', { refresh: true });
+    } finally {
+      setCheckingStatus(false);
+    }
+  }, [modem, navigation, checkModemStatus, route]);
 
   const handleRetry = useCallback(() => {
     setShowRetry(false);
@@ -141,7 +186,11 @@ const TroubleshootScreen = ({ navigation, route }) => {
                 showRetry={showRetry}
               />
             ) : (
-              <SuccessCard image={successImg} onComplete={handleComplete} />
+              <SuccessCard 
+                image={successImg} 
+                onComplete={handleComplete}
+                checkingStatus={checkingStatus}
+              />
             )}
           </View>
         </View>
@@ -235,7 +284,7 @@ const StepContent = React.memo(({ step, feedback, showRetry }) => (
 ));
 
 /* SUCCESS COMPONENT */
-const SuccessCard = React.memo(({ image, onComplete }) => (
+const SuccessCard = React.memo(({ image, onComplete, checkingStatus = false }) => (
   <View style={styles.successWrapper}>
     <View style={styles.successCard}>
       <ExpoImage
@@ -252,7 +301,13 @@ const SuccessCard = React.memo(({ image, onComplete }) => (
       <Text style={styles.successSubtitle}>Issue successfully resolved</Text>
       <Text style={styles.successBody}>The meter is now communicating properly.</Text>
 
-      <Button title="Issue Fixed" onPress={onComplete} style={styles.completeButton} />
+      <Button 
+        title={checkingStatus ? "Checking Status..." : "Issue Fixed"} 
+        onPress={onComplete} 
+        style={styles.completeButton}
+        disabled={checkingStatus}
+        loading={checkingStatus}
+      />
     </View>
   </View>
 ));
@@ -463,12 +518,6 @@ const styles = StyleSheet.create({
   completeButton: {
     width: '100%',
     marginTop: spacing.md,
-  },
-  CompleteButtonText: {
-    fontSize: 14,
-    color: COLORS.secondaryFontColor,
-    fontFamily: 'Manrope',
-    fontWeight: '700',
   },
 });
 

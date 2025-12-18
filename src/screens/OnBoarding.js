@@ -20,19 +20,6 @@ const OnBoarding = ({ onComplete }) => {
   const moveAnim = useRef(new Animated.Value(20)).current;
   const [activeIndex, setActiveIndex] = useState(0); 
   const scrollRef = useRef(null); 
-  
-  
-//   useEffect(() => {
-//   const interval = setInterval(() => {
-//     setActiveIndex(prev => {
-//       const next = (prev + 1) % 3;
-//       scrollRef.current?.scrollTo({ x: next * width, animated: true });
-//       return next;
-//     });
-//   }, 3000);
-
-//   return () => clearInterval(interval);
-// }, []);
 
   useEffect(() => {
     Animated.loop(

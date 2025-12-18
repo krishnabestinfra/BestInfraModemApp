@@ -19,6 +19,8 @@ import ActiveDashboard from "../../assets/icons/activeDashboard.svg";
 import ActiveTickets from "../../assets/icons/activeTickets.svg";
 import MetersIcon from "../../assets/icons/meterWhite.svg";
 import QRScannerIcon from "../../assets/icons/QRscanner.svg";
+import CompletedTasksIcon from "../../assets/icons/completedtasks.svg";
+import TotalTasksIcon from "../../assets/icons/totaltasks.svg";
 
 
 const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone }) => {
@@ -29,6 +31,12 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
   const renderContent = () => {
     switch (activeItem) {
       case "Dashboard":
+        return <DashboardScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
+  
+      case "Visited":
+        return <DashboardScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
+  
+      case "NotVisited":
         return <DashboardScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
   
       case "Resolved":
@@ -88,11 +96,16 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
                 ActiveIcon: ActiveDashboard
               },
               {
-                key: "QRScanner",
-                label: "QR Scanner",
-                route: "ScanScreen",
-                Icon: QRScannerIcon,
-                ActiveIcon: QRScannerIcon
+                key: "Visited",
+                label: "Visited",
+                Icon: CompletedTasksIcon,
+                ActiveIcon: CompletedTasksIcon
+              },
+              {
+                key: "NotVisited",
+                label: "Not Visited",
+                Icon: TotalTasksIcon,
+                ActiveIcon: TotalTasksIcon
               },
               {
                 key: "Resolved",
@@ -100,6 +113,13 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
                 route: "CompletedActivities",
                 Icon: MetersIcon,
                 ActiveIcon: ActiveTickets
+              },
+              {
+                key: "QRScanner",
+                label: "QR Scanner",
+                route: "ScanScreen",
+                Icon: QRScannerIcon,
+                ActiveIcon: QRScannerIcon
               },
             ]}
             activeItem={activeItem}

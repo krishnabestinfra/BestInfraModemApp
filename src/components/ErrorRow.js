@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, spacing, borderRadius, typography, shadows } from '../styles/theme';
+import { formatDisplayDateTime } from '../utils/dateUtils';
 
 const ErrorRow = ({ item, onPress }) => {
   const getStatusColor = (status) => {
@@ -83,7 +84,7 @@ const ErrorRow = ({ item, onPress }) => {
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>🕒 Date</Text>
-          <Text style={styles.detailValue}>{item.date}</Text>
+          <Text style={styles.detailValue}>{formatDisplayDateTime(item.date)}</Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>💡 Reason</Text>
