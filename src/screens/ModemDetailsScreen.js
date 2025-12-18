@@ -1,9 +1,8 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
@@ -16,33 +15,17 @@ import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
 import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
 
-
-
-const fallbackDetails = {
-  drtSlNo: '2345',
-  feederNo: '123456783',
-  feederName: 'Tadepalligudem - Rural',
-  substationNo: '1234533423',
-  substationName: 'Tadepalligudem - Rural',
-  section: 'Tadepalligudem',
-  subDivision: 'Tadepalligudem',
-  division: 'Tadepalligudem',
-  circle: 'Tadepalligudem - Rural',
-  organisation: 'NPDCL',
-};
-
 const statusMetaMap = {
   warning: { label: 'Warning', color: '#F57C00', bg: '#FFF3E0' },
   disconnected: { label: 'Non-Communicating', color: '#FF1E00', bg: '#FFF' },
   default: { label: 'Active', color: colors.secondary, bg: '#E6F7EE' },
 };
 
-const API_BASE_URL = 'https://api.bestinfra.app/v2tgnpdcl/api/modem-alerts';
-
 const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   const insets = useSafeAreaInsets();
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dataFetchedAt, setDataFetchedAt] = useState(null); // Track when data was loaded
 
   const assignedModems = Array.isArray(modems) ? modems : [];
   const routeModem = route?.params?.modem;
@@ -91,12 +74,10 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   };
 
   useEffect(() => {
-    // Modem data is already passed via route params when navigating from Dashboard/AllModems
-    // No API call needed - use the data from route
     if (resolvedModem) {
-      // Use originalAlert if available (from normalized modem record), otherwise use resolvedModem
       const modemData = resolvedModem.originalAlert || resolvedModem;
       setApiData(modemData);
+      setDataFetchedAt(new Date().toISOString()); // Track current timestamp when data is loaded
     }
     setLoading(false);
   }, [resolvedModem]);
@@ -133,7 +114,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
       };
     }
     return fallbackModem;
-  }, [apiData, fallbackModem]);
+  }, [apiData, fallbackModem, dataFetchedAt]); // Add dataFetchedAt to dependencies
 
   const statusMeta =
     statusMetaMap[modem.status] ??
@@ -141,10 +122,8 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
       ? statusMetaMap.disconnected
       : statusMetaMap.default);
 
+  const formatLastUpdate = (dateString) => formatDisplayDateTime(dateString);
 
-  // Get signal strength icon based on value - moved outside to be accessible
-
-  // Map network type to display format
   const getNetworkType = (sysmode) => {
     if (!sysmode || sysmode === 'N/A') return 'N/A';
     if (sysmode.includes('LTE')) return '4G';
@@ -154,7 +133,6 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   };
 
   const detailFields = useMemo(() => {
-    // Always show the required fields in the specified order
     const fields = [];
     
     if (apiData && modem) {
@@ -168,10 +146,9 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
         { label: 'Network Type', value: getNetworkType(modem.sysmode), type: 'text' },
         { label: 'Operator', value: modem.simService || 'N/A', type: 'text' },
         { label: 'Signal Strength', value: modem.signalStrength || 0, type: 'signal' },
-        { label: 'Last Update', value: formatDisplayDateTime(modem.logTimestamp), type: 'text' },
+        { label: 'Last Update', value: formatLastUpdate(dataFetchedAt || new Date().toISOString()), type: 'text' },
       );
     } else {
-      // Fallback fields
       fields.push(
         { label: 'Error Code', value: 'N/A', type: 'text' },
         { label: 'Error Type', value: 'N/A', type: 'text' },
@@ -187,7 +164,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
     }
     
     return fields;
-  }, [modem, apiData]);
+  }, [modem, apiData, dataFetchedAt]); // Add dataFetchedAt to dependencies
 
 
   const handleResolve = useCallback(() => {
@@ -256,7 +233,6 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   );
 };
 
-// Get signal strength icon based on value
 const getSignalIcon = (signalStrength) => {
   const strength = signalStrength || 0;
   if (strength < 15) {
@@ -556,7 +532,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.lg,
     paddingTop: spacing.sm,
     backgroundColor: "#EEF8F0",
   },

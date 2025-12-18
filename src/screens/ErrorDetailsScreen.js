@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ErrorRow from '../components/ErrorRow';
 import { modemErrors } from '../data/dummyData';
@@ -10,17 +10,14 @@ const ErrorDetailsScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('non-communicating'); // 'resolved'
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Show all modems on both tabs (same cards)
   const allModems = modemErrors;
 
-  // Filter by search only
   const filteredErrors = allModems.filter(error =>
     error.modemId.toLowerCase().includes(searchQuery.toLowerCase()) ||
     error.location.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleErrorPress = (error) => {
-    // Navigate to ModemDetails for both tabs, but pass tab info
     navigation.navigate('ModemDetails', { 
       modem: error, 
       isNonCommunicating: activeTab === 'non-communicating' 

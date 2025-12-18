@@ -111,7 +111,6 @@ const LoginScreen = ({  navigation, onLogin }) => {
   };
 
   const handleInputChange = (field, value) => {
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
     }
@@ -211,7 +210,6 @@ const LoginScreen = ({  navigation, onLogin }) => {
       return;
     }
 
-    // Verify OTP stage
     setTouched({ mobile: true, otp: true });
 
     const newErrors = {};

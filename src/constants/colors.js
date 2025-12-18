@@ -1,4 +1,3 @@
-// src/constants/colors.js
 export const colors = {
   "color_border": "rgba(233, 239, 255, 1)",
   "color_dark_border": "rgba(9, 27, 59, 1)",
@@ -38,7 +37,6 @@ export const colors = {
   "color_secondary_light": '#eef8f0',
 };
 
-// Legacy COLORS object for backward compatibility
 export const COLORS = {
   primaryDarkColor: colors.color_primary_deep,
   primaryColor: colors.color_primary,

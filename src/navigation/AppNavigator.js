@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SplashScreen from '../screens/SplashScreen';
 import OnBoarding from '../screens/OnBoarding';
 import LoginScreen from '../screens/LoginScreen';
-import { clearAuthData, getUserPhone, hasApiKey, initializeStorageCache } from '../utils/storage';
+import { clearAuthData, getUserPhone, hasApiKey } from '../utils/storage';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -27,6 +27,18 @@ const AppNavigator = () => {
   const [userModems, setUserModems] = useState([]);
   const [userPhone, setUserPhone] = useState(null);
 
+  const extractModemId = (modem) => {
+    return modem?.modemSINo ||
+           modem?.modemNo ||
+           modem?.modemno || 
+           modem?.modemSlNo || 
+           modem?.modemId || 
+           modem?.modem_sl_no || 
+           modem?.sno?.toString() || 
+           modem?.id?.toString() || 
+           null;
+  };
+
   async function fetchModemsByOfficer(phone) {
   const url = `${API_BASE_URL}${API_ENDPOINTS.GET_MODEMS_BY_OFFICER}`;
 
@@ -38,9 +50,21 @@ const AppNavigator = () => {
 
     const json = await response.json();
 
-    console.log("API3 Response:", json);
+    console.log("API3 Response (GET_MODEMS_BY_OFFICER):", json);
+    console.log("Response type:", Array.isArray(json) ? "Array" : typeof json);
+    
+    const modems = Array.isArray(json) ? json : [];
+    
+    const extractedIds = modems.map(m => ({
+      modemno: m.modemno,
+      modemSlNo: m.modemSlNo,
+      modemId: m.modemId,
+      sno: m.sno,
+      extracted: extractModemId(m)
+    }));
+    console.log("Extracted Modem IDs:", extractedIds);
 
-    return Array.isArray(json) ? json : [];  // FIXED
+    return modems;
   } catch (err) {
     console.log("fetchModemsByOfficer ERROR:", err);
     return [];
@@ -53,10 +77,8 @@ const AppNavigator = () => {
     let isMounted = true;
   
     const checkPersistentLogin = async () => {
-      // Initialize storage cache for faster access
-      await initializeStorageCache();
-      
-      // Remove artificial delay - let splash screen handle visual delay
+      await new Promise(resolve => setTimeout(resolve, 1500)); // splash delay
+  
       const apiKeyExists = await hasApiKey();
       if (!apiKeyExists) {
         if (isMounted) {
@@ -68,7 +90,6 @@ const AppNavigator = () => {
   
       const storedPhone = await getUserPhone();
   
-      // Auto-login - batch state updates
       if (isMounted) {
         setIsAuthenticated(true);
         setShowOnboarding(false);
@@ -77,26 +98,30 @@ const AppNavigator = () => {
   
       if (storedPhone && isMounted) {
         try {
+          console.log("Persistent Login → Fetching modems for:", storedPhone);
+      
           const modems = await fetchModemsByOfficer(storedPhone);
+          console.log("Persistent Modems Loaded:", modems);
+          const extractedIds = modems.map(m => extractModemId(m)).filter(Boolean);
+          console.log("Persistent Login - Extracted Modem IDs:", extractedIds);
+          console.log("Persistent Login - Total modems:", modems.length, "Extracted IDs:", extractedIds.length);
+      
           if (isMounted) setUserModems(modems);
         } catch (err) {
-          // Silent error handling
+          console.log("Persistent fetch error:", err);
         }
       }
       
+  
       if (isMounted) setIsLoading(false);
     };
   
     checkPersistentLogin();
-    return () => {
-      isMounted = false;
-    };
+    return () => (isMounted = false);
   }, []);
   
 
   const handleSplashFinish = useCallback(() => {
-    // SplashScreen is now purely visual - loading is controlled by useEffect
-    // This callback is kept for backwards compatibility but doesn't control loading
   }, []);
 
   const handleOnboardingComplete = useCallback(() => {
@@ -105,19 +130,21 @@ const AppNavigator = () => {
 
   const handleLogin = useCallback((modems = [], phoneNumber) => {
     console.log("APP NAVIGATOR handleLogin CALLED");
-    console.log("MODENS RECEIVED:", modems);
+    console.log("MODEMS RECEIVED:", modems);
     console.log("PHONE RECEIVED:", phoneNumber);
+    
+    const modemsArray = Array.isArray(modems) ? modems : [];
+    const extractedIds = modemsArray.map(m => extractModemId(m)).filter(Boolean);
+    console.log("Login - Extracted Modem IDs:", extractedIds);
+    console.log("Login - Total modems:", modemsArray.length, "Extracted IDs:", extractedIds.length);
   
-    setUserModems(Array.isArray(modems) ? modems : []);
+    setUserModems(modemsArray);
     setUserPhone(phoneNumber || null);
     setIsAuthenticated(true);
   }, []);
 
   const handleLogout = useCallback(async () => {
-    // Clear API Key and auth data from AsyncStorage
     await clearAuthData();
-    
-    // Clear local state
     setUserModems([]);
     setUserPhone(null);
     setIsAuthenticated(false);
@@ -138,8 +165,6 @@ const AppNavigator = () => {
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
-          // Prevent React Navigation from wrapping screens in ScrollView
-          contentStyle: { flex: 1 },
         }}
       >
         {isLoading ? (
@@ -168,15 +193,19 @@ const AppNavigator = () => {
           <>
             {/* Dashboard is the initial screen after login */}
             <Stack.Screen name="Dashboard">
-              {(props) => (
-                <DashboardScreen
-                  {...props}
-                  modems={userModems}
-                  modemIds={userModems.map(m => m.modemno)}
-                  userPhone={userPhone}
-                  onLogout={handleLogout}
-                />
-              )}
+              {(props) => {
+                const extractedModemIds = userModems.map(m => extractModemId(m)).filter(Boolean);
+                console.log("Dashboard - Modem IDs being passed:", extractedModemIds);
+                return (
+                  <DashboardScreen
+                    {...props}
+                    modems={userModems}
+                    modemIds={extractedModemIds}
+                    userPhone={userPhone}
+                    onLogout={handleLogout}
+                  />
+                );
+              }}
             </Stack.Screen>
 
             <Stack.Screen 
@@ -186,15 +215,18 @@ const AppNavigator = () => {
                 animation: 'slide_from_left'
               }}
             >
-              {(props) => (
-                <SideMenu
-                  {...props}
-                  modems={userModems}
-                  modemIds={userModems.map(m => m.modemno)}
-                  userPhone={userPhone}
-                  onLogout={handleLogout}
-                />
-              )}
+              {(props) => {
+                const extractedModemIds = userModems.map(m => extractModemId(m)).filter(Boolean);
+                return (
+                  <SideMenu
+                    {...props}
+                    modems={userModems}
+                    modemIds={extractedModemIds}
+                    userPhone={userPhone}
+                    onLogout={handleLogout}
+                  />
+                );
+              }}
             </Stack.Screen>
 
             {/* Other screens */}
@@ -212,14 +244,17 @@ const AppNavigator = () => {
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="ScanScreen" component={ScanScreen} />
             <Stack.Screen name="CompletedActivities">
-              {(props) => (
-                <CompletedActivities
-                  {...props}
-                  modems={userModems}
-                  modemIds={userModems.map(m => m.modemno)}
-                  userPhone={userPhone}
-                />
-              )}
+              {(props) => {
+                const extractedModemIds = userModems.map(m => extractModemId(m)).filter(Boolean);
+                return (
+                  <CompletedActivities
+                    {...props}
+                    modems={userModems}
+                    modemIds={extractedModemIds}
+                    userPhone={userPhone}
+                  />
+                );
+              }}
             </Stack.Screen>
           </>
         )

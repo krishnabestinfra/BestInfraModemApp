@@ -35,8 +35,6 @@ const AppHeader = ({
     []
   );
 
-  // Calculate default padding: use safe area top inset + minimum padding
-  // If containerStyle has paddingTop, it will override this
   const defaultContainerStyle = React.useMemo(() => ({
     paddingTop: Math.max(insets.top + 10, 10),
   }), [insets.top]);

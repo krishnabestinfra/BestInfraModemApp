@@ -20,55 +20,10 @@ const CompletedActivities = ({ navigation, modems = [], modemIds = [], userPhone
     const [resolvedList, setResolvedList] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // const resolvedList = [
-    //     {
-    //         id: "1",
-    //         modemId: "MDM001",
-    //         status: "Network Failure",
-    //         resolvedAt: "Nov 21, 2025 02:45 PM",
-    //         location: "Building B-Floor 2",
-    //     },
-    //     {
-    //         id: "2",
-    //         modemId: "MDM002",
-    //         status: "Modem Auto Restart",
-    //         resolvedAt: "Nov 21, 2025 02:45 PM",
-    //         location: "Building B-Floor 2",
-    //     },
-    //     {
-    //         id: "3",
-    //         modemId: "MDM003",
-    //         status: "Modem Power Failed",
-    //         resolvedAt: "Nov 21, 2025 02:45 PM",
-    //         location: "Building B-Floor 2",
-    //     },
-    //     {
-    //         id: "4",
-    //         modemId: "MDM004",
-    //         status: "Network Failure",
-    //         resolvedAt: "Nov 21, 2025 02:45 PM",
-    //         location: "Building B-Floor 2",
-    //     },
-    //     {
-    //         id: "5",
-    //         modemId: "MDM005",
-    //         status: "Modem Auto Restart",
-    //         resolvedAt: "Nov 21, 2025 02:45 PM",
-    //         location: "Building B-Floor 2",
-    //     },
-    //     {
-    //         id: "6",
-    //         modemId: "MDM006",
-    //         status: "Modem Power Failed",
-    //         resolvedAt: "Nov 21, 2025 02:45 PM",
-    //         location: "Building B-Floor 2",
-    //     },
-    // ];
     const fetchModems = async () => {
         try {
             setLoading(true);
             
-            // Get user phone - use prop or from storage
             const phone = userPhone || await getUserPhone();
             
             if (!phone) {
@@ -83,7 +38,6 @@ const CompletedActivities = ({ navigation, modems = [], modemIds = [], userPhone
                 return;
             }
             
-            // Build query with user's modem IDs
             const modemQuery = modemIds.join(",");
             const url = `${API_ENDPOINTS.GET_MODEM_ALERTS}?modems=${encodeURIComponent(modemQuery)}`;
             
@@ -102,10 +56,8 @@ const CompletedActivities = ({ navigation, modems = [], modemIds = [], userPhone
             const json = await response.json();
             console.log("Modems API response:", json);
     
-            // Get all modems/alerts from the API response
             const allModems = json.alerts || json.modems || [];
     
-            // Filter to only user's modems first (client-side check)
             const userModems = allModems.filter(item => {
                 const keysToCheck = [
                     item.modemSlNo,
@@ -116,7 +68,6 @@ const CompletedActivities = ({ navigation, modems = [], modemIds = [], userPhone
                 return keysToCheck.some(key => key && modemIds.includes(key));
             });
     
-            // Then filter modems where resolved === true
             const resolvedModems = userModems.filter(
                 modem => modem.resolved === true
             );
@@ -124,7 +75,6 @@ const CompletedActivities = ({ navigation, modems = [], modemIds = [], userPhone
             console.log("Total modems for user:", userModems.length);
             console.log("Resolved modems (resolved === true):", resolvedModems.length);
     
-            // Format the resolved modems for display
             const formatted = resolvedModems.map((item, index) => ({
                 id: item.id?.toString() || item.modemSlNo || item.modemno || item.sno || index.toString(),
                 modemId: item.modemSlNo || item.modemno || item.sno || item.modemId || "Unknown",
@@ -245,7 +195,6 @@ const styles = StyleSheet.create({
         backgroundColor: "#EEF8F0",
     },
 
-    // HEADER
     headerContainer: {
         paddingVertical: 20,
         paddingHorizontal: 20,
@@ -264,9 +213,8 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
 
-    // CONTENT
     container: {
-        flex: 1,                // allow container to fill available screen
+        flex: 1,
         paddingHorizontal: 15,
         backgroundColor: "#EEF8F0",
     },
@@ -287,7 +235,7 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 5,
         borderTopRightRadius: 5,
         marginBottom: 10,
-        zIndex: 10,   // helps keep above list
+        zIndex: 10,
     },
 
     sectionTitle: {

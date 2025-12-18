@@ -53,7 +53,6 @@ const ProfileScreen = ({ navigation }) => {
 
   const consumerUid = 'BI25GMRA0001';
   
-  // Reload notifications from AsyncStorage when screen focuses
   useFocusEffect(
     useCallback(() => {
       const loadNotifications = async () => {
@@ -66,7 +65,6 @@ const ProfileScreen = ({ navigation }) => {
             setNotifications([]);
           }
         } catch (e) {
-          // Silent error handling
         }
       };
       
@@ -81,7 +79,6 @@ const ProfileScreen = ({ navigation }) => {
       n.id === id ? { ...n, is_read: true } : n
     );
     setNotifications(updated);
-    // Save to AsyncStorage
     await AsyncStorage.setItem("notifications", JSON.stringify(updated));
   };
 
