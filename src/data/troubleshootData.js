@@ -55,8 +55,27 @@ export const troubleshootStepsByCode = {
           'Verify network settings and configuration are correct',
         ]
       },
+      {
+        id: 4,
+        title: 'Is Issue Fixed?',
+        description: 'Check if the meter symbol on your device shows active communication.',
+        // image: CheckVoltagePresentGif,
+    
+        // noTitle: 'Voltage Not Detected at Input Line',
+        // noImage: ReCheckVoltagePresentGif,
+        // noSubtitle: 'No voltage has been detected. Follow these corrective steps carefully.',
+        // noSteps: [
+        //   'Check if the power outlet is working by testing with another device',
+        //   'Inspect the power adapter for any damage or burnt smell',
+        //   'Verify the circuit breaker has not tripped for this line',
+        // ]
+      },
+      {
+        id: 5,
+        title: 'Is Modem Replaced ',
+        description: 'Check if the meter symbol on your device shows active communication.',
+      },
   ],
-
   202: [
     {
       id: 1,
@@ -113,6 +132,26 @@ export const troubleshootStepsByCode = {
         'Check that network cables are securely connected',
         'Verify network settings and configuration are correct',
       ]
+    },
+    {
+      id: 4,
+      title: 'Is Issue Fixed?',
+      description: 'Check if the meter symbol on your device shows active communication.',
+      // image: CheckVoltagePresentGif,
+  
+      // noTitle: 'Voltage Not Detected at Input Line',
+      // noImage: ReCheckVoltagePresentGif,
+      // noSubtitle: 'No voltage has been detected. Follow these corrective steps carefully.',
+      // noSteps: [
+      //   'Check if the power outlet is working by testing with another device',
+      //   'Inspect the power adapter for any damage or burnt smell',
+      //   'Verify the circuit breaker has not tripped for this line',
+      // ]
+    },
+    {
+      id: 5,
+      title: 'Is Modem Replaced ',
+      description: 'Check if the meter symbol on your device shows active communication.',
     },
   ],
 
@@ -172,6 +211,26 @@ export const troubleshootStepsByCode = {
         'Check that network cables are securely connected',
         'Verify network settings and configuration are correct',
       ]
+    },
+    {
+      id: 5,
+      title: 'Is Issue Fixed?',
+      description: 'Check if the meter symbol on your device shows active communication.',
+      // image: CheckVoltagePresentGif,
+  
+      // noTitle: 'Voltage Not Detected at Input Line',
+      // noImage: ReCheckVoltagePresentGif,
+      // noSubtitle: 'No voltage has been detected. Follow these corrective steps carefully.',
+      // noSteps: [
+      //   'Check if the power outlet is working by testing with another device',
+      //   'Inspect the power adapter for any damage or burnt smell',
+      //   'Verify the circuit breaker has not tripped for this line',
+      // ]
+    },
+    {
+      id: 6,
+      title: 'Is Modem Replaced ',
+      description: 'Check if the meter symbol on your device shows active communication.',
     },
   ],
 };

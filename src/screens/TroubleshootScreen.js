@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -62,6 +61,23 @@ const TroubleshootScreen = ({ navigation, route }) => {
   }, [route?.params?.status]);
 
   const handleResponse = useCallback((isSuccess) => {
+    // Check if current step is "Is Modem Replaced" and user clicked "Yes"
+    if (isSuccess && currentStep?.title?.trim() === 'Is Modem Replaced') {
+      // Extract modem ID from various possible fields
+      const modemId = extractModemId(modem) || 
+                      modem?.modemId || 
+                      modem?.modemSlNo || 
+                      modem?.modemno || 
+                      route?.params?.modemId || 
+                      'MDM000';
+      
+      // Navigate to ReplacedModemDetailsScreen with old modem ID
+      navigation.navigate('ReplacedModemDetails', {
+        oldModem: modemId,
+      });
+      return;
+    }
+
     if (!isSuccess) {
       setShowRetry(true);
       setFeedback({
@@ -80,7 +96,7 @@ const TroubleshootScreen = ({ navigation, route }) => {
     } else {
       setCurrentStepIndex(troubleshootSteps.length);
     }
-  }, [currentStep, currentStepIndex, troubleshootSteps.length]);
+  }, [currentStep, currentStepIndex, troubleshootSteps.length, modem, navigation, route]);
 
   const checkModemStatus = useCallback(async (modemId) => {
     try {
@@ -200,27 +216,30 @@ const TroubleshootScreen = ({ navigation, route }) => {
           <View style={styles.bottomResponseBar}>
             <View style={styles.responseRow}>
               {showRetry ? (
-                <TouchableOpacity
-                  style={[styles.responseButton, styles.responseButtonRetry]}
+                <Button
+                  title="Retry Check"
                   onPress={handleRetry}
-                >
-                  <Text style={styles.responseTextYes}>Retry Check</Text>
-                </TouchableOpacity>
+                  variant="primary"
+                  size="medium"
+                  style={{ flex: 1 }}
+                />
               ) : (
                 <>
-                  <TouchableOpacity
-                    style={[styles.responseButton, styles.responseButtonYes]}
+                  <Button
+                    title="Yes"
                     onPress={() => handleResponse(true)}
-                  >
-                    <Text style={styles.responseTextYes}>Yes</Text>
-                  </TouchableOpacity>
+                    variant="primary"
+                    size="medium"
+                    style={{ flex: 1 }}
+                  />
 
-                  <TouchableOpacity
-                    style={[styles.responseButton, styles.responseButtonNo]}
+                  <Button
+                    title="No"
                     onPress={() => handleResponse(false)}
-                  >
-                    <Text style={styles.responseTextNo}>No</Text>
-                  </TouchableOpacity>
+                    variant="gray"
+                    size="medium"
+                    style={{ flex: 1 }}
+                  />
                 </>
               )}
             </View>
@@ -304,7 +323,7 @@ const SuccessCard = React.memo(({ image, onComplete, checkingStatus = false }) =
       <Button 
         title={checkingStatus ? "Checking Status..." : "Issue Fixed"} 
         onPress={onComplete} 
-        style={styles.completeButton}
+        style={{ width: '100%', marginTop: spacing.md }}
         disabled={checkingStatus}
         loading={checkingStatus}
       />
@@ -423,18 +442,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
-  responseButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  responseButtonYes: { backgroundColor: colors.secondary },
-  responseButtonNo: { backgroundColor: '#eef0f4' },
-  responseButtonRetry: { backgroundColor: colors.secondary },
-
-  responseTextYes: { fontSize: 14, color: '#fff', fontWeight: '500' },
-  responseTextNo: { fontSize: 14, color: '#6E6E6E', fontWeight: '500' },
   
   feedbackCardInside: {
     backgroundColor: '#F7F7F7',
@@ -514,10 +521,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     fontFamily: 'Manrope-Medium',
-  },
-  completeButton: {
-    width: '100%',
-    marginTop: spacing.md,
   },
 });
 

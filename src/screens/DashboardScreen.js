@@ -13,6 +13,7 @@ import {
   Linking,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -27,6 +28,7 @@ import { modemStats, modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 import { formatDisplayDateTime } from '../utils/dateUtils';
+import { getSignalBand } from '../utils/modemHelpers';
 
 import SearchIcon from '../../assets/icons/searchIcon.svg';
 import ScanIcon from '../../assets/icons/scan.svg';
@@ -38,6 +40,8 @@ import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
 import CommunicatingModemsIcon from '../../assets/icons/communicating.svg';
 import NonCommunicatingModemsIcon from '../../assets/icons/noncommicating.svg';
+import TotalVisitsIcon from '../../assets/icons/totaltasks.svg';
+import ResolvedVisitsIcon from '../../assets/icons/completedtasks.svg';
 import { NotificationContext } from '../context/NotificationContext';
 import { useContext } from 'react';
 
@@ -315,19 +319,9 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   }, [apiData]);
 
   const dashboardMetrics = useMemo(() => {
-    const communicatingSet = new Set();
-    const nonCommunicatingSet = new Set();
     const nonCommunicatingCodes = [214, 112, 212];
     const communicatingSet = new Set(modemIds.map(id => id?.toString()).filter(Boolean));
     const nonCommunicatingSet = new Set();
-    
-    if (modemIds && modemIds.length > 0) {
-      modemIds.forEach(modemId => {
-        if (modemId) {
-          communicatingSet.add(modemId.toString());
-        }
-      });
-    }
     
     if (apiData && apiData.alerts && apiData.alerts.length > 0) {
       const modemStatusMap = new Map();
@@ -348,10 +342,12 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
           return normalizedOfficerId === alertModemId;
         });
         
+        if (!matchingOfficerModemId) return;
+        
         const code = Number(alert.code || alert.errorCode);
         if (!isNaN(code)) {
           const status = nonCommunicatingCodes.includes(code) ? 'non-communicating' : 'communicating';
-          modemStatusMap.set(matchingModemId, status);
+          modemStatusMap.set(matchingOfficerModemId, status);
         }
       });
       
@@ -463,7 +459,9 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
             <View style={styles.profileGreetingContainer}>
               <View style={styles.profileGreetingRow}>
                 <Text style={styles.hiText}>Hi, {userName}</Text>
-                <Hand width={30} height={30} />
+                <View style={styles.handIconWrapper}>
+                  <Hand width={30} height={30} />
+                </View>
               </View>
               <Text style={styles.stayingText}>Monitoring modems today?</Text>
             </View>
@@ -490,13 +488,43 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
               activeOpacity={0.7}
             >
               <View style={styles.textContainer}>
-                <Text style={styles.metricTitle}>Non-Communicating</Text>
+                <Text style={styles.metricTitle}>Offline Modems</Text>
                 <Text style={styles.metricValue}>
                   {loading ? '...' : wipData.nonCommunicatingModems}
                 </Text>
               </View>
               <View style={styles.metricIconContainer}>
                 <NonCommunicatingModemsIcon width={21} height={21} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.metricCard}
+              activeOpacity={0.7}
+            >
+              <View style={styles.textContainer}>
+                <Text style={styles.metricTitle}>Total Visits</Text>
+                <Text style={styles.metricValue}>
+                  {loading ? '...' : wipData.totalTasksToday}
+                </Text>
+              </View>
+              <View style={styles.metricIconContainer}>
+                <TotalVisitsIcon width={21} height={21} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.metricCard}
+              activeOpacity={0.7}
+            >
+              <View style={styles.textContainer}>
+                <Text style={styles.metricTitle}>Resolved</Text>
+                <Text style={styles.metricValue}>
+                  {loading ? '...' : wipData.completedTasksToday}
+                </Text>
+              </View>
+              <View style={styles.metricIconContainer}>
+                <ResolvedVisitsIcon width={21} height={21} />
               </View>
             </TouchableOpacity>
           </View>
@@ -782,6 +810,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginHorizontal: 2,
+    marginTop: 20,
     marginBottom: 20,
   },
   profileGreetingContainer: {
@@ -790,6 +819,10 @@ const styles = StyleSheet.create({
   profileGreetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  handIconWrapper: {
+    // Removed marginLeft as gap is now handled by parent
   },
   hiText: {
     color: COLORS.primaryFontColor,
@@ -804,6 +837,7 @@ const styles = StyleSheet.create({
 
   metricsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 8,
   },
@@ -817,6 +851,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     height: 100,
+    marginBottom: 10,
   },
   textContainer: {
     width: 120,

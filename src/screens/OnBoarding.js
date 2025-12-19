@@ -75,7 +75,8 @@ const OnBoarding = ({ onComplete }) => {
       <OnBoardingSlides  scrollRef={scrollRef} onIndexChange={setActiveIndex}  /> 
 
       <View style={styles.ButtonBox}>
-        <Button style={styles.buttonContainer} 
+        <Button 
+          style={{ width: "80%", height: "100%", justifyContent: "center", borderRadius: 4 }}
           variant="primary" 
           title={activeIndex === 2 ? "Get Started" : "Next"}
           onPress={handleButtonPress}
@@ -136,12 +137,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 40,
     zIndex: 1, // Ensure button is above background
-  },
-  buttonContainer: {
-    width: "80%",
-    height: "100%",
-    justifyContent: "center",
-    borderRadius: 4,
   },
 
   /////Arrow \\\\\\

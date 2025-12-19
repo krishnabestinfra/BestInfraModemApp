@@ -393,7 +393,7 @@ const LoginScreen = ({  navigation, onLogin }) => {
                 }
                 variant={isGenerateEnabled ? "primary" : "outline"}
                 size="medium"
-                style={styles.loginButton}
+                style={{ marginTop: 40 }}
                 onPress={handleLogin}
                 loading={isLoading}
                 disabled={isLoading || !isGenerateEnabled}
@@ -489,9 +489,6 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: 15,
-  },
-  loginButton: {
-    marginTop: 40,
   },
   rememberContainer: {
     flexDirection: "row",

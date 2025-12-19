@@ -13,6 +13,8 @@ import ErrorDetailsScreen from '../screens/ErrorDetailsScreen';
 import AlertsScreen from '../screens/AlertsScreen';
 import ModemDetailsScreen from '../screens/ModemDetailsScreen';
 import TroubleshootScreen from '../screens/TroubleshootScreen';
+import UploadIssueImageScreen from '../screens/UploadIssueIamgeScreen';
+import ReplacedModemDetailsScreen from '../screens/ReplacedModemDetailsScreen';
 import SideMenu from '../screens/Sidemenu';  
 import ScanScreen from '../components/ScanScreen';
 import CompletedActivities from '../screens/CompletedActivities';
@@ -241,6 +243,8 @@ const AppNavigator = () => {
               )}
             </Stack.Screen>
             <Stack.Screen name="Troubleshoot" component={TroubleshootScreen} />
+            <Stack.Screen name="UploadIssueImage" component={UploadIssueImageScreen} />
+            <Stack.Screen name="ReplacedModemDetails" component={ReplacedModemDetailsScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="ScanScreen" component={ScanScreen} />
             <Stack.Screen name="CompletedActivities">

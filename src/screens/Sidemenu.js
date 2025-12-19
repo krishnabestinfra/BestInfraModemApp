@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -8,6 +8,7 @@ import MenuIcon from "../../assets/icons/barsWhite.svg";
 import NotificationIcon from "../../assets/icons/notification.svg";
 import Logo from "../components/global/Logo";
 import AppHeader from "../components/global/AppHeader";
+import ConfirmationModal from "../components/global/ConfirmationModal";
 
 import DashboardScreen from "../screens/DashboardScreen";
 import Troubleshoot from "../screens/TroubleshootScreen";
@@ -26,6 +27,7 @@ import TotalTasksIcon from "../../assets/icons/totaltasks.svg";
 const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone }) => {
   const insets = useSafeAreaInsets();
   const { activeItem, setActiveItem } = useSidebar();
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
 
   const renderContent = () => {
@@ -56,11 +58,20 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
   };
 
   const handleLogout = () => {
+    setLogoutModalVisible(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setLogoutModalVisible(false);
     if (onLogout) {
       onLogout();
     } else {
       navigation?.replace?.("Login");
     }
+  };
+
+  const handleCancelLogout = () => {
+    setLogoutModalVisible(false);
   };
 
 
@@ -142,6 +153,17 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
 
         </View>
       </View>
+
+      <ConfirmationModal
+        visible={logoutModalVisible}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        onCancel={handleCancelLogout}
+        onConfirm={handleConfirmLogout}
+        cancelText="Cancel"
+        confirmText="Logout"
+        confirmButtonColor="#F44336"
+      />
     </SafeAreaView>
   );
 };
