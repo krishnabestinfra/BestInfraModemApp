@@ -1,30 +1,60 @@
 import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import MenuIcon from '../../../assets/icons/bars.svg';
 import NotificationIcon from '../../../assets/icons/notification.svg';
 import RippleLogo from './RippleLogo';
 import { COLORS } from '../../constants/colors';
+import NotificationLight from '../../../assets/icons/notification.svg';
 
 const DEFAULT_ICON_PROPS = { width: 18, height: 18, fill: '#202d59' };
 const DEFAULT_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
 const BUTTON_SIZE = 54;
 
 const AppHeader = ({
+  navigation,
   containerStyle,
   contentStyle,
   leftButtonStyle,
   rightButtonStyle,
   logoContainerStyle,
   leftIcon: LeftIcon = MenuIcon,
-  rightIcon: RightIcon = NotificationIcon,
+  rightIcon: RightIcon = NotificationLight,
+  leftIconProps,
+  rightIconProps,
   onPressLeft,
   onPressRight,
   onPressCenter,
-  logo = <RippleLogo size={68} />,
+  logo,
+  withGradient = true,
+  gradientColors = ['#f4fbf7', '#e6f4ed'],
+  headerWrapperStyle,
+  headerContainerStyle,
+  children,
 }) => {
   const insets = useSafeAreaInsets();
+  
+  // Default logo if not provided
+  const defaultLogo = logo || <RippleLogo size={68} />;
+  
+  // Auto-setup navigation handlers if navigation prop is provided (only if custom handlers not provided)
+  const handlePressLeft = onPressLeft || (navigation ? () => navigation.navigate('SideMenu') : undefined);
+  const handlePressCenter = onPressCenter || (navigation ? () => navigation.navigate('Dashboard') : undefined);
+  const handlePressRight = onPressRight || (navigation ? () => navigation.navigate('Profile') : undefined);
+  
+  // Default button styles (only apply if no custom style provided)
+  const defaultButtonStyle = React.useMemo(() => ({
+    backgroundColor: COLORS.secondaryFontColor,
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+    zIndex: 2,
+  }), []);
   
   const buttonStyle = React.useMemo(
     () => ({
@@ -38,35 +68,64 @@ const AppHeader = ({
   const defaultContainerStyle = React.useMemo(() => ({
     paddingTop: Math.max(insets.top + 10, 10),
   }), [insets.top]);
+  
+  // Default container style (only if not provided)
+  const defaultContainerStyleValue = containerStyle || { paddingTop: 10, paddingBottom: 5 };
 
-  const CenterWrapper = onPressCenter ? Pressable : View;
+  const CenterWrapper = handlePressCenter ? Pressable : View;
 
-  const renderButton = (IconComponent, pressHandler, customStyle) => (
-    <Pressable
-      hitSlop={DEFAULT_HIT_SLOP}
-      onPress={pressHandler}
-      disabled={!pressHandler}
-      style={[styles.circleButton, buttonStyle, customStyle, !pressHandler && styles.hidden]}
-    >
-      {pressHandler && <IconComponent {...DEFAULT_ICON_PROPS} />}
-    </Pressable>
-  );
+  const renderButton = (IconComponent, pressHandler, customStyle, iconProps) => {
+    // Only apply default button style if no custom style is provided
+    const buttonStyles = customStyle 
+      ? [styles.circleButton, buttonStyle, customStyle]
+      : [styles.circleButton, buttonStyle, defaultButtonStyle];
+    
+    // Use custom icon props if provided, otherwise use defaults
+    const iconPropsToUse = iconProps || DEFAULT_ICON_PROPS;
+    
+    return (
+      <Pressable
+        hitSlop={DEFAULT_HIT_SLOP}
+        onPress={pressHandler}
+        disabled={!pressHandler}
+        style={[...buttonStyles, !pressHandler && styles.hidden]}
+      >
+        {pressHandler && <IconComponent {...iconPropsToUse} />}
+      </Pressable>
+    );
+  };
 
-  return (
-    <View style={[styles.container, defaultContainerStyle, containerStyle]}>
+  const headerContent = (
+    <View style={[styles.container, defaultContainerStyle, defaultContainerStyleValue]}>
       <View style={[styles.content, contentStyle]}>
-        {renderButton(LeftIcon, onPressLeft, leftButtonStyle)}
+        {renderButton(LeftIcon, handlePressLeft, leftButtonStyle, leftIconProps)}
 
         <CenterWrapper
           style={[styles.logoWrapper, logoContainerStyle]}
-          onPress={onPressCenter}
-          hitSlop={onPressCenter ? DEFAULT_HIT_SLOP : undefined}
+          onPress={handlePressCenter}
+          hitSlop={handlePressCenter ? DEFAULT_HIT_SLOP : undefined}
         >
-          {logo}
+          {defaultLogo}
         </CenterWrapper>
 
-        {renderButton(RightIcon, onPressRight, rightButtonStyle)}
+        {renderButton(RightIcon, handlePressRight, rightButtonStyle, rightIconProps)}
       </View>
+      {children}
+    </View>
+  );
+
+  if (!withGradient) {
+    return headerContent;
+  }
+
+  return (
+    <View style={[styles.headerWrapper, headerWrapperStyle]}>
+      <LinearGradient
+        colors={gradientColors}
+        style={[styles.headerContainer, headerContainerStyle]}
+      >
+        {headerContent}
+      </LinearGradient>
     </View>
   );
 };
@@ -74,6 +133,13 @@ const AppHeader = ({
 export default AppHeader;
 
 const styles = StyleSheet.create({
+  headerWrapper: {
+    overflow: 'hidden',
+  },
+  headerContainer: {
+    paddingHorizontal: 15,
+    paddingVertical: 40,
+  },
   container: {
     width: '100%',
   },

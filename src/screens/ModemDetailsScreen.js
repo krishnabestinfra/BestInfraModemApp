@@ -3,14 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 import { formatDisplayDateTime } from '../utils/dateUtils';
-import NotificationLight from '../../assets/icons/notification.svg';
 import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
 import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
@@ -25,7 +23,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   const insets = useSafeAreaInsets();
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [dataFetchedAt, setDataFetchedAt] = useState(null); // Track when data was loaded
+  const [dataFetchedAt, setDataFetchedAt] = useState(null);
 
   const assignedModems = Array.isArray(modems) ? modems : [];
   const routeModem = route?.params?.modem;
@@ -77,14 +75,10 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
     if (resolvedModem) {
       const modemData = resolvedModem.originalAlert || resolvedModem;
       setApiData(modemData);
-      setDataFetchedAt(new Date().toISOString()); // Track current timestamp when data is loaded
+      setDataFetchedAt(new Date().toISOString());
     }
     setLoading(false);
   }, [resolvedModem]);
-
- 
-
-
   const modem = useMemo(() => {
     if (apiData && (apiData.modemSlNo || apiData.sno)) {
       return {
@@ -93,7 +87,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
         error: apiData.codeDesc || fallbackModem.error,
         errorCode: apiData.code || 'N/A',
         reason: apiData.codeDesc || fallbackModem.reason,
-        location: apiData.discom || 'N/A', // Using discom as location
+        location: apiData.discom || 'N/A',
         date: apiData.modemDate ? `${apiData.modemDate} ${apiData.modemTime || ''}` : fallbackModem.date,
         signalStrength: apiData.signalStrength1 || apiData.signalStrength2 || 0,
         discom: apiData.discom || 'N/A',
@@ -114,7 +108,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
       };
     }
     return fallbackModem;
-  }, [apiData, fallbackModem, dataFetchedAt]); // Add dataFetchedAt to dependencies
+  }, [apiData, fallbackModem, dataFetchedAt]);
 
   const statusMeta =
     statusMetaMap[modem.status] ??
@@ -164,11 +158,11 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
     }
     
     return fields;
-  }, [modem, apiData, dataFetchedAt]); // Add dataFetchedAt to dependencies
+  }, [modem, apiData, dataFetchedAt]);
 
 
   const handleResolve = useCallback(() => {
-    navigation?.navigate?.('Troubleshoot', { modem, status: statusMeta.label });
+    navigation?.navigate?.('UploadIssueImage', { modem, status: statusMeta.label });
   }, [navigation, modem, statusMeta.label]);
 
   if (loading) {
@@ -186,26 +180,16 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar style="dark" />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xxl + insets.bottom }]}
-        showsVerticalScrollIndicator={false}
+      <LinearGradient
+        colors={['#f4fbf7', '#e6f4ed']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.backgroundGradient}
       >
-        <LinearGradient
-          colors={['#f4fbf7', '#e6f4ed']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroCard}
-        >
-          <AppHeader
+        <View style={styles.heroCard}>
+          <AppHeader 
+            navigation={navigation}
             containerStyle={styles.heroTopRow}
-            leftButtonStyle={styles.barsIcon}
-            rightButtonStyle={styles.bellIcon}
-            rightIcon={NotificationLight}
-            logo={<RippleLogo size={68} />}
-            onPressLeft={() => navigation?.navigate?.('SideMenu')}
-            onPressCenter={() => navigation?.navigate?.('Dashboard')}
-            onPressRight={() => navigation?.navigate?.('Profile')}
           />
           <View style={styles.cardBackground}>
             <ModemStatusCard
@@ -216,19 +200,22 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
               style={styles.heroStatusCard}
             />
           </View>
-          
-        </LinearGradient>
-
-        <View style={styles.detailCard}>
-          <DetailGrid fields={detailFields} getSignalIcon={getSignalIcon} />
         </View>
 
-      </ScrollView>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xxl + insets.bottom }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.detailCard}>
+            <DetailGrid fields={detailFields} getSignalIcon={getSignalIcon} />
+          </View>
+        </ScrollView>
 
-      <View style={styles.footer}>
-        <Button title="Start Troubleshooting" onPress={handleResolve} style={styles.resolveButton} />
-      </View>
-
+        <View style={styles.footer}>
+          <Button title="Take a Picture" onPress={handleResolve} variant="primary" size="large" style={{ width: '100%', borderRadius: 5 }} />
+        </View>
+      </LinearGradient>
     </SafeAreaView>
   );
 };
@@ -269,7 +256,9 @@ const DetailGrid = React.memo(({ fields, getSignalIcon }) => (
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#EEF8F0',
+  },
+  backgroundGradient: {
+    flex: 1,
   },
   scroll: {
     flex: 1,
@@ -278,7 +267,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   heroCard: {
-    overflow: 'hidden',
+    paddingHorizontal: spacing.xs,
+    paddingBottom: 0,
   },
   heroOverlayCircleLarge: {
     position: 'absolute',
@@ -352,7 +342,7 @@ const styles = StyleSheet.create({
   detailCard: {
     backgroundColor: colors.cardBackground,
     marginHorizontal: spacing.md,
-    marginTop: spacing.md,
+    marginTop: 7,
     borderRadius: 5,
     padding: spacing.md,
   },
@@ -534,10 +524,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.lg,
     paddingTop: spacing.sm,
-    backgroundColor: "#EEF8F0",
-  },
-  resolveButton: {
-    borderRadius:5,
   },
   loadingContainer: {
     flex: 1,

@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import AppHeader from '../components/global/AppHeader';
 import AlertCard from '../components/AlertCard';
+import SummaryCard from '../components/SummaryCard';
 import { alerts } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography, shadows } from '../styles/theme';
+import { COLORS } from '../constants/colors';
 
 const AlertsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -40,31 +44,28 @@ const AlertsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
+      <StatusBar style="dark" />
+      <AppHeader navigation={navigation} />
+      <View style={styles.titleContainer}>
         <Text style={styles.title}>Alerts</Text>
-        <View style={styles.placeholder} />
       </View>
 
       <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{alerts.length}</Text>
-          <Text style={styles.statLabel}>Total Alerts</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: colors.error }]}>
-            {alerts.filter(alert => alert.severity === 'high').length}
-          </Text>
-          <Text style={styles.statLabel}>High Priority</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: colors.warning }]}>
-            {alerts.filter(alert => alert.severity === 'medium').length}
-          </Text>
-          <Text style={styles.statLabel}>Medium Priority</Text>
-        </View>
+        <SummaryCard
+          label="Total Alerts"
+          value={alerts.length}
+          color={colors.primary}
+        />
+        <SummaryCard
+          label="High Priority"
+          value={alerts.filter(alert => alert.severity === 'high').length}
+          color={colors.error}
+        />
+        <SummaryCard
+          label="Medium Priority"
+          value={alerts.filter(alert => alert.severity === 'medium').length}
+          color={colors.warning}
+        />
       </View>
 
       <View style={styles.filtersContainer}>
@@ -96,25 +97,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.md,
-    backgroundColor: colors.cardBackground,
-    ...shadows.small,
+  topMenu: {
+    paddingTop: 10,
+    paddingBottom: 5,
   },
-  backButton: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '600',
+  barsIcon: {
+    backgroundColor: COLORS.secondaryFontColor,
+    width: 54,
+    height: 54,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+    zIndex: 2,
+  },
+  bellIcon: {
+    backgroundColor: COLORS.secondaryFontColor,
+    width: 54,
+    height: 54,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+    zIndex: 2,
+  },
+  titleContainer: {
+    marginTop: 10,
+    marginBottom: 15,
+    paddingHorizontal: 15,
   },
   title: {
-    ...typography.h2,
-    color: colors.textPrimary,
-  },
-  placeholder: {
-    width: 50,
+    fontSize: 24,
+    color: COLORS.primaryFontColor,
+    fontFamily: 'Manrope-Bold',
   },
   statsContainer: {
     flexDirection: 'row',

@@ -3,13 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
@@ -17,10 +15,7 @@ import { colors, spacing, borderRadius } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 import { getTroubleshootSteps, hasTroubleshootSteps } from '../data/troubleshootData';
 import { extractModemId } from '../utils/modemHelpers';
-
 import successImg from '../../assets/images/Success_page.gif';
-
-import NotificationLight from '../../assets/icons/notification.svg';
 import CheckCircleIcon from '../../assets/icons/successIcon.svg';
 
 if (!Text.defaultProps) Text.defaultProps = {};
@@ -29,6 +24,7 @@ Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
 const TroubleshootScreen = ({ navigation, route }) => {
   const modem = route?.params?.modem;
   const errorCode = modem?.code || modem?.errorCode || modem?.originalAlert?.code || modem?.originalData?.code;
+  const showSuccess = route?.params?.showSuccess || false; // Parameter to show success page directly
 
   const troubleshootSteps = useMemo(() => {
     const codeNum = typeof errorCode === 'number' ? errorCode : parseInt(errorCode);
@@ -42,17 +38,21 @@ const TroubleshootScreen = ({ navigation, route }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [showRetry, setShowRetry] = useState(false);
-  const [checkingStatus, setCheckingStatus] = useState(false);
 
   useEffect(() => {
-    setCurrentStepIndex(0);
+    // If showSuccess is true, set currentStepIndex to show success immediately
+    if (showSuccess && troubleshootSteps.length > 0) {
+      setCurrentStepIndex(troubleshootSteps.length);
+    } else {
+      setCurrentStepIndex(0);
+    }
     setFeedback(null);
     setShowRetry(false);
-  }, [errorCode]);
+  }, [errorCode, showSuccess, troubleshootSteps.length]);
 
   const currentStep = troubleshootSteps[currentStepIndex];
   const hasSteps = troubleshootSteps.length > 0;
-  const isComplete = hasSteps && currentStepIndex >= troubleshootSteps.length;
+  const isComplete = showSuccess || (hasSteps && currentStepIndex >= troubleshootSteps.length);
 
   const statusMeta = useMemo(() => {
     if (route?.params?.status === 'Communicating') {
@@ -62,6 +62,41 @@ const TroubleshootScreen = ({ navigation, route }) => {
   }, [route?.params?.status]);
 
   const handleResponse = useCallback((isSuccess) => {
+    // Check if current step is "Is Modem Replaced" and user clicked "Yes"
+    if (isSuccess && currentStep?.title?.trim() === 'Is Modem Replaced') {
+      // Extract modem ID from various possible fields
+      const modemId = extractModemId(modem) || 
+                      modem?.modemId || 
+                      modem?.modemSlNo || 
+                      modem?.modemno || 
+                      route?.params?.modemId || 
+                      'MDM000';
+      
+      // Navigate to ReplacedModemDetailsScreen with old modem ID
+      navigation.navigate('ReplacedModemDetails', {
+        oldModem: modemId,
+      });
+      return;
+    }
+
+    // Check if current step is "Is Modem Replaced" and user clicked "No"
+    // If modem is not replaced, navigate directly to success screen
+    if (!isSuccess && currentStep?.title?.trim() === 'Is Modem Replaced') {
+      // Navigate directly to success screen
+      setCurrentStepIndex(troubleshootSteps.length);
+      return;
+    }
+
+    // Check if current step is "Is Issue Fixed?" and user clicked "No"
+    if (!isSuccess && currentStep?.title?.trim() === 'Is Issue Fixed?') {
+      // Navigate to IssueNotResolvedScreen
+      navigation.navigate('IssueNotResolved', {
+        modem: modem,
+        status: route?.params?.status,
+      });
+      return;
+    }
+
     if (!isSuccess) {
       setShowRetry(true);
       setFeedback({
@@ -80,55 +115,12 @@ const TroubleshootScreen = ({ navigation, route }) => {
     } else {
       setCurrentStepIndex(troubleshootSteps.length);
     }
-  }, [currentStep, currentStepIndex, troubleshootSteps.length]);
+  }, [currentStep, currentStepIndex, troubleshootSteps.length, modem, navigation, route]);
 
-  const checkModemStatus = useCallback(async (modemId) => {
-    try {
-      if (!modemId) return false;
-
-      const url = `https://api.bestinfra.app/v2tgnpdcl/api/modems/modem/${modemId}/status`;
-      const response = await fetch(url, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-      const json = await response.json();
-      return json.success && json.data && json.data.status === "resolved";
-    } catch (error) {
-      console.error('Error checking modem status:', error);
-      return false;
-    }
-  }, []);
-
-  const handleComplete = useCallback(async () => {
-    setCheckingStatus(true);
-    
-    // Extract modem ID from various possible fields
-    const modemId = extractModemId(modem) || 
-                    modem?.modemId || 
-                    modem?.modemSlNo || 
-                    modem?.modemno || 
-                    route?.params?.modemId;
-
-    try {
-      const isResolved = await checkModemStatus(modemId);
-      
-      if (isResolved) {
-        // Status is resolved - refresh dashboard and navigate
-        navigation.navigate('Dashboard', { refresh: true });
-      } else {
-        // Status is not resolved - redirect to dashboard so user can start process again
-        navigation.navigate('Dashboard', { refresh: true });
-      }
-    } catch (error) {
-      // On error, redirect to dashboard so user can start process again
-      navigation.navigate('Dashboard', { refresh: true });
-    } finally {
-      setCheckingStatus(false);
-    }
-  }, [modem, navigation, checkModemStatus, route]);
+  const handleComplete = useCallback(() => {
+    // Navigate directly to Dashboard without API check
+    navigation.navigate('Dashboard', { refresh: true });
+  }, [navigation]);
 
   const handleRetry = useCallback(() => {
     setShowRetry(false);
@@ -146,15 +138,9 @@ const TroubleshootScreen = ({ navigation, route }) => {
           colors={['#f4fbf7', '#e6f4ed']}
           style={styles.heroCard}
         >
-          <AppHeader
+          <AppHeader 
+            navigation={navigation}
             containerStyle={styles.heroTopRow}
-            leftButtonStyle={styles.barsIcon}
-            rightButtonStyle={styles.bellIcon}
-            rightIcon={NotificationLight}
-            logo={<RippleLogo size={68} />}
-            onPressLeft={() => navigation.navigate('SideMenu')}
-            onPressCenter={() => navigation.navigate('Dashboard')}
-            onPressRight={() => navigation.navigate('Profile')}
           />
 
           {!isComplete && (
@@ -175,21 +161,20 @@ const TroubleshootScreen = ({ navigation, route }) => {
             </View>
           )}
           <View style={styles.contentWrapper}>
-            {!hasSteps ? (
+            {isComplete ? (
+              <SuccessCard 
+                image={successImg} 
+                onComplete={handleComplete}
+              />
+            ) : !hasSteps ? (
               <View style={styles.noStepsContainer}>
                 <Text style={styles.noStepsText}>No troubleshooting steps available for this error code.</Text>
               </View>
-            ) : !isComplete ? (
+            ) : (
               <StepContent
                 step={currentStep}
                 feedback={feedback}
                 showRetry={showRetry}
-              />
-            ) : (
-              <SuccessCard 
-                image={successImg} 
-                onComplete={handleComplete}
-                checkingStatus={checkingStatus}
               />
             )}
           </View>
@@ -200,27 +185,30 @@ const TroubleshootScreen = ({ navigation, route }) => {
           <View style={styles.bottomResponseBar}>
             <View style={styles.responseRow}>
               {showRetry ? (
-                <TouchableOpacity
-                  style={[styles.responseButton, styles.responseButtonRetry]}
+                <Button
+                  title="Retry Check"
                   onPress={handleRetry}
-                >
-                  <Text style={styles.responseTextYes}>Retry Check</Text>
-                </TouchableOpacity>
+                  variant="primary"
+                  size="medium"
+                  style={{ flex: 1 }}
+                />
               ) : (
                 <>
-                  <TouchableOpacity
-                    style={[styles.responseButton, styles.responseButtonYes]}
+                  <Button
+                    title="Yes"
                     onPress={() => handleResponse(true)}
-                  >
-                    <Text style={styles.responseTextYes}>Yes</Text>
-                  </TouchableOpacity>
+                    variant="primary"
+                    size="medium"
+                    style={{ flex: 1 }}
+                  />
 
-                  <TouchableOpacity
-                    style={[styles.responseButton, styles.responseButtonNo]}
+                  <Button
+                    title="No"
                     onPress={() => handleResponse(false)}
-                  >
-                    <Text style={styles.responseTextNo}>No</Text>
-                  </TouchableOpacity>
+                    variant="gray"
+                    size="medium"
+                    style={{ flex: 1 }}
+                  />
                 </>
               )}
             </View>
@@ -284,7 +272,7 @@ const StepContent = React.memo(({ step, feedback, showRetry }) => (
 ));
 
 /* SUCCESS COMPONENT */
-const SuccessCard = React.memo(({ image, onComplete, checkingStatus = false }) => (
+const SuccessCard = React.memo(({ image, onComplete }) => (
   <View style={styles.successWrapper}>
     <View style={styles.successCard}>
       <ExpoImage
@@ -302,11 +290,9 @@ const SuccessCard = React.memo(({ image, onComplete, checkingStatus = false }) =
       <Text style={styles.successBody}>The meter is now communicating properly.</Text>
 
       <Button 
-        title={checkingStatus ? "Checking Status..." : "Issue Fixed"} 
+        title="Issue Fixed" 
         onPress={onComplete} 
-        style={styles.completeButton}
-        disabled={checkingStatus}
-        loading={checkingStatus}
+        style={{ width: '100%', marginTop: spacing.md }}
       />
     </View>
   </View>
@@ -423,18 +409,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
-  responseButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  responseButtonYes: { backgroundColor: colors.secondary },
-  responseButtonNo: { backgroundColor: '#eef0f4' },
-  responseButtonRetry: { backgroundColor: colors.secondary },
-
-  responseTextYes: { fontSize: 14, color: '#fff', fontWeight: '500' },
-  responseTextNo: { fontSize: 14, color: '#6E6E6E', fontWeight: '500' },
   
   feedbackCardInside: {
     backgroundColor: '#F7F7F7',
@@ -514,10 +488,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     fontFamily: 'Manrope-Medium',
-  },
-  completeButton: {
-    width: '100%',
-    marginTop: spacing.md,
   },
 });
 
