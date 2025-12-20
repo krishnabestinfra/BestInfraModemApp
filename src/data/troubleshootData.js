@@ -8,7 +8,8 @@ import CheckCableConnectionGif from '../../assets/images/Check Cable Connection.
 import ReCheckCableConnectionGif from '../../assets/images/RecheckCableConnection.gif';
 import ConfirmCommunicationGif from '../../assets/images/Confirm Communication.gif';
 import ReCheckCommunicationGif from '../../assets/images/ReCheckCommunication.gif';
-
+import ModemReplacedGif from '../../assets/Modem replaced.gif';
+import IsIssueFixedGif from '../../assets/IsIssueFixed.gif';
 export const troubleshootStepsByCode = {
   112: [
     {
@@ -55,8 +56,19 @@ export const troubleshootStepsByCode = {
           'Verify network settings and configuration are correct',
         ]
       },
+      {
+        id: 4,
+        title: 'Is Issue Fixed?',
+        description: 'Check if the meter symbol on your device shows active communication.',
+        image: IsIssueFixedGif,
+      },
+      {
+        id: 5,
+        title: 'Is Modem Replaced ',
+        description: 'Check if the meter symbol on your device shows active communication.',
+        image: ModemReplacedGif,
+      },
   ],
-
   202: [
     {
       id: 1,
@@ -113,6 +125,18 @@ export const troubleshootStepsByCode = {
         'Check that network cables are securely connected',
         'Verify network settings and configuration are correct',
       ]
+    },
+    {
+      id: 4,
+      title: 'Is Issue Fixed?',
+      description: 'Check if the meter symbol on your device shows active communication.',
+      image: IsIssueFixedGif,
+    },
+    {
+      id: 5,
+      title: 'Is Modem Replaced ',
+      description: 'Check if the meter symbol on your device shows active communication.',
+      image: ModemReplacedGif,
     },
   ],
 
@@ -172,6 +196,18 @@ export const troubleshootStepsByCode = {
         'Check that network cables are securely connected',
         'Verify network settings and configuration are correct',
       ]
+    },
+    {
+      id: 5,
+      title: 'Is Issue Fixed?',
+      description: 'Check if the meter symbol on your device shows active communication.',
+      image: IsIssueFixedGif,
+    },
+    {
+      id: 6,
+      title: 'Is Modem Replaced ',
+      description: 'Check if the meter symbol on your device shows active communication.',
+      image: ModemReplacedGif,
     },
   ],
 };

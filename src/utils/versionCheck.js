@@ -6,7 +6,6 @@ export const getCurrentVersion = () => {
     const appConfig = require('../../app.json');
     return appConfig?.expo?.version || '1.0.0';
   } catch (error) {
-    console.warn('Failed to load app.json, using default version:', error);
     // Fallback to package.json version or default
     try {
       const packageJson = require('../../package.json');
@@ -31,26 +30,8 @@ export const needsUpdate = (current, required) => {
 export const checkAppVersion = async () => {
   try {
     const currentVersion = getCurrentVersion();
-    let versionData = null;
-    
-    if (VERSION_CHECK_URL && VERSION_CHECK_URL !== 'https://your-website.com/version.json') {
-      try {
-        const response = await fetch(VERSION_CHECK_URL, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        
-        if (response.ok) {
-          versionData = await response.json();
-        }
-      } catch (error) {
-        console.log('Remote version check failed, using fallback');
-      }
-    }
-    
-    if (!versionData) {
-      versionData = FALLBACK_VERSION_CONFIG;
-    }
+    // No API calls - using fallback config only
+    const versionData = FALLBACK_VERSION_CONFIG;
     
     const requiredVersion = versionData.minimumVersion || versionData.version;
     if (!requiredVersion) return null;
@@ -59,7 +40,7 @@ export const checkAppVersion = async () => {
     
     if (!updateNeeded) return null;
     
-    return {
+      return {
       needsUpdate: true,
       message: versionData.message || 'Please update to the latest version',
       storeUrl: versionData.storeUrl?.[Platform.OS] || 
@@ -67,7 +48,6 @@ export const checkAppVersion = async () => {
                 FALLBACK_VERSION_CONFIG.storeUrl[Platform.OS],
     };
   } catch (error) {
-    console.error('Version check failed:', error);
     return null;
   }
 };

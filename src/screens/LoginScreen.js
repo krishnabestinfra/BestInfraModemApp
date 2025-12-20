@@ -19,8 +19,7 @@ import Input from "../components/global/Input";
 import Logo from "../components/global/Logo";
 import Tick from "../../assets/icons/tick.svg";
 import User from '../../assets/icons/user.svg';
-import { storeApiKey, storeUserPhone } from "../utils/storage";
-import { API_BASE_URL, API_KEY, API_ENDPOINTS, getPublicHeaders, getProtectedHeaders } from "../config/apiConfig";
+import { storeUserPhone } from "../utils/storage";
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -70,44 +69,21 @@ const LoginScreen = ({  navigation, onLogin }) => {
     };
   }, [otpEnabled]);
 
-  const sendOtp = async (phone) => {
-    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SEND_OTP}`, {
-      method: "POST",
-      headers: getPublicHeaders(),
-      body: JSON.stringify({ phone }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || "Failed to send OTP");
-    }
-  };
-
+  // Mock OTP validation - accepts any 6-digit OTP
   const validateOtp = async (phone, otp) => {
-    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.VALIDATE_OTP}`, {
-      method: "POST",
-      headers: getPublicHeaders(),
-      body: JSON.stringify({ phone, otp }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || "OTP verification failed");
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    if (otp.length !== OTP_LENGTH) {
+      throw new Error("Invalid OTP");
     }
   };
 
+  // Mock modem data - return empty array or dummy data
   const fetchModemsByOfficer = async (phone) => {
-    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.GET_MODEMS_BY_OFFICER}`, {
-      method: "GET",
-      headers: getProtectedHeaders(API_KEY, phone),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || "Unable to load assigned modems");
-    }
-
-    return response.json();
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    // Return empty array - app will work with dummy data
+    return [];
   };
 
   const handleInputChange = (field, value) => {
@@ -193,7 +169,8 @@ const LoginScreen = ({  navigation, onLogin }) => {
       }
 
       try {
-        await sendOtp(mobileNumber);
+        // Simulate OTP sending - no actual API call
+        await new Promise(resolve => setTimeout(resolve, 500));
         setOtpDigits(Array(OTP_LENGTH).fill(""));
         setOtpEnabled(true);
         setErrors(prev => ({ ...prev, otp: null }));
@@ -202,7 +179,6 @@ const LoginScreen = ({  navigation, onLogin }) => {
           otpRefs.current[0]?.focus();
         }, 100);
       } catch (error) {
-        console.error('OTP request error:', error);
         setErrors(prev => ({ ...prev, mobile: error.message || 'Unable to send OTP' }));
       } finally {
         setIsLoading(false);
@@ -228,18 +204,12 @@ const LoginScreen = ({  navigation, onLogin }) => {
 
     try {
       await validateOtp(mobileNumber, otpValue);
-      console.log("STEP 2: OTP VALIDATED");
-
-      console.log("STEP 3: CALLING fetchModemsByOfficer");
       const modems = await fetchModemsByOfficer(mobileNumber);
-      console.log("MODENS FROM LOGIN SCREEN:", modems);
-      await storeApiKey(API_KEY);
       await storeUserPhone(mobileNumber);
       
       onLogin(modems, mobileNumber);   // Updates AppNavigator  global state
 
     } catch (error) {
-      console.error('Login error:', error);
       setErrors(prev => ({ ...prev, otp: error.message || 'Unable to verify OTP' }));
     } finally {
       setIsLoading(false);
@@ -393,7 +363,7 @@ const LoginScreen = ({  navigation, onLogin }) => {
                 }
                 variant={isGenerateEnabled ? "primary" : "outline"}
                 size="medium"
-                style={styles.loginButton}
+                style={{ marginTop: 40 }}
                 onPress={handleLogin}
                 loading={isLoading}
                 disabled={isLoading || !isGenerateEnabled}
@@ -489,9 +459,6 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: 15,
-  },
-  loginButton: {
-    marginTop: 40,
   },
   rememberContainer: {
     flexDirection: "row",

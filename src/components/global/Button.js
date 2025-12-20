@@ -1,17 +1,20 @@
 import React, { useMemo, useCallback } from 'react';
-import { Pressable, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { Pressable, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
 import { COLORS } from '../../constants/colors';
 
 const Button = React.memo(({
   title,
   onPress,
-  variant = 'primary', // 'primary', 'secondary', 'outline', 'ghost' ,'primary-outline', 'disabled'
+  variant = 'primary', // 'primary', 'secondary', 'outline', 'ghost', 'gray', 'disabled'
   size = 'medium', // 'small', 'medium', 'large'
   disabled = false,
   loading = false,
   style,
-  textStyle='mediumText',
+  textStyle,
   children,
+  leftIcon,
+  rightIcon,
+  iconGap = 8,
   ...props
 }) => {
   const getButtonStyle = useMemo(() => {
@@ -30,6 +33,9 @@ const Button = React.memo(({
       case 'ghost':
         baseStyle.push(styles.ghost);
         break;
+      case 'gray':
+        baseStyle.push(styles.gray);
+        break;
       default:
         baseStyle.push(styles.primary);
     }
@@ -38,8 +44,13 @@ const Button = React.memo(({
       baseStyle.push(styles.disabled);
     }
 
+    // Add flexDirection row if icons are present
+    if (leftIcon || rightIcon) {
+      baseStyle.push(styles.buttonWithIcons);
+    }
+
     return baseStyle;
-  }, [variant, size, disabled]);
+  }, [variant, size, disabled, leftIcon, rightIcon]);
 
   const getTextStyle = useMemo(() => {
     const baseTextStyle = [styles.text, styles[`${size}Text`]];
@@ -56,6 +67,9 @@ const Button = React.memo(({
         break;
       case 'ghost':
         baseTextStyle.push(styles.ghostText);
+        break;
+      case 'gray':
+        baseTextStyle.push(styles.grayText);
         break;
       default:
         baseTextStyle.push(styles.primaryText);
@@ -74,6 +88,47 @@ const Button = React.memo(({
     }
   }, [disabled, loading, onPress]);
 
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <ActivityIndicator 
+          color={variant === 'primary' || variant === 'secondary' ? COLORS.secondaryFontColor : COLORS.secondaryColor} 
+          size="small" 
+        />
+      );
+    }
+
+    // If children are provided, render them (for custom content)
+    if (children && !title) {
+      return children;
+    }
+
+    // Render with icons and/or title
+    const hasIcons = leftIcon || rightIcon;
+    const content = (
+      <>
+        {leftIcon && (
+          <View style={{ marginRight: title ? iconGap : 0 }}>
+            {typeof leftIcon === 'function' ? leftIcon() : leftIcon}
+          </View>
+        )}
+        {title && <Text style={[getTextStyle, textStyle]}>{title}</Text>}
+        {rightIcon && (
+          <View style={{ marginLeft: title ? iconGap : 0 }}>
+            {typeof rightIcon === 'function' ? rightIcon() : rightIcon}
+          </View>
+        )}
+        {children}
+      </>
+    );
+
+    return hasIcons ? (
+      <View style={styles.buttonContent}>
+        {content}
+      </View>
+    ) : content;
+  };
+
   return (
     <Pressable
       style={[getButtonStyle, style]}
@@ -81,17 +136,7 @@ const Button = React.memo(({
       disabled={disabled || loading}
       {...props}
     >
-      {loading ? (
-        <ActivityIndicator 
-          color={variant === 'primary' ? COLORS.secondaryFontColor : COLORS.secondaryColor} 
-          size="small" 
-        />
-      ) : (
-        <>
-          {children}
-          {title && <Text style={[getTextStyle, textStyle]}>{title}</Text>}
-        </>
-      )}
+      {renderContent()}
     </Pressable>
   );
 });
@@ -104,6 +149,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 8,
     fontFamily: 'Manrope-Medium',
+  },
+  buttonWithIcons: {
+    flexDirection: 'row',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // Size variants
   small: {
@@ -136,6 +189,9 @@ const styles = StyleSheet.create({
   ghost: {
     backgroundColor: 'transparent',
   },
+  gray: {
+    backgroundColor: '#eef0f4',
+  },
   disabled: {
     backgroundColor: '#e0e0e0',
     borderColor: '#e0e0e0',
@@ -167,6 +223,9 @@ const styles = StyleSheet.create({
   },
   ghostText: {
     color: COLORS.secondaryColor,
+  },
+  grayText: {
+    color: '#6E6E6E',
   },
   disabledText: {
     color: '#999',

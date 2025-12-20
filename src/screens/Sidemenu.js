@@ -1,5 +1,5 @@
-import React from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import React, { useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { BlurView } from "expo-blur";
@@ -8,59 +8,71 @@ import MenuIcon from "../../assets/icons/barsWhite.svg";
 import NotificationIcon from "../../assets/icons/notification.svg";
 import Logo from "../components/global/Logo";
 import AppHeader from "../components/global/AppHeader";
+import ConfirmationModal from "../components/global/ConfirmationModal";
 
 import DashboardScreen from "../screens/DashboardScreen";
-import Troubleshoot from "../screens/TroubleshootScreen";
-import CompletedActivities from "../screens/CompletedActivities";
+import OfflineModemsScreen from "../screens/OfflineModemsScreen";
+import VisitedScreen from "../screens/VisitedScreen";
 import { useSidebar } from "../context/SidebarContext";
 import SideMenuNavigation from "../components/SideMenuNavigation";
 import DashboardIcon from "../../assets/icons/dashboardMenu.svg";
 import ActiveDashboard from "../../assets/icons/activeDashboard.svg";
-import ActiveTickets from "../../assets/icons/activeTickets.svg";
-import MetersIcon from "../../assets/icons/meterWhite.svg";
 import QRScannerIcon from "../../assets/icons/QRscanner.svg";
 import CompletedTasksIcon from "../../assets/icons/completedtasks.svg";
-import TotalTasksIcon from "../../assets/icons/totaltasks.svg";
+import NonCommunicatingModemsIcon from "../../assets/icons/noncommicating.svg";
 
 
 const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone }) => {
   const insets = useSafeAreaInsets();
   const { activeItem, setActiveItem } = useSidebar();
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
 
   const renderContent = () => {
     switch (activeItem) {
       case "Dashboard":
         return <DashboardScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
+      
+      case "OfflineModems":
+        return <OfflineModemsScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
   
       case "Visited":
-        return <DashboardScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
-  
-      case "NotVisited":
-        return <DashboardScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
-  
-      case "Resolved":
-        return <CompletedActivities navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
+        return <VisitedScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
       
       default:
         return <DashboardScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
     }
   };
-  
-  
-
 
   const handleMenuPress = (item) => {
     setActiveItem(item.key);
-    if (item.route) navigation.navigate(item.route);
+    // Navigate to the route if it exists
+    if (item.route) {
+      // Always navigate to ensure the screen is shown
+      // The inline content (via activeItem) will also update for visual feedback
+      navigation.navigate(item.route, {
+        modems: modems,
+        modemIds: modemIds,
+        userPhone: userPhone,
+      });
+    }
   };
 
   const handleLogout = () => {
+    setLogoutModalVisible(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setLogoutModalVisible(false);
     if (onLogout) {
       onLogout();
     } else {
       navigation?.replace?.("Login");
     }
+  };
+
+  const handleCancelLogout = () => {
+    setLogoutModalVisible(false);
   };
 
 
@@ -96,23 +108,18 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
                 ActiveIcon: ActiveDashboard
               },
               {
+                key: "OfflineModems",
+                label: "Offline Modems",
+                route: "OfflineModems",
+                Icon: NonCommunicatingModemsIcon,
+                ActiveIcon: NonCommunicatingModemsIcon
+              },
+              {
                 key: "Visited",
                 label: "Visited",
+                route: "Visited",
                 Icon: CompletedTasksIcon,
                 ActiveIcon: CompletedTasksIcon
-              },
-              {
-                key: "NotVisited",
-                label: "Not Visited",
-                Icon: TotalTasksIcon,
-                ActiveIcon: TotalTasksIcon
-              },
-              {
-                key: "Resolved",
-                label: "Resolved",
-                route: "CompletedActivities",
-                Icon: MetersIcon,
-                ActiveIcon: ActiveTickets
               },
               {
                 key: "QRScanner",
@@ -142,6 +149,17 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
 
         </View>
       </View>
+
+      <ConfirmationModal
+        visible={logoutModalVisible}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        onCancel={handleCancelLogout}
+        onConfirm={handleConfirmLogout}
+        cancelText="Cancel"
+        confirmText="Logout"
+        confirmButtonColor="#F44336"
+      />
     </SafeAreaView>
   );
 };

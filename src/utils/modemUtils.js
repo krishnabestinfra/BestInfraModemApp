@@ -26,22 +26,3 @@ export const normalizeModemIdentifier = (item) => {
   return null;
 };
 
-/**
- * Gets status string from error code
- * Maps error codes to status types: 'warning', 'success', 'disconnected', 'default'
- */
-export const getStatusFromCode = (code) => {
-  if (!code) return 'default';
-  
-  const map = {
-    202: 'warning',      // Modem / DCU Auto Restart
-    213: 'success',      // Meter COM Restored
-    214: 'disconnected', // DCU / Modem Power Failed
-    215: 'success',      // DCU / Modem Power Restored
-    112: 'disconnected',
-    212: 'disconnected', // Meter COM Failed
-  };
-  
-  return map[code] || 'default';
-};
-

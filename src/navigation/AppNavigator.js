@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SplashScreen from '../screens/SplashScreen';
 import OnBoarding from '../screens/OnBoarding';
 import LoginScreen from '../screens/LoginScreen';
-import { clearAuthData, getUserPhone, hasApiKey } from '../utils/storage';
+import { clearAuthData, getUserPhone } from '../utils/storage';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -13,10 +13,14 @@ import ErrorDetailsScreen from '../screens/ErrorDetailsScreen';
 import AlertsScreen from '../screens/AlertsScreen';
 import ModemDetailsScreen from '../screens/ModemDetailsScreen';
 import TroubleshootScreen from '../screens/TroubleshootScreen';
+import UploadIssueImageScreen from '../screens/UploadIssueIamgeScreen';
+import ReplacedModemDetailsScreen from '../screens/ReplacedModemDetailsScreen';
+import ModemReplacementSuccessScreen from '../screens/ModemReplacementSuccessScreen';
+import IssueNotResolvedScreen from '../screens/IssueNotResolvedScreen';
 import SideMenu from '../screens/Sidemenu';  
 import ScanScreen from '../components/ScanScreen';
-import CompletedActivities from '../screens/CompletedActivities';
-import { API_BASE_URL, API_KEY, API_ENDPOINTS, getProtectedHeaders } from '../config/apiConfig';
+import OfflineModemsScreen from '../screens/OfflineModemsScreen';
+import VisitedScreen from '../screens/VisitedScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -39,80 +43,32 @@ const AppNavigator = () => {
            null;
   };
 
+  // API call removed - return empty array, app will use dummy data
   async function fetchModemsByOfficer(phone) {
-  const url = `${API_BASE_URL}${API_ENDPOINTS.GET_MODEMS_BY_OFFICER}`;
-
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: getProtectedHeaders(API_KEY, phone),
-    });
-
-    const json = await response.json();
-
-    console.log("API3 Response (GET_MODEMS_BY_OFFICER):", json);
-    console.log("Response type:", Array.isArray(json) ? "Array" : typeof json);
-    
-    const modems = Array.isArray(json) ? json : [];
-    
-    const extractedIds = modems.map(m => ({
-      modemno: m.modemno,
-      modemSlNo: m.modemSlNo,
-      modemId: m.modemId,
-      sno: m.sno,
-      extracted: extractModemId(m)
-    }));
-    console.log("Extracted Modem IDs:", extractedIds);
-
-    return modems;
-  } catch (err) {
-    console.log("fetchModemsByOfficer ERROR:", err);
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
     return [];
   }
-}
 
-  
-  
   useEffect(() => {
     let isMounted = true;
   
     const checkPersistentLogin = async () => {
       await new Promise(resolve => setTimeout(resolve, 1500)); // splash delay
   
-      const apiKeyExists = await hasApiKey();
-      if (!apiKeyExists) {
-        if (isMounted) {
-          setIsAuthenticated(false);
-          setIsLoading(false);
-        }
-        return;
-      }
-  
       const storedPhone = await getUserPhone();
   
-      if (isMounted) {
+      if (storedPhone && isMounted) {
         setIsAuthenticated(true);
         setShowOnboarding(false);
         setUserPhone(storedPhone);
+        
+        // No API call - use empty array, app will work with dummy data
+        if (isMounted) setUserModems([]);
+      } else if (isMounted) {
+        setIsAuthenticated(false);
       }
-  
-      if (storedPhone && isMounted) {
-        try {
-          console.log("Persistent Login → Fetching modems for:", storedPhone);
-      
-          const modems = await fetchModemsByOfficer(storedPhone);
-          console.log("Persistent Modems Loaded:", modems);
-          const extractedIds = modems.map(m => extractModemId(m)).filter(Boolean);
-          console.log("Persistent Login - Extracted Modem IDs:", extractedIds);
-          console.log("Persistent Login - Total modems:", modems.length, "Extracted IDs:", extractedIds.length);
-      
-          if (isMounted) setUserModems(modems);
-        } catch (err) {
-          console.log("Persistent fetch error:", err);
-        }
-      }
-      
-  
+
       if (isMounted) setIsLoading(false);
     };
   
@@ -129,14 +85,8 @@ const AppNavigator = () => {
   }, []);
 
   const handleLogin = useCallback((modems = [], phoneNumber) => {
-    console.log("APP NAVIGATOR handleLogin CALLED");
-    console.log("MODEMS RECEIVED:", modems);
-    console.log("PHONE RECEIVED:", phoneNumber);
-    
     const modemsArray = Array.isArray(modems) ? modems : [];
     const extractedIds = modemsArray.map(m => extractModemId(m)).filter(Boolean);
-    console.log("Login - Extracted Modem IDs:", extractedIds);
-    console.log("Login - Total modems:", modemsArray.length, "Extracted IDs:", extractedIds.length);
   
     setUserModems(modemsArray);
     setUserPhone(phoneNumber || null);
@@ -165,6 +115,8 @@ const AppNavigator = () => {
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
+          // Prevent screens from being unmounted when app goes to background
+          detachInactiveScreens: false,
         }}
       >
         {isLoading ? (
@@ -195,7 +147,6 @@ const AppNavigator = () => {
             <Stack.Screen name="Dashboard">
               {(props) => {
                 const extractedModemIds = userModems.map(m => extractModemId(m)).filter(Boolean);
-                console.log("Dashboard - Modem IDs being passed:", extractedModemIds);
                 return (
                   <DashboardScreen
                     {...props}
@@ -241,13 +192,30 @@ const AppNavigator = () => {
               )}
             </Stack.Screen>
             <Stack.Screen name="Troubleshoot" component={TroubleshootScreen} />
+            <Stack.Screen name="UploadIssueImage" component={UploadIssueImageScreen} />
+            <Stack.Screen name="ReplacedModemDetails" component={ReplacedModemDetailsScreen} />
+            <Stack.Screen name="ModemReplacementSuccess" component={ModemReplacementSuccessScreen} />
+            <Stack.Screen name="IssueNotResolved" component={IssueNotResolvedScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="ScanScreen" component={ScanScreen} />
-            <Stack.Screen name="CompletedActivities">
+            <Stack.Screen name="OfflineModems">
               {(props) => {
                 const extractedModemIds = userModems.map(m => extractModemId(m)).filter(Boolean);
                 return (
-                  <CompletedActivities
+                  <OfflineModemsScreen
+                    {...props}
+                    modems={userModems}
+                    modemIds={extractedModemIds}
+                    userPhone={userPhone}
+                  />
+                );
+              }}
+            </Stack.Screen>
+            <Stack.Screen name="Visited">
+              {(props) => {
+                const extractedModemIds = userModems.map(m => extractModemId(m)).filter(Boolean);
+                return (
+                  <VisitedScreen
                     {...props}
                     modems={userModems}
                     modemIds={extractedModemIds}

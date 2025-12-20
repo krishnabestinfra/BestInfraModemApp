@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AlertCard from '../components/AlertCard';
+import SummaryCard from '../components/SummaryCard';
 import { alerts } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography, shadows } from '../styles/theme';
 
@@ -49,22 +50,21 @@ const AlertsScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{alerts.length}</Text>
-          <Text style={styles.statLabel}>Total Alerts</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: colors.error }]}>
-            {alerts.filter(alert => alert.severity === 'high').length}
-          </Text>
-          <Text style={styles.statLabel}>High Priority</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: colors.warning }]}>
-            {alerts.filter(alert => alert.severity === 'medium').length}
-          </Text>
-          <Text style={styles.statLabel}>Medium Priority</Text>
-        </View>
+        <SummaryCard
+          label="Total Alerts"
+          value={alerts.length}
+          color={colors.primary}
+        />
+        <SummaryCard
+          label="High Priority"
+          value={alerts.filter(alert => alert.severity === 'high').length}
+          color={colors.error}
+        />
+        <SummaryCard
+          label="Medium Priority"
+          value={alerts.filter(alert => alert.severity === 'medium').length}
+          color={colors.warning}
+        />
       </View>
 
       <View style={styles.filtersContainer}>

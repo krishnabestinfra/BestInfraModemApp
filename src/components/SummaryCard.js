@@ -2,13 +2,25 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, spacing, borderRadius, typography, shadows } from '../styles/theme';
 
-const SummaryCard = ({ label, value, icon, color = colors.primary, trend = null, onPress }) => {
+const SummaryCard = ({ label, value, icon, iconComponent, color = colors.primary, trend = null, onPress }) => {
+  const renderIcon = () => {
+    if (iconComponent) {
+      return iconComponent;
+    }
+    if (icon) {
+      return <Text style={[styles.icon, { color }]}>{icon}</Text>;
+    }
+    return null;
+  };
+
   return (
-    <TouchableOpacity style={[styles.card, shadows.medium]} onPress={onPress}>
+    <TouchableOpacity style={[styles.card, shadows.medium]} onPress={onPress} activeOpacity={onPress ? 0.7 : 1}>
       <View style={styles.header}>
-        <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
-          <Text style={[styles.icon, { color }]}>{icon}</Text>
-        </View>
+        {(icon || iconComponent) && (
+          <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
+            {renderIcon()}
+          </View>
+        )}
         {trend && (
           <View style={[styles.trendContainer, { backgroundColor: trend > 0 ? colors.success + '15' : colors.error + '15' }]}>
             <Text style={[styles.trendText, { color: trend > 0 ? colors.success : colors.error }]}>
