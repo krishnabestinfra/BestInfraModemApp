@@ -63,7 +63,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 8,
   },
   metricCard: {
     backgroundColor: '#fff',

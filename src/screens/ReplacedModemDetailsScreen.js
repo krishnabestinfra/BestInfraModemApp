@@ -2,15 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import PhotoUpload from '../components/global/PhotoUpload';
 import { colors, spacing, borderRadius } from '../styles/theme';
 import { COLORS } from '../constants/colors';
-import NotificationLight from '../../assets/icons/notification.svg';
 
 if (!Text.defaultProps) Text.defaultProps = {};
 Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
@@ -40,25 +37,15 @@ const ReplacedModemDetailScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <LinearGradient colors={['#f4fbf7', '#e6f4ed']} style={styles.header}>
-          <AppHeader
-            containerStyle={styles.headerTop}
-            leftButtonStyle={styles.iconBtn}
-            rightButtonStyle={styles.iconBtn}
-            rightIcon={NotificationLight}
-            logo={<RippleLogo size={68} />}
-            onPressLeft={() => navigation.navigate('SideMenu')}
-            onPressCenter={() => navigation.navigate('Dashboard')}
-            onPressRight={() => navigation.navigate('Profile')}
-          />
-          <View style={styles.titleSection}>
-            <View style={styles.iconBox}>
-              <Ionicons name="swap-horizontal" size={32} color={colors.secondary} />
-            </View>
-            <Text style={styles.title}>Modem Replaced</Text>
+      <AppHeader navigation={navigation}>
+        <View style={styles.titleSection}>
+          <View style={styles.iconBox}>
+            <Ionicons name="swap-horizontal" size={32} color={colors.secondary} />
           </View>
-        </LinearGradient>
+          <Text style={styles.title}>Modem Replaced</Text>
+        </View>
+      </AppHeader>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
@@ -94,15 +81,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
-  header: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.lg,
-    overflow: 'hidden',
-  },
-  headerTop: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+  topMenu: {
+    paddingTop: 10,
+    paddingBottom: 5,
   },
   iconBtn: {
     backgroundColor: COLORS.secondaryFontColor,

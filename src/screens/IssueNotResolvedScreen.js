@@ -2,13 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
-import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import { colors, spacing, borderRadius } from '../styles/theme';
 import { COLORS } from '../constants/colors';
-import NotificationLight from '../../assets/icons/notification.svg';
 import IssueNotResolvedGif from '../../assets/IssueNotresolved.gif';
 
 if (!Text.defaultProps) Text.defaultProps = {};
@@ -25,20 +22,7 @@ const IssueNotResolvedScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
       <View style={styles.container}>
-        <LinearGradient colors={['#f4fbf7', '#e6f4ed']} style={styles.headerGradient}>
-          <View style={styles.header}>
-            <AppHeader
-              containerStyle={styles.headerTop}
-              leftButtonStyle={styles.iconBtn}
-              rightButtonStyle={styles.iconBtn}
-              rightIcon={NotificationLight}
-              logo={<RippleLogo size={68} />}
-              onPressLeft={() => navigation.navigate('SideMenu')}
-              onPressCenter={() => navigation.navigate('Dashboard')}
-              onPressRight={() => navigation.navigate('Profile')}
-            />
-          </View>
-        </LinearGradient>
+        <AppHeader navigation={navigation} />
 
         <ScrollView 
           showsVerticalScrollIndicator={false} 
@@ -93,19 +77,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  headerGradient: {
-    paddingBottom: spacing.xs,
-  },
-  header: {
-    paddingHorizontal: spacing.md,
+  topMenu: {
+    paddingTop: 10,
+    paddingBottom: 5,
   },
   scrollView: {
     backgroundColor: '#fff',
-  },
-  headerTop: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
   },
   iconBtn: {
     backgroundColor: COLORS.secondaryFontColor,

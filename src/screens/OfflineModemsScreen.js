@@ -12,14 +12,10 @@ import AppHeader from '../components/global/AppHeader';
 import SearchBar from '../components/global/SearchBar';
 import TabNavigation from '../components/global/TabNavigation';
 import EmptyState from '../components/global/EmptyState';
-import RippleLogo from '../components/global/RippleLogo';
 import VisitedModemCard from '../components/VisitedModemCard';
 import NotVisitedModemCard from '../components/NotVisitedModemCard';
 import { spacing } from '../styles/theme';
 import { COLORS } from '../constants/colors';
-import { LinearGradient } from 'expo-linear-gradient';
-
-import NotificationLight from '../../assets/icons/notification.svg';
 import Meter from '../../assets/images/meter.png';
 
 if (!Text.defaultProps) Text.defaultProps = {};
@@ -99,23 +95,7 @@ const OfflineModemsScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
       
-      <View style={styles.headerWrapper}>
-        <LinearGradient
-          colors={['#f4fbf7', '#e6f4ed']}
-          style={styles.headerContainer}
-        >
-          <AppHeader
-            containerStyle={styles.topMenu}
-            leftButtonStyle={styles.barsIcon}
-            rightButtonStyle={styles.bellIcon}
-            rightIcon={NotificationLight}
-            logo={<RippleLogo size={68} />}
-            onPressLeft={() => navigation.navigate('SideMenu')}
-            onPressCenter={() => navigation.navigate('Dashboard')}
-            onPressRight={() => navigation.navigate('Profile')}
-          />
-        </LinearGradient>
-      </View>
+      <AppHeader navigation={navigation} />
 
       <View style={styles.titleContainer}>
         <Text style={styles.title}>Offline Modems</Text>
@@ -178,13 +158,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingHorizontal: spacing.md,
     gap: spacing.md,
-  },
-  headerWrapper: {
-    overflow: 'hidden',
-  },
-  headerContainer: {
-    paddingHorizontal: 15,
-    paddingVertical: 40,
   },
   topMenu: {
     paddingTop: 10,

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View, Pressable } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { BlurView } from "expo-blur";
@@ -7,7 +7,6 @@ import { COLORS } from "../constants/colors";
 import MenuIcon from "../../assets/icons/barsWhite.svg";
 import NotificationIcon from "../../assets/icons/notification.svg";
 import Logo from "../components/global/Logo";
-import AppHeader from "../components/global/AppHeader";
 import ConfirmationModal from "../components/global/ConfirmationModal";
 
 import DashboardScreen from "../screens/DashboardScreen";
@@ -80,20 +79,31 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
     <SafeAreaView style={styles.Container} edges={[]}>
       <StatusBar style="light" />
 
+      <View style={styles.TopMenu}>
+        <Pressable
+          style={styles.barsIcon}
+          onPress={() => navigation.navigate("Dashboard")}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <MenuIcon width={18} height={18} fill="#fff" />
+        </Pressable>
 
-      <AppHeader
-        containerStyle={styles.TopMenu}
-        leftButtonStyle={styles.barsIcon}
-        rightButtonStyle={styles.bellIcon}
-        leftIcon={MenuIcon}
-        rightIcon={NotificationIcon}
-        leftIconProps={{ width: 18, height: 18, fill: "#fff" }}
-        rightIconProps={{ width: 18, height: 18, fill: "#000" }}
-        logo={<Logo variant="white" size="medium" />}
-        onPressLeft={() => navigation.navigate("Dashboard")}
-        onPressCenter={() => navigation.navigate("Dashboard")}
-        onPressRight={() => navigation.navigate("Profile")}
-      />
+        <Pressable
+          style={styles.logoContainer}
+          onPress={() => navigation.navigate("Dashboard")}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Logo variant="white" size="medium" />
+        </Pressable>
+
+        <Pressable
+          style={styles.bellIcon}
+          onPress={() => navigation.navigate("Profile")}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <NotificationIcon width={18} height={18} fill="#000" />
+        </Pressable>
+      </View>
 
       <View style={styles.MenuContainer}>
 
@@ -174,9 +184,17 @@ const styles = StyleSheet.create({
 
   },
   TopMenu: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingTop: 75,
     paddingBottom: 35,
     paddingHorizontal: 30,
+  },
+  logoContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
   },
   barsIcon: {
     backgroundColor: COLORS.secondaryColor,

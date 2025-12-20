@@ -3,14 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 import { formatDisplayDateTime } from '../utils/dateUtils';
-import NotificationLight from '../../assets/icons/notification.svg';
 import SignalWeaknessIcon from '../../assets/icons/Signal-Weak.svg';
 import SignalAverageIcon from '../../assets/icons/Signal-Moderate.svg';
 import SignalStrongIcon from '../../assets/icons/Signal-Strong.svg';
@@ -189,15 +187,9 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
         style={styles.backgroundGradient}
       >
         <View style={styles.heroCard}>
-          <AppHeader
+          <AppHeader 
+            navigation={navigation}
             containerStyle={styles.heroTopRow}
-            leftButtonStyle={styles.barsIcon}
-            rightButtonStyle={styles.bellIcon}
-            rightIcon={NotificationLight}
-            logo={<RippleLogo size={68} />}
-            onPressLeft={() => navigation?.navigate?.('SideMenu')}
-            onPressCenter={() => navigation?.navigate?.('Dashboard')}
-            onPressRight={() => navigation?.navigate?.('Profile')}
           />
           <View style={styles.cardBackground}>
             <ModemStatusCard

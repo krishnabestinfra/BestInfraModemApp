@@ -5,14 +5,12 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import PhotoUpload from '../components/global/PhotoUpload';
 import ConfirmationModal from '../components/global/ConfirmationModal';
 import { colors, spacing, borderRadius } from '../styles/theme';
 import { COLORS } from '../constants/colors';
-import NotificationLight from '../../assets/icons/notification.svg';
 
 if (!Text.defaultProps) Text.defaultProps = {};
 Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
@@ -68,24 +66,13 @@ const UploadIssueImageScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
-      <LinearGradient colors={['#f4fbf7', '#e6f4ed']} style={styles.backgroundGradient}>
-        <View style={styles.header}>
-          <AppHeader
-            containerStyle={styles.headerTop}
-            leftButtonStyle={styles.iconBtn}
-            rightButtonStyle={styles.iconBtn}
-            rightIcon={NotificationLight}
-            logo={<RippleLogo size={68} />}
-            onPressLeft={() => navigation.navigate('SideMenu')}
-            onPressCenter={() => navigation.navigate('Dashboard')}
-            onPressRight={() => navigation.navigate('Profile')}
-          />
-          <View style={styles.infoBanner}>
-            <Ionicons name="information-circle" size={20} color={COLORS.secondaryFontColor} />
-            <Text style={styles.infoBannerText}>Please Upload Issue Images</Text>
-          </View>
+      <AppHeader navigation={navigation}>
+        <View style={styles.infoBanner}>
+          <Ionicons name="information-circle" size={20} color={COLORS.secondaryFontColor} />
+          <Text style={styles.infoBannerText}>Please Upload Issue Images</Text>
         </View>
-
+      </AppHeader>
+      <LinearGradient colors={['#f4fbf7', '#e6f4ed']} style={styles.backgroundGradient}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <View style={styles.uploadCard}>
             <PhotoUpload
@@ -133,14 +120,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
-  header: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xs,
-  },
-  headerTop: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+  topMenu: {
+    paddingTop: 10,
+    paddingBottom: 5,
   },
   iconBtn: {
     backgroundColor: COLORS.secondaryFontColor,
@@ -158,6 +140,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.ms,
     borderRadius: borderRadius.md,
     marginTop: spacing.md,
+    marginHorizontal: 0,
     gap: spacing.sm,
   },
   infoBannerText: {

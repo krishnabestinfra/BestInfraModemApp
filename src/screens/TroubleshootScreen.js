@@ -8,7 +8,6 @@ import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import ModemStatusCard from '../components/ModemStatusCard';
@@ -16,10 +15,7 @@ import { colors, spacing, borderRadius } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 import { getTroubleshootSteps, hasTroubleshootSteps } from '../data/troubleshootData';
 import { extractModemId } from '../utils/modemHelpers';
-
 import successImg from '../../assets/images/Success_page.gif';
-
-import NotificationLight from '../../assets/icons/notification.svg';
 import CheckCircleIcon from '../../assets/icons/successIcon.svg';
 
 if (!Text.defaultProps) Text.defaultProps = {};
@@ -142,15 +138,9 @@ const TroubleshootScreen = ({ navigation, route }) => {
           colors={['#f4fbf7', '#e6f4ed']}
           style={styles.heroCard}
         >
-          <AppHeader
+          <AppHeader 
+            navigation={navigation}
             containerStyle={styles.heroTopRow}
-            leftButtonStyle={styles.barsIcon}
-            rightButtonStyle={styles.bellIcon}
-            rightIcon={NotificationLight}
-            logo={<RippleLogo size={68} />}
-            onPressLeft={() => navigation.navigate('SideMenu')}
-            onPressCenter={() => navigation.navigate('Dashboard')}
-            onPressRight={() => navigation.navigate('Profile')}
           />
 
           {!isComplete && (

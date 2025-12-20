@@ -17,7 +17,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import NotVisitedModemCard from '../components/NotVisitedModemCard';
 import MetricsCards from '../components/MetricsCards';
@@ -34,7 +33,6 @@ import {
   createSearchableText,
 } from '../utils/modemHelpers';
 import { calculateDashboardMetrics } from '../utils/dashboardMetrics';
-import NotificationLight from '../../assets/icons/notification.svg';
 import Hand from '../../assets/icons/hand.svg';
 import Meter from '../../assets/images/meter.png';
 
@@ -129,18 +127,11 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}>
-        <View style={styles.bluecontainer}>
-          <AppHeader
-            containerStyle={styles.TopMenu}
-            leftButtonStyle={styles.barsIcon}
-            rightButtonStyle={styles.bellIcon}
-            rightIcon={NotificationLight}
-            logo={<RippleLogo size={68} />}
-            onPressLeft={() => navigation.navigate('SideMenu')}
-            onPressCenter={() => navigation.navigate('Dashboard')}
-            onPressRight={() => navigation.navigate('Profile')}
-          />
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
+      >
+        <AppHeader navigation={navigation}>
           <View style={styles.ProfileBox}>
             <View style={styles.profileGreetingContainer}>
               <View style={styles.profileGreetingRow}>
@@ -151,7 +142,7 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
             </View>
           </View>
           <MetricsCards loading={loading} metrics={dashboardMetrics} />
-        </View>
+        </AppHeader>
 
         <SearchBar
           value={searchQuery}
@@ -276,40 +267,152 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
 export default DashboardScreen;
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#fff" },
-  scrollContent: { paddingBottom: spacing.xl },
-  bluecontainer: { backgroundColor: '#eef8f0', padding: 15 },
-  TopMenu: { paddingTop: 10, paddingBottom: 5, paddingHorizontal: 15 },
-  barsIcon: { backgroundColor: COLORS.secondaryFontColor, width: 54, height: 54, borderRadius: 60, alignItems: 'center', justifyContent: 'center', elevation: 1, zIndex: 2 },
-  bellIcon: { backgroundColor: COLORS.secondaryFontColor, width: 54, height: 54, borderRadius: 60, alignItems: 'center', justifyContent: 'center', elevation: 1, zIndex: 2 },
-  ProfileBox: { flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 2, marginTop: 20, marginBottom: 20 },
-  profileGreetingContainer: { gap: 6 },
-  profileGreetingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  hiText: { color: COLORS.primaryFontColor, fontSize: 18, fontFamily: 'Manrope-Bold' },
-  stayingText: { color: COLORS.primaryFontColor, fontSize: 14, fontFamily: 'Manrope-Regular' },
-  cardsWrapper: { marginTop: spacing.md, paddingHorizontal: spacing.md, gap: spacing.md },
-  loadingContainer: { padding: spacing.xl, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { ...typography.body, color: colors.textSecondary, marginTop: spacing.md },
-  emptyContainer: { padding: spacing.xl, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { ...typography.body, color: colors.textSecondary },
-  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg, backgroundColor: 'rgba(4, 12, 34, 0.45)' },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject },
-  filterModalCard: { width: '100%', backgroundColor: '#fff', borderRadius: 16, padding: spacing.lg, elevation: 8 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
-  modalTitle: { fontSize: 18, fontFamily: 'Manrope-SemiBold' },
-  modalSection: { marginBottom: spacing.lg },
-  modalSectionLabel: { fontSize: 14, color: colors.textSecondary, marginBottom: spacing.sm, fontFamily: 'Manrope-SemiBold' },
-  chipGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  filterChip: { borderWidth: 1, borderColor: '#dfe5eb', borderRadius: 999, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, backgroundColor: '#fff' },
-  filterChipActive: { backgroundColor: '#e6f4ed', borderColor: colors.secondary },
-  filterChipText: { fontSize: 13, color: colors.textSecondary, fontFamily: 'Manrope-Medium' },
-  filterChipTextActive: { color: colors.secondary, fontFamily: 'Manrope-SemiBold' },
-  modalActions: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
-  modalButton: { flex: 1, paddingVertical: spacing.sm, borderRadius: 10, alignItems: 'center' },
-  modalButtonGhost: { borderWidth: 1, borderColor: '#dfe5eb', backgroundColor: '#fff' },
-  modalButtonPrimary: { backgroundColor: colors.secondary },
-  modalButtonText: { fontSize: 15, fontFamily: 'Manrope-SemiBold', color: '#fff' },
-  modalButtonGhostText: { color: colors.textPrimary },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl,
+  },
+  ProfileBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: 2,
+    marginTop: 20,
+    marginBottom: 20,
+    paddingHorizontal: 0,
+  },
+  profileGreetingContainer: {
+    gap: 6,
+  },
+  profileGreetingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  hiText: {
+    color: COLORS.primaryFontColor,
+    fontSize: 18,
+    fontFamily: 'Manrope-Bold',
+  },
+  stayingText: {
+    color: COLORS.primaryFontColor,
+    fontSize: 14,
+    fontFamily: 'Manrope-Regular',
+  },
+  cardsWrapper: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
+  },
+  loadingContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+  },
+  emptyContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+    backgroundColor: 'rgba(4, 12, 34, 0.45)',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  filterModalCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: spacing.lg,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Manrope-SemiBold',
+  },
+  modalSection: {
+    marginBottom: spacing.lg,
+  },
+  modalSectionLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    fontFamily: 'Manrope-SemiBold',
+  },
+  chipGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  filterChip: {
+    borderWidth: 1,
+    borderColor: '#dfe5eb',
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: '#fff',
+  },
+  filterChipActive: {
+    backgroundColor: '#e6f4ed',
+    borderColor: colors.secondary,
+  },
+  filterChipText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontFamily: 'Manrope-Medium',
+  },
+  filterChipTextActive: {
+    color: colors.secondary,
+    fontFamily: 'Manrope-SemiBold',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalButtonGhost: {
+    borderWidth: 1,
+    borderColor: '#dfe5eb',
+    backgroundColor: '#fff',
+  },
+  modalButtonPrimary: {
+    backgroundColor: colors.secondary,
+  },
+  modalButtonText: {
+    fontSize: 15,
+    fontFamily: 'Manrope-SemiBold',
+    color: '#fff',
+  },
+  modalButtonGhostText: {
+    color: colors.textPrimary,
+  },
   stickyScanButtonContainer: {
     position: 'absolute',
     bottom: 0,

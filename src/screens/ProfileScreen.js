@@ -12,18 +12,17 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import Menu from '../../assets/icons/bars.svg';
-import Notification from '../../assets/icons/notificationsWhite.svg';
-import NotificationIcon from '../../assets/icons/notificationDark.svg';
-import HandBill from '../../assets/icons/handBill.svg';
-import Calendar from '../../assets/icons/calendar.svg';
-import CheapDollar from '../../assets/icons/cheapDollar.svg';
-import Logo from '../components/global/Logo';
+import AppHeader from '../components/global/AppHeader';
 import NotificationCard from '../components/global/NotificationCard';
 import { COLORS } from '../constants/colors';
+import { colors } from '../styles/theme';
 import EmptyNotification from '../../assets/icons/NoNotification.svg';
 import { useContext } from 'react';
 import { NotificationContext } from '../context/NotificationContext';
+import HandBill from '../../assets/icons/handBill.svg';
+import Calendar from '../../assets/icons/calendar.svg';
+import CheapDollar from '../../assets/icons/cheapDollar.svg';
+import NotificationIcon from '../../assets/icons/notificationDark.svg';
 
 const iconMapper = {
   payment: HandBill,
@@ -105,26 +104,8 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
-      <StatusBar style="light" />
-      <View style={styles.topMenu}>
-        <Pressable
-          style={styles.barsIcon}
-          onPress={() => navigation?.navigate?.('SideMenu')}
-        >
-          <Menu width={18} height={18} fill="#202d59" />
-        </Pressable>
-
-        <Pressable onPress={() => navigation?.navigate?.('SideMenu')}>
-          <Logo variant="white" size="medium" />
-        </Pressable>
-
-        <Pressable
-          style={styles.bellIcon}
-          onPress={() => navigation?.navigate?.('')}
-        >
-          <Notification width={18} height={18} fill="#ffffff" />
-        </Pressable>
-      </View>
+      <StatusBar style="dark" />
+      <AppHeader navigation={navigation} />
 
       <ScrollView
         style={styles.notificationsContainer}
@@ -185,16 +166,12 @@ export default ProfileScreen;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: COLORS.brandBlueColor,
+    backgroundColor: '#fff',
     flex: 1,
   },
   topMenu: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 75,
-    paddingBottom: 35,
-    paddingHorizontal: 30,
+    paddingTop: 10,
+    paddingBottom: 5,
   },
   barsIcon: {
     backgroundColor: COLORS.secondaryFontColor,
@@ -203,29 +180,24 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    elevation: 1,
+    zIndex: 2,
   },
   bellIcon: {
-    backgroundColor: COLORS.secondaryColor,
+    backgroundColor: COLORS.secondaryFontColor,
     width: 54,
     height: 54,
     borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    elevation: 1,
+    zIndex: 2,
   },
   notificationsContainer: {
     paddingVertical: 20,
     paddingHorizontal: 25,
     paddingTop: 10,
+    backgroundColor: '#fff',
   },
   loadingContainer: {
     flex: 1,
@@ -234,7 +206,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   loadingText: {
-    color: COLORS.secondaryFontColor,
+    color: colors.textPrimary,
     fontSize: 14,
     fontFamily: 'Manrope-Medium',
     marginTop: 12,
@@ -246,7 +218,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   errorText: {
-    color: COLORS.secondaryFontColor,
+    color: colors.textPrimary,
     fontSize: 14,
     fontFamily: 'Manrope-Medium',
     textAlign: 'center',
@@ -257,7 +229,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: '#FFFFFF',
+    color: colors.textPrimary,
     fontSize: 20,
     fontFamily: 'Manrope',
     fontWeight: '700',
@@ -266,7 +238,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   emptySubText: {
-    color: '#CDCDCD',
+    color: colors.textSecondary,
     fontSize: 16,
     fontFamily: 'Manrope',
     textAlign: 'center',

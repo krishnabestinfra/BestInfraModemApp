@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import AppHeader from '../components/global/AppHeader';
 import ErrorRow from '../components/ErrorRow';
 import { modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography, shadows } from '../styles/theme';
+import { COLORS } from '../constants/colors';
 
 const ErrorDetailsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -37,13 +40,10 @@ const ErrorDetailsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
+      <StatusBar style="dark" />
+      <AppHeader navigation={navigation} />
+      <View style={styles.titleContainer}>
         <Text style={styles.title}>Modems</Text>
-        <View style={styles.placeholder} />
       </View>
 
       {/* Search Bar */}
@@ -92,25 +92,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.md,
-    backgroundColor: colors.cardBackground,
-    ...shadows.small,
+  topMenu: {
+    paddingTop: 10,
+    paddingBottom: 5,
   },
-  backButton: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '600',
+  barsIcon: {
+    backgroundColor: COLORS.secondaryFontColor,
+    width: 54,
+    height: 54,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+    zIndex: 2,
+  },
+  bellIcon: {
+    backgroundColor: COLORS.secondaryFontColor,
+    width: 54,
+    height: 54,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+    zIndex: 2,
+  },
+  titleContainer: {
+    marginTop: 10,
+    marginBottom: 15,
+    paddingHorizontal: 15,
   },
   title: {
-    ...typography.h2,
-    color: colors.textPrimary,
-  },
-  placeholder: {
-    width: 50,
+    fontSize: 24,
+    color: COLORS.primaryFontColor,
+    fontFamily: 'Manrope-Bold',
   },
   searchContainer: {
     backgroundColor: colors.cardBackground,

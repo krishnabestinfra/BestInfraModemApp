@@ -2,14 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Image as ExpoImage } from 'expo-image';
-import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
 import { colors, spacing, borderRadius } from '../styles/theme';
 import { COLORS } from '../constants/colors';
-import NotificationLight from '../../assets/icons/notification.svg';
 import CheckCircleIcon from '../../assets/icons/successIcon.svg';
 import successImg from '../../assets/images/Success_page.gif';
 
@@ -31,22 +28,11 @@ const ModemReplacementSuccessScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
+      <AppHeader navigation={navigation} />
       <ScrollView 
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={styles.scrollContent}
       >
-        <LinearGradient colors={['#f4fbf7', '#e6f4ed']} style={styles.header}>
-          <AppHeader
-            containerStyle={styles.headerTop}
-            leftButtonStyle={styles.iconBtn}
-            rightButtonStyle={styles.iconBtn}
-            rightIcon={NotificationLight}
-            logo={<RippleLogo size={68} />}
-            onPressLeft={() => navigation.navigate('SideMenu')}
-            onPressCenter={() => navigation.navigate('Dashboard')}
-            onPressRight={() => navigation.navigate('Profile')}
-          />
-        </LinearGradient>
 
         <View style={styles.content}>
           <View style={styles.successCard}>
@@ -91,15 +77,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: spacing.xl,
   },
-  header: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.lg,
-    overflow: 'hidden',
-  },
-  headerTop: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+  topMenu: {
+    paddingTop: 10,
+    paddingBottom: 5,
   },
   iconBtn: {
     backgroundColor: COLORS.secondaryFontColor,
