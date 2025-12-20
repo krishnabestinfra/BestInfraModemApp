@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, Modal, Pressable, AppState } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Button from './Button';
@@ -29,6 +29,8 @@ const PhotoUpload = ({
   const [localImages, setLocalImages] = useState(() => normalizeImages(images));
   const prevImagesRef = useRef(images);
   const [showPickerModal, setShowPickerModal] = useState(false);
+  const cameraOpenRef = useRef(false);
+  const pendingCameraResultRef = useRef(null);
 
   // Sync local state with prop changes
   useEffect(() => {
@@ -45,9 +47,29 @@ const PhotoUpload = ({
     }
   }, [images, maxImages]);
 
+  // Handle app state changes when camera is open
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      // When app comes to foreground and camera was open, check for pending result
+      if (nextAppState === 'active' && cameraOpenRef.current) {
+        // Reset camera open flag after a short delay to allow result processing
+        setTimeout(() => {
+          cameraOpenRef.current = false;
+        }, 1000);
+      }
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
+
   const pickImage = async (index, useCamera = false) => {
     try {
       if (useCamera) {
+        // Mark camera as open before launching
+        cameraOpenRef.current = true;
+        
         // Check camera permission status first
         const { status: existingStatus } = await ImagePicker.getCameraPermissionsAsync();
         
@@ -57,6 +79,7 @@ const PhotoUpload = ({
           permission = await ImagePicker.requestCameraPermissionsAsync();
           
           if (permission.status !== 'granted') {
+            cameraOpenRef.current = false;
             Alert.alert(
               'Camera Permission Required',
               'Please grant camera permission to take photos. You can enable it in your device settings.',
@@ -85,19 +108,22 @@ const PhotoUpload = ({
       }
 
       // Launch image picker
+      // Note: When camera opens, app goes to background. 
+      // The result will be available when app returns to foreground.
       const result = useCamera
         ? await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: aspectRatio,
+            allowsEditing: false,
             quality: quality,
             exif: false,
           })
         : await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: aspectRatio,
+            allowsEditing: false,
             quality: quality,
           });
+
+      // Reset camera open flag
+      cameraOpenRef.current = false;
 
       if (!result.canceled && result.assets[0]) {
         const newImages = [...localImages];
@@ -110,9 +136,12 @@ const PhotoUpload = ({
         if (onImagesChange) {
           onImagesChange(newImages);
         }
+      } else {
+        // User cancelled, reset flag
+        cameraOpenRef.current = false;
       }
     } catch (error) {
-      console.error('Error picking image:', error);
+      cameraOpenRef.current = false;
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };

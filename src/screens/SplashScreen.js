@@ -21,7 +21,6 @@ const SplashScreen = ({ onFinish }) => {
         }
       } catch (error) {
         // Silently fail - don't block app launch
-        console.warn('Version check error:', error);
       } finally {
         // Always mark as checked to allow app to proceed
         setVersionChecked(true);

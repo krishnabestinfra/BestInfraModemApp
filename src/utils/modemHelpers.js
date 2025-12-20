@@ -52,21 +52,6 @@ export const extractSignalStrength = (item) => {
 };
 
 /**
- * Check if modem ID matches any in the provided array
- */
-export const isModemInList = (modemId, modemIds) => {
-  if (!modemId || !modemIds || modemIds.length === 0) return false;
-  
-  const modemIdStr = modemId.toString();
-  return modemIds.some(id => {
-    const idStr = id.toString();
-    return idStr === modemIdStr || 
-           modemIdStr.includes(idStr) || 
-           idStr.includes(modemIdStr);
-  });
-};
-
-/**
  * Get status from error code
  */
 export const getStatusFromCode = (code) => {
@@ -89,6 +74,46 @@ export const getSignalBand = (signalStrength) => {
   if (n < 15) return 'weak';
   if (n <= 20) return 'average';
   return 'strong';
+};
+
+/**
+ * Get error type description from error code
+ */
+export const getErrorType = (code, fallbackError = 'Unknown Error') => {
+  const errorMap = {
+    202: 'Modem Auto Restart',
+    214: 'Modem Power Failed',
+    112: 'Meter COM Failed',
+    212: 'Meter COM Failed',
+  };
+  return errorMap[code] || fallbackError;
+};
+
+/**
+ * Normalizes modem identifiers from both APIs
+ * Handles: modemSINo, modemNo, modemSlNo, modemno, sno, modemId, id, modem_sl_no
+ */
+export const normalizeModemIdentifier = (item) => {
+  if (!item) return null;
+  
+  const identifiers = [
+    item.modemSINo,
+    item.modemNo,
+    item.modemSlNo,
+    item.modemno,
+    item.modemId,
+    item.modem_sl_no,
+    item.sno,
+    item.id
+  ];
+  
+  for (const id of identifiers) {
+    if (id !== null && id !== undefined && id !== '') {
+      return String(id).trim();
+    }
+  }
+  
+  return null;
 };
 
 /**
@@ -119,18 +144,6 @@ export const normalizeModemRecord = (alert = {}, index = 0, fallbackImage = null
 };
 
 /**
- * Filter alerts by modem IDs
- */
-export const filterAlertsByModemIds = (alerts, modemIds) => {
-  if (!Array.isArray(alerts) || !Array.isArray(modemIds)) return [];
-  
-  return alerts.filter(item => {
-    const modemId = extractModemId(item);
-    return modemId && isModemInList(modemId, modemIds);
-  });
-};
-
-/**
  * Create searchable text from modem record
  */
 export const createSearchableText = (modem) => {
@@ -155,18 +168,5 @@ export const createSearchableText = (modem) => {
   ];
   
   return fields.join(' ').toLowerCase();
-};
-
-/**
- * Search modems by query string
- */
-export const searchModems = (modems, query) => {
-  if (!query || !query.trim()) return modems;
-  
-  const searchTerm = query.toLowerCase().trim();
-  return modems.filter(modem => {
-    const searchableText = createSearchableText(modem);
-    return searchableText.includes(searchTerm);
-  });
 };
 

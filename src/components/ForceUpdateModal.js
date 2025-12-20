@@ -6,7 +6,7 @@ import Button from './global/Button';
 const ForceUpdateModal = ({ visible, message, storeUrl }) => {
   const handleUpdate = () => {
     if (storeUrl) {
-      Linking.openURL(storeUrl).catch(console.error);
+      Linking.openURL(storeUrl).catch(() => {});
     }
   };
 

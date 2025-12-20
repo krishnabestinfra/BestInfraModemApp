@@ -30,9 +30,11 @@ const ReplacedModemDetailScreen = ({ navigation, route }) => {
       Alert.alert('Validation', 'Please fill in both Old Modem and New Modem fields');
       return;
     }
-    Alert.alert('Success', 'Modem replacement recorded successfully', [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+    // Navigate to TroubleshootScreen success page
+    navigation.navigate('Troubleshoot', {
+      modem: { modemId: oldModem.trim() },
+      showSuccess: true,
+    });
   };
 
   return (

@@ -8,7 +8,8 @@ import CheckCableConnectionGif from '../../assets/images/Check Cable Connection.
 import ReCheckCableConnectionGif from '../../assets/images/RecheckCableConnection.gif';
 import ConfirmCommunicationGif from '../../assets/images/Confirm Communication.gif';
 import ReCheckCommunicationGif from '../../assets/images/ReCheckCommunication.gif';
-
+import ModemReplacedGif from '../../assets/Modem replaced.gif';
+import IsIssueFixedGif from '../../assets/IsIssueFixed.gif';
 export const troubleshootStepsByCode = {
   112: [
     {
@@ -59,21 +60,13 @@ export const troubleshootStepsByCode = {
         id: 4,
         title: 'Is Issue Fixed?',
         description: 'Check if the meter symbol on your device shows active communication.',
-        // image: CheckVoltagePresentGif,
-    
-        // noTitle: 'Voltage Not Detected at Input Line',
-        // noImage: ReCheckVoltagePresentGif,
-        // noSubtitle: 'No voltage has been detected. Follow these corrective steps carefully.',
-        // noSteps: [
-        //   'Check if the power outlet is working by testing with another device',
-        //   'Inspect the power adapter for any damage or burnt smell',
-        //   'Verify the circuit breaker has not tripped for this line',
-        // ]
+        image: IsIssueFixedGif,
       },
       {
         id: 5,
         title: 'Is Modem Replaced ',
         description: 'Check if the meter symbol on your device shows active communication.',
+        image: ModemReplacedGif,
       },
   ],
   202: [
@@ -137,21 +130,13 @@ export const troubleshootStepsByCode = {
       id: 4,
       title: 'Is Issue Fixed?',
       description: 'Check if the meter symbol on your device shows active communication.',
-      // image: CheckVoltagePresentGif,
-  
-      // noTitle: 'Voltage Not Detected at Input Line',
-      // noImage: ReCheckVoltagePresentGif,
-      // noSubtitle: 'No voltage has been detected. Follow these corrective steps carefully.',
-      // noSteps: [
-      //   'Check if the power outlet is working by testing with another device',
-      //   'Inspect the power adapter for any damage or burnt smell',
-      //   'Verify the circuit breaker has not tripped for this line',
-      // ]
+      image: IsIssueFixedGif,
     },
     {
       id: 5,
       title: 'Is Modem Replaced ',
       description: 'Check if the meter symbol on your device shows active communication.',
+      image: ModemReplacedGif,
     },
   ],
 
@@ -216,21 +201,13 @@ export const troubleshootStepsByCode = {
       id: 5,
       title: 'Is Issue Fixed?',
       description: 'Check if the meter symbol on your device shows active communication.',
-      // image: CheckVoltagePresentGif,
-  
-      // noTitle: 'Voltage Not Detected at Input Line',
-      // noImage: ReCheckVoltagePresentGif,
-      // noSubtitle: 'No voltage has been detected. Follow these corrective steps carefully.',
-      // noSteps: [
-      //   'Check if the power outlet is working by testing with another device',
-      //   'Inspect the power adapter for any damage or burnt smell',
-      //   'Verify the circuit breaker has not tripped for this line',
-      // ]
+      image: IsIssueFixedGif,
     },
     {
       id: 6,
       title: 'Is Modem Replaced ',
       description: 'Check if the meter symbol on your device shows active communication.',
+      image: ModemReplacedGif,
     },
   ],
 };

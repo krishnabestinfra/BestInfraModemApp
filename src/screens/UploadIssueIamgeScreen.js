@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RippleLogo from '../components/global/RippleLogo';
 import AppHeader from '../components/global/AppHeader';
@@ -22,19 +23,35 @@ const UploadIssueImageScreen = ({ navigation, route }) => {
   const [images, setImages] = useState([null, null]);
   const [validationModalVisible, setValidationModalVisible] = useState(false);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      return () => {
+      };
+    }, [])
+  );
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+      }
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
+
   const handleImagesChange = (newImages) => {
     setImages(newImages);
   };
 
   const handleStartTroubleshooting = () => {
-    // Validate that at least one image is uploaded
     const hasImages = images.some(img => img !== null);
     if (!hasImages) {
       setValidationModalVisible(true);
       return;
     }
 
-    // Navigate to TroubleshootScreen with modem data
     navigation?.navigate?.('Troubleshoot', { 
       modem: modem || { 
         modemId: modem?.modemId || modem?.modemSlNo || modem?.modemno,

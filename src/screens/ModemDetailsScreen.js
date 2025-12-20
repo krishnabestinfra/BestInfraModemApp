@@ -25,7 +25,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
   const insets = useSafeAreaInsets();
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [dataFetchedAt, setDataFetchedAt] = useState(null); // Track when data was loaded
+  const [dataFetchedAt, setDataFetchedAt] = useState(null);
 
   const assignedModems = Array.isArray(modems) ? modems : [];
   const routeModem = route?.params?.modem;
@@ -77,14 +77,10 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
     if (resolvedModem) {
       const modemData = resolvedModem.originalAlert || resolvedModem;
       setApiData(modemData);
-      setDataFetchedAt(new Date().toISOString()); // Track current timestamp when data is loaded
+      setDataFetchedAt(new Date().toISOString());
     }
     setLoading(false);
   }, [resolvedModem]);
-
- 
-
-
   const modem = useMemo(() => {
     if (apiData && (apiData.modemSlNo || apiData.sno)) {
       return {
@@ -93,7 +89,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
         error: apiData.codeDesc || fallbackModem.error,
         errorCode: apiData.code || 'N/A',
         reason: apiData.codeDesc || fallbackModem.reason,
-        location: apiData.discom || 'N/A', // Using discom as location
+        location: apiData.discom || 'N/A',
         date: apiData.modemDate ? `${apiData.modemDate} ${apiData.modemTime || ''}` : fallbackModem.date,
         signalStrength: apiData.signalStrength1 || apiData.signalStrength2 || 0,
         discom: apiData.discom || 'N/A',
@@ -114,7 +110,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
       };
     }
     return fallbackModem;
-  }, [apiData, fallbackModem, dataFetchedAt]); // Add dataFetchedAt to dependencies
+  }, [apiData, fallbackModem, dataFetchedAt]);
 
   const statusMeta =
     statusMetaMap[modem.status] ??
@@ -164,7 +160,7 @@ const ModemDetailsScreen = ({ route, navigation, modems = [] }) => {
     }
     
     return fields;
-  }, [modem, apiData, dataFetchedAt]); // Add dataFetchedAt to dependencies
+  }, [modem, apiData, dataFetchedAt]);
 
 
   const handleResolve = useCallback(() => {

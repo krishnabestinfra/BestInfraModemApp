@@ -28,6 +28,7 @@ Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
 const TroubleshootScreen = ({ navigation, route }) => {
   const modem = route?.params?.modem;
   const errorCode = modem?.code || modem?.errorCode || modem?.originalAlert?.code || modem?.originalData?.code;
+  const showSuccess = route?.params?.showSuccess || false; // Parameter to show success page directly
 
   const troubleshootSteps = useMemo(() => {
     const codeNum = typeof errorCode === 'number' ? errorCode : parseInt(errorCode);
@@ -41,17 +42,21 @@ const TroubleshootScreen = ({ navigation, route }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [showRetry, setShowRetry] = useState(false);
-  const [checkingStatus, setCheckingStatus] = useState(false);
 
   useEffect(() => {
-    setCurrentStepIndex(0);
+    // If showSuccess is true, set currentStepIndex to show success immediately
+    if (showSuccess && troubleshootSteps.length > 0) {
+      setCurrentStepIndex(troubleshootSteps.length);
+    } else {
+      setCurrentStepIndex(0);
+    }
     setFeedback(null);
     setShowRetry(false);
-  }, [errorCode]);
+  }, [errorCode, showSuccess, troubleshootSteps.length]);
 
   const currentStep = troubleshootSteps[currentStepIndex];
   const hasSteps = troubleshootSteps.length > 0;
-  const isComplete = hasSteps && currentStepIndex >= troubleshootSteps.length;
+  const isComplete = showSuccess || (hasSteps && currentStepIndex >= troubleshootSteps.length);
 
   const statusMeta = useMemo(() => {
     if (route?.params?.status === 'Communicating') {
@@ -78,6 +83,24 @@ const TroubleshootScreen = ({ navigation, route }) => {
       return;
     }
 
+    // Check if current step is "Is Modem Replaced" and user clicked "No"
+    // If modem is not replaced, navigate directly to success screen
+    if (!isSuccess && currentStep?.title?.trim() === 'Is Modem Replaced') {
+      // Navigate directly to success screen
+      setCurrentStepIndex(troubleshootSteps.length);
+      return;
+    }
+
+    // Check if current step is "Is Issue Fixed?" and user clicked "No"
+    if (!isSuccess && currentStep?.title?.trim() === 'Is Issue Fixed?') {
+      // Navigate to IssueNotResolvedScreen
+      navigation.navigate('IssueNotResolved', {
+        modem: modem,
+        status: route?.params?.status,
+      });
+      return;
+    }
+
     if (!isSuccess) {
       setShowRetry(true);
       setFeedback({
@@ -98,53 +121,10 @@ const TroubleshootScreen = ({ navigation, route }) => {
     }
   }, [currentStep, currentStepIndex, troubleshootSteps.length, modem, navigation, route]);
 
-  const checkModemStatus = useCallback(async (modemId) => {
-    try {
-      if (!modemId) return false;
-
-      const url = `https://api.bestinfra.app/v2tgnpdcl/api/modems/modem/${modemId}/status`;
-      const response = await fetch(url, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-      const json = await response.json();
-      return json.success && json.data && json.data.status === "resolved";
-    } catch (error) {
-      console.error('Error checking modem status:', error);
-      return false;
-    }
-  }, []);
-
-  const handleComplete = useCallback(async () => {
-    setCheckingStatus(true);
-    
-    // Extract modem ID from various possible fields
-    const modemId = extractModemId(modem) || 
-                    modem?.modemId || 
-                    modem?.modemSlNo || 
-                    modem?.modemno || 
-                    route?.params?.modemId;
-
-    try {
-      const isResolved = await checkModemStatus(modemId);
-      
-      if (isResolved) {
-        // Status is resolved - refresh dashboard and navigate
-        navigation.navigate('Dashboard', { refresh: true });
-      } else {
-        // Status is not resolved - redirect to dashboard so user can start process again
-        navigation.navigate('Dashboard', { refresh: true });
-      }
-    } catch (error) {
-      // On error, redirect to dashboard so user can start process again
-      navigation.navigate('Dashboard', { refresh: true });
-    } finally {
-      setCheckingStatus(false);
-    }
-  }, [modem, navigation, checkModemStatus, route]);
+  const handleComplete = useCallback(() => {
+    // Navigate directly to Dashboard without API check
+    navigation.navigate('Dashboard', { refresh: true });
+  }, [navigation]);
 
   const handleRetry = useCallback(() => {
     setShowRetry(false);
@@ -191,21 +171,20 @@ const TroubleshootScreen = ({ navigation, route }) => {
             </View>
           )}
           <View style={styles.contentWrapper}>
-            {!hasSteps ? (
+            {isComplete ? (
+              <SuccessCard 
+                image={successImg} 
+                onComplete={handleComplete}
+              />
+            ) : !hasSteps ? (
               <View style={styles.noStepsContainer}>
                 <Text style={styles.noStepsText}>No troubleshooting steps available for this error code.</Text>
               </View>
-            ) : !isComplete ? (
+            ) : (
               <StepContent
                 step={currentStep}
                 feedback={feedback}
                 showRetry={showRetry}
-              />
-            ) : (
-              <SuccessCard 
-                image={successImg} 
-                onComplete={handleComplete}
-                checkingStatus={checkingStatus}
               />
             )}
           </View>
@@ -303,7 +282,7 @@ const StepContent = React.memo(({ step, feedback, showRetry }) => (
 ));
 
 /* SUCCESS COMPONENT */
-const SuccessCard = React.memo(({ image, onComplete, checkingStatus = false }) => (
+const SuccessCard = React.memo(({ image, onComplete }) => (
   <View style={styles.successWrapper}>
     <View style={styles.successCard}>
       <ExpoImage
@@ -321,11 +300,9 @@ const SuccessCard = React.memo(({ image, onComplete, checkingStatus = false }) =
       <Text style={styles.successBody}>The meter is now communicating properly.</Text>
 
       <Button 
-        title={checkingStatus ? "Checking Status..." : "Issue Fixed"} 
+        title="Issue Fixed" 
         onPress={onComplete} 
         style={{ width: '100%', marginTop: spacing.md }}
-        disabled={checkingStatus}
-        loading={checkingStatus}
       />
     </View>
   </View>
