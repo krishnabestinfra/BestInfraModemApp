@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     paddingHorizontal: 15,
-    paddingVertical: 40,
+    paddingVertical: 20,
   },
   container: {
     width: '100%',

@@ -12,17 +12,18 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import AppHeader from '../components/global/AppHeader';
-import NotificationCard from '../components/global/NotificationCard';
-import { COLORS } from '../constants/colors';
-import { colors } from '../styles/theme';
-import EmptyNotification from '../../assets/icons/NoNotification.svg';
-import { useContext } from 'react';
-import { NotificationContext } from '../context/NotificationContext';
+import Menu from '../../assets/icons/bars.svg';
+import Notification from '../../assets/icons/notificationsWhite.svg';
+import NotificationIcon from '../../assets/icons/notificationDark.svg';
 import HandBill from '../../assets/icons/handBill.svg';
 import Calendar from '../../assets/icons/calendar.svg';
 import CheapDollar from '../../assets/icons/cheapDollar.svg';
-import NotificationIcon from '../../assets/icons/notificationDark.svg';
+import Logo from '../components/global/Logo';
+import NotificationCard from '../components/global/NotificationCard';
+import { COLORS } from '../constants/colors';
+import EmptyNotification from '../../assets/icons/NoNotification.svg';
+import { useContext } from 'react';
+import { NotificationContext } from '../context/NotificationContext';
 
 const iconMapper = {
   payment: HandBill,
@@ -52,6 +53,7 @@ const ProfileScreen = ({ navigation }) => {
 
   const consumerUid = 'BI25GMRA0001';
   
+  // Reload notifications from AsyncStorage when screen focuses
   useFocusEffect(
     useCallback(() => {
       const loadNotifications = async () => {
@@ -64,6 +66,7 @@ const ProfileScreen = ({ navigation }) => {
             setNotifications([]);
           }
         } catch (e) {
+          // Silent error handling
         }
       };
       
@@ -78,6 +81,7 @@ const ProfileScreen = ({ navigation }) => {
       n.id === id ? { ...n, is_read: true } : n
     );
     setNotifications(updated);
+    // Save to AsyncStorage
     await AsyncStorage.setItem("notifications", JSON.stringify(updated));
   };
 
@@ -104,8 +108,26 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
-      <StatusBar style="dark" />
-      <AppHeader navigation={navigation} />
+      <StatusBar style="light" />
+      <View style={styles.topMenu}>
+        <Pressable
+          style={styles.barsIcon}
+          onPress={() => navigation?.navigate?.('SideMenu')}
+        >
+          <Menu width={18} height={18} fill="#202d59" />
+        </Pressable>
+
+        <Pressable onPress={() => navigation?.navigate?.('SideMenu')}>
+          <Logo variant="white" size="medium" />
+        </Pressable>
+
+        <Pressable
+          style={styles.bellIcon}
+          onPress={() => navigation?.navigate?.('')}
+        >
+          <Notification width={18} height={18} fill="#ffffff" />
+        </Pressable>
+      </View>
 
       <ScrollView
         style={styles.notificationsContainer}
@@ -140,7 +162,7 @@ const ProfileScreen = ({ navigation }) => {
             <EmptyNotification width={60} height={60}/>
 
             <Text style={styles.emptyText}>No Notification</Text>
-            <Text style={styles.emptySubText}>We’ll let you know when there will be</Text>
+            <Text style={styles.emptySubText}>We'll let you know when there will be</Text>
             <Text style={styles.emptySubText}>something to update you.</Text>
           </View>
         ) : (
@@ -166,12 +188,16 @@ export default ProfileScreen;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.brandBlueColor,
     flex: 1,
   },
   topMenu: {
-    paddingTop: 10,
-    paddingBottom: 5,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 75,
+    paddingBottom: 35,
+    paddingHorizontal: 30,
   },
   barsIcon: {
     backgroundColor: COLORS.secondaryFontColor,
@@ -180,24 +206,29 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 1,
-    zIndex: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   bellIcon: {
-    backgroundColor: COLORS.secondaryFontColor,
+    backgroundColor: COLORS.secondaryColor,
     width: 54,
     height: 54,
     borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 1,
-    zIndex: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   notificationsContainer: {
     paddingVertical: 20,
     paddingHorizontal: 25,
     paddingTop: 10,
-    backgroundColor: '#fff',
   },
   loadingContainer: {
     flex: 1,
@@ -206,7 +237,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   loadingText: {
-    color: colors.textPrimary,
+    color: COLORS.secondaryFontColor,
     fontSize: 14,
     fontFamily: 'Manrope-Medium',
     marginTop: 12,
@@ -218,7 +249,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   errorText: {
-    color: colors.textPrimary,
+    color: COLORS.secondaryFontColor,
     fontSize: 14,
     fontFamily: 'Manrope-Medium',
     textAlign: 'center',
@@ -229,7 +260,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: colors.textPrimary,
+    color: '#FFFFFF',
     fontSize: 20,
     fontFamily: 'Manrope',
     fontWeight: '700',
@@ -238,7 +269,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   emptySubText: {
-    color: colors.textSecondary,
+    color: '#CDCDCD',
     fontSize: 16,
     fontFamily: 'Manrope',
     textAlign: 'center',

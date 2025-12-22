@@ -80,15 +80,27 @@ const TroubleshootScreen = ({ navigation, route }) => {
     }
 
     // Check if current step is "Is Modem Replaced" and user clicked "No"
-    // If modem is not replaced, navigate directly to success screen
+    // If modem is not replaced, navigate to success screen with remark option
     if (!isSuccess && currentStep?.title?.trim() === 'Is Modem Replaced') {
-      // Navigate directly to success screen
-      setCurrentStepIndex(troubleshootSteps.length);
+      // Extract modem ID from various possible fields
+      const modemId = extractModemId(modem) || 
+                      modem?.modemId || 
+                      modem?.modemSlNo || 
+                      modem?.modemno || 
+                      route?.params?.modemId || 
+                      'MDM000';
+      
+      // Navigate to ModemReplacementSuccessScreen with isReplaced=false
+      navigation.navigate('ModemReplacementSuccess', {
+        oldModem: modemId,
+        isReplaced: false,
+        modem: modem,
+      });
       return;
     }
 
-    // Check if current step is "Is Issue Fixed?" and user clicked "No"
-    if (!isSuccess && currentStep?.title?.trim() === 'Is Issue Fixed?') {
+    // Check if current step is "Confirm Communication" and user clicked "No" (issue not fixed)
+    if (!isSuccess && currentStep?.title?.trim() === 'Confirm Communication') {
       // Navigate to IssueNotResolvedScreen
       navigation.navigate('IssueNotResolved', {
         modem: modem,

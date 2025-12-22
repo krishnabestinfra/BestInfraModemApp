@@ -72,7 +72,7 @@ const UploadIssueImageScreen = ({ navigation, route }) => {
           <Text style={styles.infoBannerText}>Please Upload Issue Images</Text>
         </View>
       </AppHeader>
-      <LinearGradient colors={['#f4fbf7', '#e6f4ed']} style={styles.backgroundGradient}>
+      <LinearGradient colors={['#FFFFFF', '#F5F5F5']} style={styles.backgroundGradient}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <View style={styles.uploadCard}>
             <PhotoUpload
@@ -120,10 +120,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
-  topMenu: {
-    paddingTop: 10,
-    paddingBottom: 5,
-  },
   iconBtn: {
     backgroundColor: COLORS.secondaryFontColor,
     width: 54,
@@ -140,7 +136,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.ms,
     borderRadius: borderRadius.md,
     marginTop: spacing.md,
-    marginHorizontal: 0,
     gap: spacing.sm,
   },
   infoBannerText: {
