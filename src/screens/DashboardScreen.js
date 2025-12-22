@@ -5,9 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Pressable,
   ActivityIndicator,
-  Modal,
   Linking,
   Alert,
   Platform,
@@ -15,13 +13,13 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import AppHeader from '../components/global/AppHeader';
 import NotVisitedModemCard from '../components/NotVisitedModemCard';
 import MetricsCards from '../components/MetricsCards';
 import NotificationPopup from '../components/NotificationPopup';
-import SearchBar from '../components/global/SearchBar';
+import Search from '../components/global/Search';
+import Filter from '../components/global/Filter';
 import ScanIcon from '../../assets/icons/scan.svg';
 import { modemErrors } from '../data/dummyData';
 import { colors, spacing, typography } from '../styles/theme';
@@ -64,16 +62,12 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
   const [searchQuery, setSearchQuery] = useState('');
   const [userName] = useState('Field Officer');
   const [loading, setLoading] = useState(false);
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState({ statuses: [], signal: 'all', errorType: 'all', sortBy: 'newest' });
-  const [draftFilters, setDraftFilters] = useState({ statuses: [], signal: 'all', errorType: 'all', sortBy: 'newest' });
 
   const hasActiveFilters = appliedFilters.statuses.length > 0 || appliedFilters.signal !== 'all' || appliedFilters.errorType !== 'all';
 
-  const handleResetFilters = useCallback(() => {
-    const cleared = { statuses: [], signal: 'all', errorType: 'all', sortBy: 'newest' };
-    setAppliedFilters(cleared);
-    setDraftFilters(cleared);
+  const handleFiltersChange = useCallback((newFilters) => {
+    setAppliedFilters(newFilters);
   }, []);
 
   const handleDirectionPress = useCallback(async (modem) => {
@@ -144,12 +138,19 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
           <MetricsCards loading={loading} metrics={dashboardMetrics} />
         </AppHeader>
 
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onFilterPress={() => setFilterModalVisible(true)}
-          hasActiveFilters={hasActiveFilters}
-        />
+        <View style={styles.searchFilterContainer}>
+          <Search
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search modems..."
+          />
+          <Filter
+            filterOptions={ERROR_FILTER_OPTIONS}
+            initialFilters={appliedFilters}
+            onFiltersChange={handleFiltersChange}
+            hasActiveFilters={hasActiveFilters}
+          />
+        </View>
 
         <View style={styles.cardsWrapper}>
           {loading ? (
@@ -186,74 +187,6 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
         </TouchableOpacity>
       </View>
 
-      <Modal transparent visible={filterModalVisible} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setFilterModalVisible(false)} />
-          <View style={styles.filterModalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter Alerts</Text>
-              <Pressable onPress={() => setFilterModalVisible(false)}>
-                <Ionicons name="close" size={22} />
-              </Pressable>
-            </View>
-            <View style={styles.modalSection}>
-              <Text style={styles.modalSectionLabel}>Error Type</Text>
-              <View style={styles.chipGroup}>
-                {ERROR_FILTER_OPTIONS.map((opt) => {
-                  const active = draftFilters.errorType === opt.value;
-                  return (
-                    <TouchableOpacity
-                      key={opt.value}
-                      onPress={() => setDraftFilters((p) => ({ ...p, errorType: opt.value }))}
-                      style={[styles.filterChip, active && styles.filterChipActive]}
-                    >
-                      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                        {opt.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-            <View style={styles.modalSection}>
-              <Text style={styles.modalSectionLabel}>Sort By</Text>
-              <View style={styles.chipGroup}>
-                {[
-                  { label: 'Newest First', value: 'newest' },
-                  { label: 'Oldest First', value: 'oldest' },
-                ].map((opt) => {
-                  const active = draftFilters.sortBy === opt.value;
-                  return (
-                    <TouchableOpacity
-                      key={opt.value}
-                      onPress={() => setDraftFilters((p) => ({ ...p, sortBy: opt.value }))}
-                      style={[styles.filterChip, active && styles.filterChipActive]}
-                    >
-                      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                        {opt.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-            <View style={styles.modalActions}>
-              <TouchableOpacity onPress={handleResetFilters} style={[styles.modalButton, styles.modalButtonGhost]}>
-                <Text style={[styles.modalButtonText, styles.modalButtonGhostText]}>Reset</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setAppliedFilters(draftFilters);
-                  setFilterModalVisible(false);
-                }}
-                style={[styles.modalButton, styles.modalButtonPrimary]}
-              >
-                <Text style={styles.modalButtonText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       <NotificationPopup
         visible={showPopup}
@@ -324,94 +257,9 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.lg,
-    backgroundColor: 'rgba(4, 12, 34, 0.45)',
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  filterModalCard: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: spacing.lg,
-    elevation: 8,
-  },
-  modalHeader: {
+  searchFilterContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontFamily: 'Manrope-SemiBold',
-  },
-  modalSection: {
-    marginBottom: spacing.lg,
-  },
-  modalSectionLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-    fontFamily: 'Manrope-SemiBold',
-  },
-  chipGroup: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  filterChip: {
-    borderWidth: 1,
-    borderColor: '#dfe5eb',
-    borderRadius: 999,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    backgroundColor: '#fff',
-  },
-  filterChipActive: {
-    backgroundColor: '#e6f4ed',
-    borderColor: colors.secondary,
-  },
-  filterChipText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    fontFamily: 'Manrope-Medium',
-  },
-  filterChipTextActive: {
-    color: colors.secondary,
-    fontFamily: 'Manrope-SemiBold',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  modalButtonGhost: {
-    borderWidth: 1,
-    borderColor: '#dfe5eb',
-    backgroundColor: '#fff',
-  },
-  modalButtonPrimary: {
-    backgroundColor: colors.secondary,
-  },
-  modalButtonText: {
-    fontSize: 15,
-    fontFamily: 'Manrope-SemiBold',
-    color: '#fff',
-  },
-  modalButtonGhostText: {
-    color: colors.textPrimary,
   },
   stickyScanButtonContainer: {
     position: 'absolute',

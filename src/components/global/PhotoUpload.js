@@ -12,8 +12,8 @@ const PhotoUpload = ({
   uploadButtonText = 'Upload',
   takePhotoButtonText = 'Take Photo',
   showButtons = true, // Whether to show action buttons
-  aspectRatio = [1, 1], // Image aspect ratio
-  quality = 0.8, // Image quality (0-1)
+  aspectRatio = [1, 1],
+  quality = 0.8, 
   style,
   containerStyle,
 }) => {
@@ -252,9 +252,7 @@ const PhotoUpload = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginTop: 0,
-  },
+
   uploadBoxes: {
     flexDirection: 'row',
     gap: spacing.xl,

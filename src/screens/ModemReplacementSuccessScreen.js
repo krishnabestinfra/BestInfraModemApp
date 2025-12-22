@@ -1,10 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Image as ExpoImage } from 'expo-image';
 import AppHeader from '../components/global/AppHeader';
 import Button from '../components/global/Button';
+import PhotoUpload from '../components/global/PhotoUpload';
 import { colors, spacing, borderRadius } from '../styles/theme';
 import { COLORS } from '../constants/colors';
 import CheckCircleIcon from '../../assets/icons/successIcon.svg';
@@ -14,10 +16,11 @@ if (!Text.defaultProps) Text.defaultProps = {};
 Text.defaultProps.style = [{ fontFamily: 'Manrope-Regular' }];
 
 const ModemReplacementSuccessScreen = ({ navigation, route }) => {
-  const insets = useSafeAreaInsets();
-  const { oldModem, newModem } = route?.params || {};
+  const { oldModem, newModem, isReplaced = true } = route?.params || {};
+  const [remark, setRemark] = useState('');
+  const [images, setImages] = useState([null, null]);
 
-  const handleContinue = () => {
+  const handleSubmit = () => {
     // Navigate back to Dashboard
     navigation.reset({
       index: 0,
@@ -29,41 +32,80 @@ const ModemReplacementSuccessScreen = ({ navigation, route }) => {
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <StatusBar style="dark" />
       <AppHeader navigation={navigation} />
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
-        contentContainerStyle={styles.scrollContent}
-      >
-
-        <View style={styles.content}>
-          <View style={styles.successCard}>
-            <ExpoImage
-              source={successImg}
-              style={styles.successImage}
-              contentFit="contain"
-            />
-
-            <View style={styles.successImageContainer}>
-              <CheckCircleIcon width={18} height={18} />
-              <Text style={styles.successTitle}>Success</Text>
+      <LinearGradient colors={['#FFFFFF', '#F5F5F5']} style={styles.backgroundGradient}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.content}>
+            {/* Success Indicator */}
+            <View style={styles.successCard}>
+              <ExpoImage
+                source={successImg}
+                style={styles.successImage}
+                contentFit="contain"
+              />
+              <View style={styles.successTitleContainer}>
+                <CheckCircleIcon width={18} height={18} />
+                <Text style={styles.successTitle}>Success</Text>
+              </View>
             </View>
 
-            <Text style={styles.successSubtitle}>Modem replacement recorded successfully</Text>
-            <Text style={styles.successBody}>
-              {oldModem && newModem 
-                ? `Old Modem: ${oldModem} has been replaced with New Modem: ${newModem}`
-                : 'The modem replacement details have been saved successfully.'}
-            </Text>
+            {/* Show remark box and image upload only when modem is not replaced */}
+            {!isReplaced && (
+              <>
+                {/* Remark Box */}
+                <View style={styles.remarkContainer}>
+                  <Text style={styles.remarkLabel}>Remarks</Text>
+                  <TextInput
+                    style={styles.remarkInput}
+                    placeholder="Enter remarks..."
+                    placeholderTextColor={colors.textSecondary}
+                    value={remark}
+                    onChangeText={setRemark}
+                    multiline
+                    numberOfLines={6}
+                    textAlignVertical="top"
+                  />
+                </View>
 
-            <Button 
-              title="Continue" 
-              onPress={handleContinue} 
-              style={{ width: '100%', marginTop: spacing.md }}
-              variant="primary"
-              size="large"
-            />
+                {/* Image Upload Section */}
+                <View style={styles.uploadSection}>
+                  <PhotoUpload
+                    images={images}
+                    onImagesChange={setImages}
+                    maxImages={2}
+                    uploadButtonText="Upload"
+                    takePhotoButtonText="Take Photo"
+                  />
+                </View>
+              </>
+            )}
+
+            {/* Show success message when modem is replaced */}
+            {isReplaced && (
+              <View style={styles.messageContainer}>
+                <Text style={styles.successSubtitle}>
+                  {oldModem && newModem 
+                    ? `Old Modem: ${oldModem} has been replaced with New Modem: ${newModem}`
+                    : 'Modem replacement recorded successfully'}
+                </Text>
+              </View>
+            )}
           </View>
+        </ScrollView>
+
+        {/* Submit Button - Fixed at bottom */}
+        <View style={styles.submitContainer}>
+          <Button 
+            title="Submit" 
+            onPress={handleSubmit} 
+            style={styles.submitButton}
+            variant="primary"
+            size="large"
+          />
         </View>
-      </ScrollView>
+      </LinearGradient>
     </SafeAreaView>
   );
 };
@@ -73,28 +115,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  backgroundGradient: {
+    flex: 1,
+  },
   scrollContent: {
-    flexGrow: 1,
-    paddingBottom: spacing.xl,
-  },
-  topMenu: {
-    paddingTop: 10,
-    paddingBottom: 5,
-  },
-  iconBtn: {
-    backgroundColor: COLORS.secondaryFontColor,
-    width: 54,
-    height: 54,
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingBottom: 100,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
   },
   content: {
-    flex: 1,
-    justifyContent: 'center',
+    width: '100%',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl,
   },
   successCard: {
     width: '100%',
@@ -102,37 +133,79 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: spacing.md,
     alignItems: 'center',
+    marginBottom: spacing.xl,
+    marginTop: spacing.md,
   },
   successImage: {
     width: '100%',
     height: 150,
     borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
   },
-  successImageContainer: {
+  successTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.md,
+    gap: spacing.sm,
   },
   successTitle: {
     fontSize: 24,
     color: colors.secondary,
-    marginLeft: 8,
     fontFamily: 'Manrope-SemiBold',
   },
-  successSubtitle: {
-    fontSize: 16,
-    marginTop: spacing.xs,
-    color: COLORS.primaryFontColor,
-    fontFamily: 'Manrope-Medium',
-    textAlign: 'center',
+  messageContainer: {
+    width: '100%',
+    paddingHorizontal: spacing.sm,
+    marginTop: spacing.lg,
   },
-  successBody: {
+  successSubtitle: {
     fontSize: 14,
-    marginTop: spacing.xs,
-    textAlign: 'center',
     color: colors.textSecondary,
     fontFamily: 'Manrope-Regular',
-    paddingHorizontal: spacing.sm,
+    textAlign: 'center',
+  },
+  remarkContainer: {
+    width: '100%',
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  remarkLabel: {
+    fontSize: 14,
+    color: COLORS.primaryFontColor,
+    fontFamily: 'Manrope-SemiBold',
+    marginBottom: spacing.sm,
+  },
+  remarkInput: {
+    width: '100%',
+    minHeight: 120,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: 14,
+    color: COLORS.primaryFontColor,
+    fontFamily: 'Manrope-Regular',
+    backgroundColor: '#FFFFFF',
+  },
+  uploadSection: {
+    width: '100%',
+    backgroundColor: colors.cardBackground,
+    borderRadius: borderRadius.md,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  submitContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    backgroundColor: '#FFFFFF',
+  },
+  submitButton: {
+    width: '100%',
+    borderRadius: 5,
   },
 });
 

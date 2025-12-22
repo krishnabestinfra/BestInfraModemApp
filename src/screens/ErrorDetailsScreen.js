@@ -1,24 +1,91 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import AppHeader from '../components/global/AppHeader';
 import ErrorRow from '../components/ErrorRow';
+import Search from '../components/global/Search';
+import Filter from '../components/global/Filter';
 import { modemErrors } from '../data/dummyData';
 import { colors, spacing, borderRadius, typography, shadows } from '../styles/theme';
 import { COLORS } from '../constants/colors';
+import { 
+  normalizeModemRecord, 
+  getSignalBand, 
+  createSearchableText,
+} from '../utils/modemHelpers';
+import Meter from '../../assets/images/meter.png';
+
+const ERROR_FILTER_OPTIONS = [
+  { label: 'All', value: 'all' },
+  { label: 'Meter COM Failed', value: 'meterComFailed', codes: [112] },
+  { label: 'Modem/DCU Auto Restart', value: 'modemAutoRestart', codes: [202] },
+  { label: 'DCU/Modem Power Failed', value: 'modemPowerFailed', codes: [214] },
+  { label: 'Network Issue', value: 'networkIssue' }
+];
+
+const matchesErrorFilter = (item, filterValue) => {
+  if (filterValue === 'all') return true;
+  const byCode = ERROR_FILTER_OPTIONS.find(i => i.value === filterValue && i.codes);
+  if (byCode) return byCode.codes.includes(item.code);
+  if (filterValue === 'networkIssue') {
+    const raw = item.originalAlert || {};
+    return `${raw.codeDesc || ''} ${item.error || ''}`.toLowerCase().includes('network');
+  }
+  return true;
+};
 
 const ErrorDetailsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState('non-communicating'); // 'resolved'
+  const [activeTab, setActiveTab] = useState('non-communicating');
   const [searchQuery, setSearchQuery] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState({ statuses: [], signal: 'all', errorType: 'all', sortBy: 'newest' });
 
-  const allModems = modemErrors;
+  const hasActiveFilters = appliedFilters.statuses.length > 0 || appliedFilters.signal !== 'all' || appliedFilters.errorType !== 'all';
 
-  const filteredErrors = allModems.filter(error =>
-    error.modemId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    error.location.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleFiltersChange = useCallback((newFilters) => {
+    setAppliedFilters(newFilters);
+  }, []);
+
+  const transformedAlerts = useMemo(() => {
+    return modemErrors.map((alert, index) => normalizeModemRecord(alert, index, Meter));
+  }, []);
+
+  const filteredErrors = useMemo(() => {
+    let list = [...transformedAlerts];
+    
+    // Filter by tab
+    if (activeTab === 'resolved') {
+      list = list.filter(m => m.status === 'success' || m.resolved);
+    } else {
+      list = list.filter(m => m.status !== 'success' && !m.resolved);
+    }
+    
+    // Apply signal filter
+    if (appliedFilters.signal !== 'all') {
+      list = list.filter(m => getSignalBand(m.signalStrength) === appliedFilters.signal);
+    }
+    
+    // Apply error type filter
+    if (appliedFilters.errorType !== 'all') {
+      list = list.filter(m => matchesErrorFilter(m, appliedFilters.errorType));
+    }
+    
+    // Apply sorting
+    if (appliedFilters.sortBy === 'newest') {
+      list.sort((a, b) => new Date(b.date) - new Date(a.date));
+    } else {
+      list.sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
+    
+    // Apply search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(m => createSearchableText(m).includes(q));
+    }
+    
+    return list;
+  }, [transformedAlerts, activeTab, appliedFilters, searchQuery]);
 
   const handleErrorPress = (error) => {
     navigation.navigate('ModemDetails', { 
@@ -46,14 +113,18 @@ const ErrorDetailsScreen = ({ navigation }) => {
         <Text style={styles.title}>Modems</Text>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          placeholder="Search modems..."
-          placeholderTextColor={colors.textSecondary}
+      {/* Search and Filter */}
+      <View style={styles.searchFilterContainer}>
+        <Search
           value={searchQuery}
           onChangeText={setSearchQuery}
-          style={styles.searchInput}
+          placeholder="Search modems..."
+        />
+        <Filter
+          filterOptions={ERROR_FILTER_OPTIONS}
+          initialFilters={appliedFilters}
+          onFiltersChange={handleFiltersChange}
+          hasActiveFilters={hasActiveFilters}
         />
       </View>
 
@@ -83,6 +154,7 @@ const ErrorDetailsScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.listContainer, { paddingBottom: spacing.lg + insets.bottom }]}
       />
+
     </SafeAreaView>
   );
 };
@@ -126,22 +198,6 @@ const styles = StyleSheet.create({
     color: COLORS.primaryFontColor,
     fontFamily: 'Manrope-Bold',
   },
-  searchContainer: {
-    backgroundColor: colors.cardBackground,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    ...shadows.small,
-  },
-  searchInput: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.round,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 14,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: colors.cardBackground,
@@ -182,6 +238,10 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingBottom: spacing.lg,
+  },
+  searchFilterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
 

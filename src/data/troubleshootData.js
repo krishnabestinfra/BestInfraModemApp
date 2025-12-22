@@ -9,7 +9,6 @@ import ReCheckCableConnectionGif from '../../assets/images/RecheckCableConnectio
 import ConfirmCommunicationGif from '../../assets/images/Confirm Communication.gif';
 import ReCheckCommunicationGif from '../../assets/images/ReCheckCommunication.gif';
 import ModemReplacedGif from '../../assets/Modem replaced.gif';
-import IsIssueFixedGif from '../../assets/IsIssueFixed.gif';
 export const troubleshootStepsByCode = {
   112: [
     {
@@ -58,12 +57,6 @@ export const troubleshootStepsByCode = {
       },
       {
         id: 4,
-        title: 'Is Issue Fixed?',
-        description: 'Check if the meter symbol on your device shows active communication.',
-        image: IsIssueFixedGif,
-      },
-      {
-        id: 5,
         title: 'Is Modem Replaced ',
         description: 'Check if the meter symbol on your device shows active communication.',
         image: ModemReplacedGif,
@@ -111,33 +104,27 @@ export const troubleshootStepsByCode = {
         'Check for burnt marks or damage on the SMPS socket area.',
         'Clean dust or moisture at the SMPS installation area before retrying.',
       ]
-    },
-    {
-      id: 3,
-      title: 'Confirm Communication',
-      description: 'Check if the meter symbol on your device shows active communication.',
-      image: ConfirmCommunicationGif,
-      noTitle: 'Communication Not Established',
-      noSubtitle: 'The modem is unable to communicate with the network. Follow these steps.',
-      noImage: ReCheckCommunicationGif,
-      noSteps: [
-        'Power cycle the modem by unplugging it for 30 seconds',
-        'Check that network cables are securely connected',
-        'Verify network settings and configuration are correct',
-      ]
-    },
-    {
-      id: 4,
-      title: 'Is Issue Fixed?',
-      description: 'Check if the meter symbol on your device shows active communication.',
-      image: IsIssueFixedGif,
-    },
-    {
-      id: 5,
-      title: 'Is Modem Replaced ',
-      description: 'Check if the meter symbol on your device shows active communication.',
-      image: ModemReplacedGif,
-    },
+      },
+      {
+        id: 4,
+        title: 'Confirm Communication',
+        description: 'Check if the meter symbol on your device shows active communication.',
+        image: ConfirmCommunicationGif,
+        noTitle: 'Communication Not Established',
+        noSubtitle: 'The modem is unable to communicate with the network. Follow these steps.',
+        noImage: ReCheckCommunicationGif,
+        noSteps: [
+          'Power cycle the modem by unplugging it for 30 seconds',
+          'Check that network cables are securely connected',
+          'Verify network settings and configuration are correct',
+        ]
+      },
+      {
+        id: 5,
+        title: 'Is Modem Replaced ',
+        description: 'Check if the meter symbol on your device shows active communication.',
+        image: ModemReplacedGif,
+      },
   ],
 
   214: [
@@ -183,32 +170,26 @@ export const troubleshootStepsByCode = {
         'Clean dust or moisture at the SMPS installation area before retrying.',
       ]
     },
-    {
-      id: 4,
-      title: 'Confirm Communication',
-      description: 'Check if the meter symbol on your device shows active communication.',
-      image: ConfirmCommunicationGif,
-      noTitle: 'Communication Not Established',
-      noSubtitle: 'The modem is unable to communicate with the network. Follow these steps.',
-      noImage: ReCheckCommunicationGif,
-      noSteps: [
-        'Power cycle the modem by unplugging it for 30 seconds',
-        'Check that network cables are securely connected',
-        'Verify network settings and configuration are correct',
-      ]
-    },
-    {
-      id: 5,
-      title: 'Is Issue Fixed?',
-      description: 'Check if the meter symbol on your device shows active communication.',
-      image: IsIssueFixedGif,
-    },
-    {
-      id: 6,
-      title: 'Is Modem Replaced ',
-      description: 'Check if the meter symbol on your device shows active communication.',
-      image: ModemReplacedGif,
-    },
+      {
+        id: 4,
+        title: 'Confirm Communication',
+        description: 'Check if the meter symbol on your device shows active communication.',
+        image: ConfirmCommunicationGif,
+        noTitle: 'Communication Not Established',
+        noSubtitle: 'The modem is unable to communicate with the network. Follow these steps.',
+        noImage: ReCheckCommunicationGif,
+        noSteps: [
+          'Power cycle the modem by unplugging it for 30 seconds',
+          'Check that network cables are securely connected',
+          'Verify network settings and configuration are correct',
+        ]
+      },
+      {
+        id: 5,
+        title: 'Is Modem Replaced ',
+        description: 'Check if the meter symbol on your device shows active communication.',
+        image: ModemReplacedGif,
+      },
   ],
 };
 
