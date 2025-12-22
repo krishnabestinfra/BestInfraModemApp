@@ -2,9 +2,11 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import LogoutIcon from '../../assets/icons/logoutMenu.svg';
 import ActiveLogout from '../../assets/icons/activeLogout.svg';
+import TicketsIcon from '../../assets/icons/ticketsMenu.svg';
+import ActiveTickets from '../../assets/icons/activeTickets.svg';
 import { COLORS } from '../constants/colors';
 
-const SideMenuNavigation = ({ items, activeItem, onSelect, onLogout }) => {
+const SideMenuNavigation = ({ items, activeItem, onSelect, onLogout, onSupport }) => {
 
   return (
     <View style={{ flex: 1, justifyContent: 'space-between' }}>
@@ -35,8 +37,27 @@ const SideMenuNavigation = ({ items, activeItem, onSelect, onLogout }) => {
         })}
       </View>
 
-      {/* LOGOUT */}
+      {/* SUPPORT & LOGOUT */}
       <View style={styles.logoutWrapper}>
+        {/* SUPPORT */}
+        <Pressable style={styles.menuRow} onPress={onSupport}>
+          {activeItem === "Support" ? (
+            <ActiveTickets width={18} height={18} style={styles.menuIcon} />
+          ) : (
+            <TicketsIcon width={18} height={18} style={styles.menuIcon} />
+          )}
+
+          <Text
+            style={[
+              styles.menuText,
+              activeItem === "Support" && styles.menuTextActive
+            ]}
+          >
+            Support
+          </Text>
+        </Pressable>
+
+        {/* LOGOUT */}
         <Pressable style={styles.menuRow} onPress={onLogout}>
           {activeItem === "Logout" ? (
             <ActiveLogout width={18} height={18} style={styles.menuIcon} />

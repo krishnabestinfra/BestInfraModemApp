@@ -21,6 +21,7 @@ import SideMenu from '../screens/Sidemenu';
 import ScanScreen from '../components/ScanScreen';
 import OfflineModemsScreen from '../screens/OfflineModemsScreen';
 import VisitedScreen from '../screens/VisitedScreen';
+import SupportScreen from '../screens/SupportScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -197,6 +198,7 @@ const AppNavigator = () => {
             <Stack.Screen name="ModemReplacementSuccess" component={ModemReplacementSuccessScreen} />
             <Stack.Screen name="IssueNotResolved" component={IssueNotResolvedScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="Support" component={SupportScreen} />
             <Stack.Screen name="ScanScreen" component={ScanScreen} />
             <Stack.Screen name="OfflineModems">
               {(props) => {

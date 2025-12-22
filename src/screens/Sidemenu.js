@@ -12,6 +12,7 @@ import ConfirmationModal from "../components/global/ConfirmationModal";
 import DashboardScreen from "../screens/DashboardScreen";
 import OfflineModemsScreen from "../screens/OfflineModemsScreen";
 import VisitedScreen from "../screens/VisitedScreen";
+import SupportScreen from "../screens/SupportScreen";
 import { useSidebar } from "../context/SidebarContext";
 import SideMenuNavigation from "../components/SideMenuNavigation";
 import DashboardIcon from "../../assets/icons/dashboardMenu.svg";
@@ -38,6 +39,9 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
       case "Visited":
         return <VisitedScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
       
+      case "Support":
+        return <SupportScreen navigation={navigation} />;
+      
       default:
         return <DashboardScreen navigation={navigation} modems={modems} modemIds={modemIds} userPhone={userPhone} />;
     }
@@ -55,6 +59,11 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
         userPhone: userPhone,
       });
     }
+  };
+
+  const handleSupport = () => {
+    setActiveItem("Support");
+    navigation.navigate("Support");
   };
 
   const handleLogout = () => {
@@ -142,6 +151,7 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
             activeItem={activeItem}
             onSelect={handleMenuPress}
             onLogout={handleLogout}
+            onSupport={handleSupport}
           />
         </View>
 

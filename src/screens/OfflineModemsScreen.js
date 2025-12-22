@@ -9,7 +9,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar';
 
 import AppHeader from '../components/global/AppHeader';
-import SearchBar from '../components/global/SearchBar';
+import Search from '../components/global/Search';
+import Filter from '../components/global/Filter';
 import TabNavigation from '../components/global/TabNavigation';
 import EmptyState from '../components/global/EmptyState';
 import VisitedModemCard from '../components/VisitedModemCard';
@@ -107,11 +108,24 @@ const OfflineModemsScreen = ({ navigation }) => {
         onTabChange={setActiveTab}
       />
 
-      <SearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        onFilterPress={() => {}}
-      />
+      <View style={styles.searchFilterContainer}>
+        <Search
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search modems..."
+        />
+        <Filter
+          filterOptions={[]}
+          sortOptions={[
+            { label: 'Newest First', value: 'newest' },
+            { label: 'Oldest First', value: 'oldest' },
+          ]}
+          initialFilters={{ statuses: [], signal: 'all', errorType: 'all', sortBy: 'newest' }}
+          onFiltersChange={() => {}}
+          hasActiveFilters={false}
+          modalTitle="Filter Offline Modems"
+        />
+      </View>
 
       <ScrollView 
         showsVerticalScrollIndicator={false} 
@@ -198,5 +212,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: COLORS.primaryFontColor,
     fontFamily: 'Manrope-Bold',
+  },
+  searchFilterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
