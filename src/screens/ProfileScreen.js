@@ -24,6 +24,7 @@ import { COLORS } from '../constants/colors';
 import EmptyNotification from '../../assets/icons/NoNotification.svg';
 import { useContext } from 'react';
 import { NotificationContext } from '../context/NotificationContext';
+import { notifications as dummyNotifications } from '../data/dummyData';
 
 const iconMapper = {
   payment: HandBill,
@@ -61,12 +62,33 @@ const ProfileScreen = ({ navigation }) => {
           const savedNoti = await AsyncStorage.getItem("notifications");
           if (savedNoti) {
             const parsed = JSON.parse(savedNoti);
-            setNotifications(parsed);
+            // Check if we have the new alert-related notifications by checking IDs
+            const expectedIds = ['NTF001', 'NTF002', 'NTF003', 'NTF004', 'NTF005', 'NTF006'];
+            const hasNewNotifications = parsed.some(n => expectedIds.includes(n.id));
+            
+            // Also check for old payment/balance keywords
+            const hasOldNotifications = parsed.some(n => 
+              n.title?.includes('Payment') || 
+              n.title?.includes('Balance') || 
+              n.message?.includes('₹')
+            );
+            
+            // Replace if we have old notifications OR if we don't have the new ones
+            if (hasOldNotifications || !hasNewNotifications || parsed.length === 0) {
+              // Replace with new alert-related notifications
+              setNotifications(dummyNotifications);
+              await AsyncStorage.setItem("notifications", JSON.stringify(dummyNotifications));
+            } else {
+              setNotifications(parsed);
+            }
           } else {
-            setNotifications([]);
+            // Initialize with dummy notifications if no saved data
+            setNotifications(dummyNotifications);
+            await AsyncStorage.setItem("notifications", JSON.stringify(dummyNotifications));
           }
         } catch (e) {
-          // Silent error handling
+          // Silent error handling - initialize with dummy data on error
+          setNotifications(dummyNotifications);
         }
       };
       
@@ -74,7 +96,7 @@ const ProfileScreen = ({ navigation }) => {
     }, [setNotifications])
   );
   
-  const displayNotifications = useMemo(() => notifications.slice(0, 5), [notifications]);
+  const displayNotifications = useMemo(() => notifications, [notifications]);
 
   const markAsRead = async (id) => {
     const updated = notifications.map(n =>
@@ -91,14 +113,43 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     setError(null);
+    try {
+      // Force reload from AsyncStorage and check for old notifications
+      const savedNoti = await AsyncStorage.getItem("notifications");
+      if (savedNoti) {
+        const parsed = JSON.parse(savedNoti);
+        // Check if we have the new alert-related notifications by checking IDs
+        const expectedIds = ['NTF001', 'NTF002', 'NTF003', 'NTF004', 'NTF005', 'NTF006'];
+        const hasNewNotifications = parsed.some(n => expectedIds.includes(n.id));
+        
+        // Also check for old payment/balance keywords
+        const hasOldNotifications = parsed.some(n => 
+          n.title?.includes('Payment') || 
+          n.title?.includes('Balance') || 
+          n.message?.includes('₹')
+        );
+        
+        // Replace if we have old notifications OR if we don't have the new ones
+        if (hasOldNotifications || !hasNewNotifications || parsed.length === 0) {
+          setNotifications(dummyNotifications);
+          await AsyncStorage.setItem("notifications", JSON.stringify(dummyNotifications));
+        } else {
+          setNotifications(parsed);
+        }
+      } else {
+        setNotifications(dummyNotifications);
+        await AsyncStorage.setItem("notifications", JSON.stringify(dummyNotifications));
+      }
+    } catch (e) {
+      setNotifications(dummyNotifications);
+    }
     setTimeout(() => {
-      setNotifications((prev) => [...prev]);
       setRefreshing(false);
     }, 800);
-  }, []);
+  }, [setNotifications]);
 
   const getNotificationIcon = (type) =>
     iconMapper[type?.toLowerCase()] ?? NotificationIcon;

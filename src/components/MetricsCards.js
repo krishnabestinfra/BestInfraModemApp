@@ -1,12 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 import CommunicatingModemsIcon from '../../assets/icons/communicating.svg';
 import NonCommunicatingModemsIcon from '../../assets/icons/noncommicating.svg';
 import TotalVisitsIcon from '../../assets/icons/totaltasks.svg';
 import ResolvedVisitsIcon from '../../assets/icons/completedtasks.svg';
-
-const { width } = Dimensions.get('window');
 
 const MetricsCards = ({ loading, metrics }) => {
   const metricsData = [
@@ -69,7 +67,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingVertical: 10,
     paddingHorizontal: 10,
-    width: (width - 40) / 2,
+    width: '48%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',

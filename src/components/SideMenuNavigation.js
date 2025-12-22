@@ -22,7 +22,18 @@ const SideMenuNavigation = ({ items, activeItem, onSelect, onLogout, onSupport }
               style={styles.menuRow}
               onPress={() => onSelect(item)}
             >
-              {Icon && <Icon width={18} height={18} style={styles.menuIcon} />}
+              {Icon && (
+                <View style={styles.iconWrapper}>
+                  <Icon 
+                    width={18} 
+                    height={18} 
+                    style={[
+                      styles.menuIcon,
+                      isActive && styles.menuIconActive
+                    ]} 
+                  />
+                </View>
+              )}
 
               <Text
                 style={[
@@ -42,9 +53,22 @@ const SideMenuNavigation = ({ items, activeItem, onSelect, onLogout, onSupport }
         {/* SUPPORT */}
         <Pressable style={styles.menuRow} onPress={onSupport}>
           {activeItem === "Support" ? (
-            <ActiveTickets width={18} height={18} style={styles.menuIcon} />
+            <ActiveTickets 
+              width={18} 
+              height={18} 
+              fill={COLORS.secondaryColor}
+              style={[
+                styles.menuIcon,
+                styles.menuIconActive
+              ]} 
+            />
           ) : (
-            <TicketsIcon width={18} height={18} style={styles.menuIcon} />
+            <TicketsIcon 
+              width={18} 
+              height={18} 
+              fill={COLORS.secondaryFontColor}
+              style={styles.menuIcon} 
+            />
           )}
 
           <Text
@@ -60,9 +84,22 @@ const SideMenuNavigation = ({ items, activeItem, onSelect, onLogout, onSupport }
         {/* LOGOUT */}
         <Pressable style={styles.menuRow} onPress={onLogout}>
           {activeItem === "Logout" ? (
-            <ActiveLogout width={18} height={18} style={styles.menuIcon} />
+            <ActiveLogout 
+              width={18} 
+              height={18} 
+              fill={COLORS.secondaryColor}
+              style={[
+                styles.menuIcon,
+                styles.menuIconActive
+              ]} 
+            />
           ) : (
-            <LogoutIcon width={18} height={18} style={styles.menuIcon} />
+            <LogoutIcon 
+              width={18} 
+              height={18} 
+              fill={COLORS.secondaryFontColor}
+              style={styles.menuIcon} 
+            />
           )}
 
           <Text
@@ -88,9 +125,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
   },
-  menuIcon: {
+  iconWrapper: {
     marginRight: 20,
+  },
+  menuIcon: {
     opacity: 0.8,
+  },
+  menuIconActive: {
+    opacity: 1,
   },
   menuText: {
     fontSize: 16,

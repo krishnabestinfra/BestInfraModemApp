@@ -123,28 +123,44 @@ export const errorTypes = [
 export const notifications = [
   {
     id: 'NTF001',
-    title: 'Payment Received',
-    message: 'Payment of ₹4,250 received for Zone A.',
-    type: 'success',
+    title: 'Meter COM Failed Alert',
+    message: 'Modem MDM112001 at Bangalore - Zone A has communication failure.',
+    type: 'warning',
     is_read: false,
-    created_at: '2025-08-07T09:10:00Z'
+    created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString() // 15 minutes ago
   },
   {
     id: 'NTF002',
-    title: 'Network Maintenance',
-    message: 'Scheduled maintenance at Building 304.',
-    type: 'warning',
+    title: 'Modem Auto Restart Detected',
+    message: 'Modem MDM202002 at Mumbai - Zone B automatically restarted.',
+    type: 'alert',
     is_read: false,
-    created_at: '2025-08-07T05:40:00Z'
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2 hours ago
   },
   {
     id: 'NTF003',
-    title: 'Balance Reminder',
-    message: 'Diesel generator balance due in 3 days.',
-    type: 'info',
+    title: 'Power Failure Alert',
+    message: 'DCU/Modem power failed at Delhi - Zone C. Signal strength: 0.',
+    type: 'warning',
     is_read: true,
-    created_at: '2025-08-06T16:15:00Z'
-  }
+    created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() // 5 hours ago
+  },
+  {
+    id: 'NTF004',
+    title: 'Network Issue Resolved',
+    message: 'Network connection restored for modem MDM001 at Building B-Floor 2.',
+    type: 'success',
+    is_read: false,
+    created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString() // 30 minutes ago
+  },
+  {
+    id: 'NTF005',
+    title: 'Low Signal Warning',
+    message: 'Modem MDM003 showing weak signal strength (5 dBm) at Building C-Floor 3.',
+    type: 'alert',
+    is_read: true,
+    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() // 1 day ago
+  },
 ];
 
 export const testAlerts = [

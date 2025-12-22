@@ -1,5 +1,6 @@
 import React, { createContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { notifications as dummyNotifications } from "../data/dummyData";
 
 export const NotificationContext = createContext();
 
@@ -19,9 +20,33 @@ export const NotificationProvider = ({ children }) => {
         }
         if (savedNoti) {
           const parsed = JSON.parse(savedNoti);
-          setNotifications(parsed);
+          // Check if we have the new alert-related notifications by checking IDs or content
+          const expectedIds = ['NTF001', 'NTF002', 'NTF003', 'NTF004', 'NTF005', 'NTF006'];
+          const hasNewNotifications = parsed.some(n => expectedIds.includes(n.id));
+          
+          // Also check for old payment/balance keywords
+          const hasOldNotifications = parsed.some(n => 
+            n.title?.includes('Payment') || 
+            n.title?.includes('Balance') || 
+            n.message?.includes('₹')
+          );
+          
+          // Replace if we have old notifications OR if we don't have the new ones
+          if (hasOldNotifications || !hasNewNotifications || parsed.length === 0) {
+            // Replace with new alert-related notifications
+            setNotifications(dummyNotifications);
+            await AsyncStorage.setItem("notifications", JSON.stringify(dummyNotifications));
+          } else {
+            setNotifications(parsed);
+          }
+        } else {
+          // Initialize with dummy notifications if no saved data
+          setNotifications(dummyNotifications);
+          await AsyncStorage.setItem("notifications", JSON.stringify(dummyNotifications));
         }
       } catch (e) {
+        // Initialize with dummy data on error
+        setNotifications(dummyNotifications);
       }
     })();
   }, []);

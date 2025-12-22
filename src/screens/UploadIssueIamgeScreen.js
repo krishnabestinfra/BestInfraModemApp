@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
 });
 
