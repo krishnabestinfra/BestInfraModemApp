@@ -18,8 +18,11 @@ import SideMenuNavigation from "../components/SideMenuNavigation";
 import DashboardIcon from "../../assets/icons/dashboardMenu.svg";
 import ActiveDashboard from "../../assets/icons/activeDashboard.svg";
 import QRScannerIcon from "../../assets/icons/QRscanner.svg";
+import ActiveQRScanner from "../../assets/icons/activeQRScanner.svg";
 import CompletedTasksIcon from "../../assets/icons/completedtasks.svg";
+import ActiveCompletedTasks from "../../assets/icons/activeCompletedTasks.svg";
 import NonCommunicatingModemsIcon from "../../assets/icons/noncommicating.svg";
+import ActiveNonCommunicating from "../../assets/icons/activeNonCommunicating.svg";
 
 
 const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone }) => {
@@ -131,21 +134,21 @@ const SideMenu = ({ navigation, onLogout, modems = [], modemIds = [], userPhone 
                 label: "Offline Modems",
                 route: "OfflineModems",
                 Icon: NonCommunicatingModemsIcon,
-                ActiveIcon: NonCommunicatingModemsIcon
+                ActiveIcon: ActiveNonCommunicating
               },
               {
                 key: "Visited",
                 label: "Visited",
                 route: "Visited",
                 Icon: CompletedTasksIcon,
-                ActiveIcon: CompletedTasksIcon
+                ActiveIcon: ActiveCompletedTasks
               },
               {
                 key: "QRScanner",
                 label: "QR Scanner",
                 route: "ScanScreen",
                 Icon: QRScannerIcon,
-                ActiveIcon: QRScannerIcon
+                ActiveIcon: ActiveQRScanner
               },
             ]}
             activeItem={activeItem}

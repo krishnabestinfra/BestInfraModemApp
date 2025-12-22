@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xxl,
     borderTopWidth: 1,
     borderTopColor: '#F8F8F8',
     elevation: 8,

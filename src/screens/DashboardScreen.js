@@ -176,7 +176,7 @@ const DashboardScreen = ({ navigation, modems = [], modemIds = [], userPhone }) 
         </View>
       </ScrollView>
 
-      <View style={[styles.stickyScanButtonContainer, { paddingBottom: spacing.md + insets.bottom }]}>
+      <View style={[styles.stickyScanButtonContainer, { paddingBottom: spacing.xl + insets.bottom }]}>
         <TouchableOpacity 
           style={styles.stickyScanButton} 
           onPress={() => navigation.navigate("ScanScreen")}

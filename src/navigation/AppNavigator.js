@@ -9,8 +9,6 @@ import { clearAuthData, getUserPhone } from '../utils/storage';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import ErrorDetailsScreen from '../screens/ErrorDetailsScreen';
-import AlertsScreen from '../screens/AlertsScreen';
 import ModemDetailsScreen from '../screens/ModemDetailsScreen';
 import TroubleshootScreen from '../screens/TroubleshootScreen';
 import UploadIssueImageScreen from '../screens/UploadIssueIamgeScreen';
@@ -182,8 +180,6 @@ const AppNavigator = () => {
             </Stack.Screen>
 
             {/* Other screens */}
-            <Stack.Screen name="ErrorDetails" component={ErrorDetailsScreen} />
-            <Stack.Screen name="Alerts" component={AlertsScreen} />
             <Stack.Screen name="ModemDetails">
               {(props) => (
                 <ModemDetailsScreen
